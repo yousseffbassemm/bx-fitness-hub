@@ -194,8 +194,37 @@ How it is protected:
 Wrong password, tampered cookie, garbage cookie, expired-but-correctly-signed
 cookie, and post-logout all redirect to the login screen with nothing leaked.
 
-Not built: individual staff accounts, an audit trail of who looked, cancelling
-a booking from this screen. Ask if you want them.
+### Cancelling a booking
+
+Each member has a **Cancel** next to them. It takes two clicks - the first
+arms it and names the person, the second does it - so a stray click cannot
+cancel anyone.
+
+**Cancelling never deletes the row.** It stamps `cancelled_at`, which frees
+the place while keeping the record. The booking stays on the list, struck
+through and marked CANCELLED, with an **Undo** beside it.
+
+That design does three things:
+
+- The freed place is immediately bookable by the public.
+- Nobody's record quietly disappears, so staff can see that someone was
+  cancelled rather than wondering whether they were ever booked.
+- Undo is possible - and it re-checks capacity first, so if the place has
+  since gone to someone else it refuses and says so.
+
+Because cancelled rows are kept, "one place per phone per class" is a
+**partial unique index over live rows only**. Without that, anyone who had
+been cancelled could never rebook. The SQLite store migrates an existing
+database to this shape on first open, rebuilding the table because SQLite
+cannot drop a table-level UNIQUE.
+
+The endpoint (`PATCH /api/staff/bookings`) checks the session itself - the
+proxy only covers the `/staff` pages, since the login route has to stay
+reachable - and refuses a request whose `Origin` is not this host, on top of
+the sameSite cookie.
+
+Not built: individual staff accounts, and an audit trail of who cancelled
+what. With one shared password there is no "who" to record.
 
 ## Still to fill in
 

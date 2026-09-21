@@ -6,6 +6,7 @@ import {
   toISODate,
 } from "@/lib/booking";
 import { getStore } from "@/lib/store";
+import BookingRowActions from "@/components/staff/BookingRowActions";
 import { Mark } from "@/components/ui/Logo";
 
 // Bookings change constantly; never serve a cached list.
@@ -18,7 +19,7 @@ type Group = {
   coach: string;
   ladiesOnly: boolean;
   capacity: number;
-  people: { name: string; phone: string; createdAt: string }[];
+  people: { id: string; name: string; phone: string; cancelledAt: string | null }[];
 };
 
 export default async function StaffPage(props: PageProps<"/staff">) {
@@ -33,6 +34,7 @@ export default async function StaffPage(props: PageProps<"/staff">) {
   const to = toISODate(until);
 
   const rows = await (await getStore()).list(from, to);
+  const liveCount = rows.filter((r) => r.cancelledAt === null).length;
 
   // Group by the actual class, so staff read it the way the day runs.
   const groups = new Map<string, Group>();
@@ -53,9 +55,10 @@ export default async function StaffPage(props: PageProps<"/staff">) {
       });
     }
     groups.get(key)!.people.push({
+      id: row.id,
       name: row.name,
       phone: row.phone,
-      createdAt: row.createdAt,
+      cancelledAt: row.cancelledAt,
     });
   }
 
@@ -78,7 +81,7 @@ export default async function StaffPage(props: PageProps<"/staff">) {
             <span className="kicker">Staff &middot; Bookings</span>
           </div>
           <h1 className="font-display mt-5 text-3xl text-white sm:text-4xl">
-            {rows.length} {rows.length === 1 ? "booking" : "bookings"}
+            {liveCount} {liveCount === 1 ? "booking" : "bookings"}
           </h1>
           <p className="mt-2 text-sm text-grey">
             {formatDate(from)} onwards &middot; next {BOOKING_WINDOW_DAYS} days
@@ -147,27 +150,49 @@ export default async function StaffPage(props: PageProps<"/staff">) {
                         </p>
                       </div>
                       <p className="font-display text-sm text-white">
-                        {g.people.length}
+                        {g.people.filter((p) => p.cancelledAt === null).length}
                         <span className="text-grey-dim">/{g.capacity}</span>
                       </p>
                     </div>
 
                     <ol className="divide-y divide-white/8">
-                      {g.people.map((p, i) => (
-                        <li
-                          key={`${p.phone}-${i}`}
-                          className="grid grid-cols-[1.5rem_1fr_auto] items-center gap-4 px-5 py-3"
-                        >
-                          <span className="text-xs text-grey-dim">{i + 1}</span>
-                          <span className="text-sm text-white">{p.name}</span>
-                          <a
-                            href={`tel:${p.phone.replace(/\s/g, "")}`}
-                            className="text-sm tabular-nums text-grey hover:text-lime"
+                      {g.people.map((p, i) => {
+                        const off = p.cancelledAt !== null;
+                        return (
+                          <li
+                            key={p.id}
+                            className={`grid grid-cols-[1.5rem_1fr_auto_auto] items-center gap-4 px-5 py-3 ${
+                              off ? "bg-white/[0.02]" : ""
+                            }`}
                           >
-                            {p.phone}
-                          </a>
-                        </li>
-                      ))}
+                            <span className="text-xs text-grey-dim">
+                              {off ? "\u2014" : i + 1}
+                            </span>
+                            {/* The strike sits on the name alone: a parent's
+                                text-decoration is painted across children and
+                                cannot be removed by them. */}
+                            <span className="flex flex-wrap items-baseline gap-2 text-sm">
+                              <span className={off ? "text-grey-dim line-through" : "text-white"}>
+                                {p.name}
+                              </span>
+                              {off && (
+                                <span className="text-[0.7rem] tracking-[0.1em] text-pink uppercase">
+                                  Cancelled
+                                </span>
+                              )}
+                            </span>
+                            <a
+                              href={`tel:${p.phone.replace(/\s/g, "")}`}
+                              className={`text-sm tabular-nums ${
+                                off ? "text-grey-dim" : "text-grey hover:text-lime"
+                              }`}
+                            >
+                              {p.phone}
+                            </a>
+                            <BookingRowActions id={p.id} cancelled={off} name={p.name} />
+                          </li>
+                        );
+                      })}
                     </ol>
                   </article>
                 ))}

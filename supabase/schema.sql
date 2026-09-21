@@ -10,17 +10,28 @@
 create extension if not exists pgcrypto;
 
 create table if not exists public.bookings (
-  id          uuid primary key default gen_random_uuid(),
-  session_id  text        not null,
-  class_date  date        not null,
-  name        text        not null,
-  phone       text        not null,
-  created_at  timestamptz not null default now(),
-  -- one place per phone number per class
-  unique (session_id, class_date, phone)
+  id           uuid primary key default gen_random_uuid(),
+  session_id   text        not null,
+  class_date   date        not null,
+  name         text        not null,
+  phone        text        not null,
+  created_at   timestamptz not null default now(),
+  -- Staff cancellation keeps the row and stamps this, so a member's record
+  -- is never silently erased and the place is freed.
+  cancelled_at timestamptz
 );
 
+-- Existing installs.
+alter table public.bookings add column if not exists cancelled_at timestamptz;
+alter table public.bookings drop constraint if exists bookings_session_id_class_date_phone_key;
+
 create index if not exists bookings_date_idx on public.bookings (class_date);
+
+-- One place per phone per class, counting live rows only - otherwise someone
+-- who was cancelled could never rebook.
+create unique index if not exists bookings_live_unique
+  on public.bookings (session_id, class_date, phone)
+  where cancelled_at is null;
 
 -- The table is only ever reached through the service role from the server,
 -- so no anon policy is granted.
@@ -50,7 +61,8 @@ begin
   select count(*) into taken
     from public.bookings
    where session_id = p_session_id
-     and class_date = p_date;
+     and class_date = p_date
+     and cancelled_at is null;
 
   if taken >= p_capacity then
     return json_build_object('ok', false, 'reason', 'full', 'spots_left', 0);
@@ -63,5 +75,46 @@ begin
 exception
   when unique_violation then
     return json_build_object('ok', false, 'reason', 'duplicate');
+end;
+$$;
+
+-- Undo a cancellation, if the class has not filled up since.
+create or replace function public.restore_booking(
+  p_id       uuid,
+  p_capacity int
+) returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  row_session text;
+  row_date    date;
+  taken       int;
+begin
+  select session_id, class_date into row_session, row_date
+    from public.bookings
+   where id = p_id and cancelled_at is not null;
+
+  if row_session is null then
+    return json_build_object('ok', false, 'reason', 'not-found');
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext(row_session || '|' || row_date::text));
+
+  select count(*) into taken
+    from public.bookings
+   where session_id = row_session and class_date = row_date and cancelled_at is null;
+
+  if taken >= p_capacity then
+    return json_build_object('ok', false, 'reason', 'full');
+  end if;
+
+  update public.bookings set cancelled_at = null where id = p_id;
+  return json_build_object('ok', true);
+exception
+  when unique_violation then
+    -- Someone rebooked with the same number while it was cancelled.
+    return json_build_object('ok', false, 'reason', 'full');
 end;
 $$;
