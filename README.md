@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BX Fitness Hub
 
-## Getting Started
+Website for BX Fitness Hub, built with Next.js (App Router), TypeScript and
+Tailwind CSS.
 
-First, run the development server:
+## Setup on a fresh Mac
+
+You need [Homebrew](https://brew.sh) first. Then:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+brew install node          # installs Node and npm
+git clone https://github.com/yousseffbassemm/bx-fitness-hub.git
+cd bx-fitness-hub
+npm install                # installs project dependencies
+npm run dev                # starts the dev server
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>. The page reloads as you edit files.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Other scripts:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build   # production build - run this before pushing
+npm run lint    # ESLint
+```
 
-## Learn More
+## Daily Git routine
 
-To learn more about Next.js, take a look at the following resources:
+**Before you start working:**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+git pull
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**After you finish a piece of work:**
 
-## Deploy on Vercel
+```bash
+git add .
+git commit -m "describe what you changed"
+git push
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Pull first, every time. It keeps the two of us from ending up with conflicting
+copies of `main`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Two rules:
+
+- **Never force-push and never rewrite history** (no `git push --force`, no
+  `git rebase` on pushed commits). It deletes the other person's work.
+- If `git push` is rejected, run `git pull` and resolve any conflict, then push
+  again. Do not reach for `--force`.
+
+## Who owns what
+
+| Area | Owner |
+| --- | --- |
+| Layout, shared components (`src/components/`), theme | Youssef |
+| Home (`/`) | Youssef |
+| Classes (`/classes`) | Youssef |
+| Trainers (`/trainers`) | Karma |
+| Pricing (`/pricing`) | Karma |
+| Contact (`/contact`) | Karma |
+
+Stick to your own files where you can. If you need a change in a shared file
+(`src/app/layout.tsx`, `src/components/`, `src/app/globals.css`), tell the
+other person before you push it.
+
+## Project structure
+
+```
+src/
+  app/
+    layout.tsx        root layout - Navbar + Footer wrap every page
+    globals.css       Tailwind import + brand design tokens
+    page.tsx          Home
+    classes/page.tsx
+    trainers/page.tsx
+    pricing/page.tsx
+    contact/page.tsx
+  components/
+    Navbar.tsx
+    Footer.tsx
+public/               static files (images, icons)
+```
+
+## Brand colors and fonts
+
+All brand values are **placeholders** right now and live in two files:
+
+- `src/app/globals.css` - colors, as CSS variables on `:root`
+- `src/app/layout.tsx` - the two fonts, loaded through `next/font`
+
+The colors are exposed to Tailwind, so use them as normal utility classes
+rather than hardcoding hex values:
+
+```tsx
+<p className="text-brand-muted">...</p>
+<button className="bg-brand-primary hover:bg-brand-primary-dark">...</button>
+<h2 className="font-heading">...</h2>
+```
+
+Available: `brand-primary`, `brand-primary-dark`, `brand-accent`, `brand-ink`,
+`brand-muted`, `brand-surface`, `brand-surface-alt`, `brand-border`, plus the
+`font-heading` and `font-body` families.
+
+Swap the placeholder values in those two files and the whole site updates.
+
+## Content placeholders
+
+Pages currently contain a heading and `TODO` comments only. Real gym details -
+prices, class schedules, trainer names, the address - are **not** in the repo
+yet. Confirm each one before adding it; do not guess.
+
+## Style notes
+
+- Mobile-first: write the small-screen styles first, then add `sm:` / `md:`
+  variants for larger screens.
+- Keep components simple. A component is a Server Component by default; only
+  add `"use client"` when you need state or browser events (as `Navbar.tsx`
+  does).
+- Run `npm run build` before pushing so you do not push code that fails to
+  compile.
