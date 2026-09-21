@@ -6,11 +6,6 @@ import Navbar from "@/components/Navbar";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(site.url),
-  title: {
-    default: "BX Fitness Hub | Gym in New Cairo",
-    template: `%s | ${site.name}`,
-  },
   description:
     "BX Fitness Hub is a gym in New Cairo open 6AM to 1AM every day. Strength and cardio floors, 15 classes a week open to members and non-members, personal training, recovery and spa.",
   keywords: [

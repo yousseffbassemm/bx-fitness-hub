@@ -103,14 +103,14 @@ export const facilities = [
   {
     title: "EightyEight",
     copy: "The coffee shop on site. Salads, protein and proper coffee, straight after a session.",
-    image: "/images/eightyeight.jpg",
-    alt: "Salads, iced coffee and shakes in EightyEight branded cups at the BX coffee shop",
+    image: "/images/eightyeight-cafe.jpg",
+    alt: "The EightyEight counter at BX, under its lit sign and shelves of supplements",
   },
   {
     title: "BX Spa",
-    copy: "Recovery next door. Hammam, sauna and massage - the art of stillness.",
-    image: "/images/bx-spa.jpg",
-    alt: "Moroccan tea service on a brass tray in the warm light of BX Spa",
+    copy: "Recovery next door. Jacuzzi, hammam, sauna and massage - the art of stillness.",
+    image: "/images/bx-spa-jacuzzi.jpg",
+    alt: "The jacuzzi at BX Spa, beside a living green wall and a stone water feature",
   },
 ] as const;
 

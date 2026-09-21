@@ -20,8 +20,8 @@ export default function About() {
             </div>
             <div className="absolute -bottom-10 -right-4 hidden aspect-square w-40 border-4 border-ink sm:block lg:-right-10 lg:w-52">
               <Image
-                src="/images/studio-bright.jpg"
-                alt="Daylight in the mirrored movement studio"
+                src="/images/studio-yoga.jpg"
+                alt="A member moving through a yoga flow in the daylit studio at BX"
                 fill
                 sizes="200px"
                 className="plate object-cover"
