@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { site } from "@/lib/site";
 import { Button } from "../ui/Button";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
@@ -62,7 +61,7 @@ export default function PersonalTraining() {
 
             <Reveal delay={140} className="mt-9 flex flex-wrap gap-3">
               <Button href="#coaches">Meet Our Coaches</Button>
-              <Button href={site.whatsapp.href} variant="outline">
+              <Button href="#contact" variant="outline">
                 Ask about PT
               </Button>
             </Reveal>

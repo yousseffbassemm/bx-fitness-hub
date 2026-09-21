@@ -66,21 +66,13 @@ export default function Contact() {
                 href={site.maps}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-display border border-line px-5 py-3 text-[0.78rem] tracking-[0.12em] text-white transition-colors hover:border-lime hover:text-lime"
+                className="font-display rounded-sm border border-white/15 px-5 py-3 text-[0.78rem] tracking-[0.12em] text-white transition-colors hover:border-lime hover:text-lime"
               >
                 Get Directions
               </a>
               <a
-                href={site.whatsapp.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-display border border-line px-5 py-3 text-[0.78rem] tracking-[0.12em] text-white transition-colors hover:border-lime hover:text-lime"
-              >
-                WhatsApp Us
-              </a>
-              <a
                 href={site.phone.href}
-                className="font-display bg-lime px-5 py-3 text-[0.78rem] tracking-[0.12em] text-ink transition-colors hover:bg-white"
+                className="font-display rounded-sm bg-lime px-5 py-3 text-[0.78rem] tracking-[0.12em] text-ink transition-colors hover:bg-white"
               >
                 Call Now
               </a>

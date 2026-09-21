@@ -58,7 +58,7 @@ src/
   components/
     Navbar.tsx          transparent over the hero, solid once scrolled
     Footer.tsx
-    MobileBar.tsx       sticky Call / WhatsApp / Join bar on phones
+    MobileBar.tsx       sticky Call / Book / Join bar on phones
     LeadForm.tsx        contact form with validation
     sections/           one file per homepage section
     ui/                 Logo, Button, Reveal, SectionHead
@@ -110,7 +110,9 @@ white with one phrase dropped to lime, over a thin lime rule.
 
 ## Class booking
 
-People book a place on the site; they are not sent to WhatsApp.
+People book a place on the site. There is no WhatsApp anywhere on it -
+enquiries go through the contact form, and the phone number is the only
+direct line offered.
 
 Each row of the timetable shows how many places are left and a **Book** button.
 Booking asks for a name and a phone number only - no account, no payment. The

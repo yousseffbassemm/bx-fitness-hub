@@ -40,7 +40,7 @@ export default function Hero() {
 
           <div className="mt-9 flex flex-wrap gap-3">
             <Button href="#membership">Join Now</Button>
-            <Button href={site.whatsapp.href} variant="outline">
+            <Button href="#contact" variant="outline">
               Book a Free Trial
             </Button>
           </div>

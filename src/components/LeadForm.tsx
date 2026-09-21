@@ -62,7 +62,7 @@ export default function LeadForm() {
         <p className="font-display text-2xl text-lime">You&apos;re on the list.</p>
         <p className="mt-3 text-sm leading-relaxed text-grey">
           We&apos;ll be in touch on the number you gave us. If you&apos;d rather
-          not wait, message us on WhatsApp and we&apos;ll answer straight away.
+          not wait, give the gym a call and we&apos;ll answer straight away.
         </p>
       </div>
     );
@@ -178,8 +178,8 @@ export default function LeadForm() {
 
       {state === "error" && (
         <p role="alert" className="text-xs text-pink">
-          Something went wrong sending that. Please try again, or message us on
-          WhatsApp.
+          Something went wrong sending that. Please try again, or give the gym a
+          call.
         </p>
       )}
 

@@ -54,18 +54,14 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
           <a
-            href={site.whatsapp.href}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#contact"
             className="hidden text-[0.82rem] text-grey transition-colors hover:text-white lg:block"
           >
             Book a free trial
           </a>
           <a
-            href={site.whatsapp.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-display hidden bg-lime px-5 py-2.5 text-[0.78rem] tracking-[0.12em] text-ink transition-colors hover:bg-white sm:inline-flex"
+            href="#membership"
+            className="font-display hidden rounded-sm bg-lime px-5 py-2.5 text-[0.78rem] tracking-[0.12em] text-ink transition-colors hover:bg-white sm:inline-flex"
           >
             Join Now
           </a>
@@ -120,16 +116,15 @@ export default function Navbar() {
         </ul>
         <div className="flex gap-3 px-6 pb-6 pt-2">
           <a
-            href={site.whatsapp.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-display flex-1 bg-lime py-3.5 text-center text-[0.8rem] tracking-[0.12em] text-ink"
+            href="#membership"
+            onClick={() => setOpen(false)}
+            className="font-display flex-1 rounded-sm bg-lime py-3.5 text-center text-[0.8rem] tracking-[0.12em] text-ink"
           >
             Join Now
           </a>
           <a
             href={site.phone.href}
-            className="font-display flex-1 border border-line py-3.5 text-center text-[0.8rem] tracking-[0.12em] text-white"
+            className="font-display flex-1 rounded-sm border border-white/15 py-3.5 text-center text-[0.8rem] tracking-[0.12em] text-white"
           >
             Call
           </a>

@@ -1,4 +1,4 @@
-import { plans, site } from "@/lib/site";
+import { plans } from "@/lib/site";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
 
@@ -73,13 +73,11 @@ export default function Membership() {
                 </ul>
 
                 <a
-                  href={site.whatsapp.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`font-display mt-9 block py-3.5 text-center text-[0.8rem] tracking-[0.12em] transition-colors ${
+                  href="#contact"
+                  className={`font-display mt-9 block rounded-sm py-3.5 text-center text-[0.8rem] tracking-[0.12em] transition-colors ${
                     p.featured
                       ? "bg-lime text-ink hover:bg-white"
-                      : "border border-line text-white hover:border-lime hover:text-lime"
+                      : "border border-white/15 text-white hover:border-lime hover:text-lime"
                   }`}
                 >
                   Join Now

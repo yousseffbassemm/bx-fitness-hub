@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { site } from "@/lib/site";
 import { Button } from "../ui/Button";
 import Reveal from "../ui/Reveal";
 
@@ -41,7 +40,7 @@ export default function CTA() {
 
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <Button href="#membership">Join Now</Button>
-            <Button href={site.whatsapp.href} variant="outline">
+            <Button href="#contact" variant="outline">
               Book a Free Trial
             </Button>
           </div>

@@ -90,7 +90,7 @@ export default function Classes() {
           <Reveal>
             <p className="text-sm text-grey sm:text-right">
               Timetable current for September 2026.
-              <br className="hidden sm:block" /> Book a place on WhatsApp.
+              <br className="hidden sm:block" /> Book a place below.
             </p>
           </Reveal>
         </div>
@@ -248,12 +248,10 @@ export default function Classes() {
 
           <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3">
             <a
-              href={site.whatsapp.href}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={site.phone.href}
               className="font-display rounded-sm border border-white/15 px-6 py-3.5 text-[0.8rem] tracking-[0.12em] text-white transition-colors hover:border-lime hover:text-lime"
             >
-              Ask about a class
+              Call about a class
             </a>
             <p className="text-xs text-grey-dim">
               Schedules change monthly &mdash; the live version is always on{" "}

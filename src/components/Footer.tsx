@@ -53,16 +53,6 @@ export default function Footer() {
                 </a>
                 <span className="ml-2 text-xs text-grey-dim">Spa</span>
               </li>
-              <li>
-                <a
-                  href={site.whatsapp.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="transition-colors hover:text-lime"
-                >
-                  WhatsApp
-                </a>
-              </li>
               <li className="text-grey-dim">{site.email.display}</li>
             </ul>
           </div>

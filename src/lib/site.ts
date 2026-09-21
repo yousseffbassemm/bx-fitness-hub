@@ -13,10 +13,6 @@ export const site = {
   tagline: "Where Movement Meets Style.",
 
   phone: { display: "010 4000 1413", href: "tel:+201040001413" },
-  whatsapp: {
-    display: "010 4000 1413",
-    href: "https://wa.me/201040001413",
-  },
   spa: { display: "010 4000 1409", href: "tel:+201040001409" },
 
   // PLACEHOLDER - BX has no public email address listed anywhere.
