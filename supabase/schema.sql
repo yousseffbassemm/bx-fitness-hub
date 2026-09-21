@@ -1,8 +1,11 @@
 -- BX Fitness Hub - class bookings
 --
+-- You only need this if you are deploying somewhere serverless, or running
+-- more than one instance. On a single server the built-in SQLite store is
+-- enough and needs no setup at all (see src/lib/store/sqlite.ts).
+--
 -- Run this once in the Supabase SQL editor, then set SUPABASE_URL and
--- SUPABASE_SERVICE_ROLE_KEY in the environment. Until those are set the app
--- falls back to an in-process store (see src/lib/store/memory.ts).
+-- SUPABASE_SERVICE_ROLE_KEY. The app switches over on its own.
 
 create extension if not exists pgcrypto;
 

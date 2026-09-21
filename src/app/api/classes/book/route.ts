@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { capacityFor, findSession, isDateValidForRow } from "@/lib/booking";
-import { store } from "@/lib/store";
+import { getStore } from "@/lib/store";
 
 const PHONE = /^[+\d][\d\s-]{8,17}$/;
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await store.book({
+    const result = await (await getStore()).book({
       sessionId,
       date,
       name: name.trim(),

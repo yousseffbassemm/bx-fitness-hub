@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { capacityFor, sessionId } from "@/lib/booking";
 import { schedule } from "@/lib/site";
-import { store } from "@/lib/store";
+import { getStore } from "@/lib/store";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const taken = await store.counts(from, to);
+    const taken = await (await getStore()).counts(from, to);
     return NextResponse.json(
       { capacity, taken },
       { headers: { "Cache-Control": "no-store" } },

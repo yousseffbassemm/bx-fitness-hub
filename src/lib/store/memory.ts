@@ -4,10 +4,11 @@ import type { BookingInput, BookingResult, BookingStore } from "./types";
 type Row = { sessionId: string; date: string; phone: string };
 
 /**
- * Development store. Bookings live in this process only: they vanish on
- * restart and are not shared between server instances, so this is fine for
- * local work and useless in production. Set the Supabase environment
- * variables and the Supabase store takes over automatically.
+ * Last-resort store, for a runtime with no filesystem and no Supabase.
+ *
+ * Bookings live in this process only: they vanish on restart and are not
+ * shared between instances. Nothing selects it unless node:sqlite failed to
+ * load, and that path logs a warning when it happens.
  */
 const rows: Row[] = [];
 

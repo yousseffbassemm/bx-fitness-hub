@@ -65,7 +65,7 @@ src/
   lib/
     site.ts             ALL copy, data, hours, schedule, prices
     booking.ts          capacity, slot ids, date rules
-    store/              booking storage (memory in dev, Supabase in prod)
+    store/              booking storage (SQLite by default, Supabase optional)
 supabase/schema.sql     run this once in Supabase
 public/images/          photography
 ```
@@ -125,17 +125,29 @@ visitor's own timezone, and sends it. The server checks that the date really is
 that weekday and falls inside the booking window before accepting it. A server
 running outside Cairo therefore cannot put someone on the wrong day.
 
-**Storage.** Out of the box, bookings are held in the running Node process.
-That is fine for local work and **useless in production** - they disappear on
-restart and are not shared between instances. To make it real:
+**Storage.** Bookings go into SQLite at `.data/bookings.db`, using the driver
+built into Node - nothing to install and nothing to sign up for. A fresh clone
+takes real bookings that survive a restart.
+
+Writes open with `BEGIN IMMEDIATE`, which takes the write lock before reading
+the count. That is what stops two people both being told there is one place
+left and both taking it. Ten simultaneous requests for a single remaining
+place produce exactly one booking.
+
+That is the right store for **one server**. It is the wrong one for serverless
+or for more than one instance, because each instance would own its own file.
+For that, use Supabase:
 
 1. Create a Supabase project (the free tier is enough).
 2. Run `supabase/schema.sql` in its SQL editor.
 3. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (see `.env.example`).
 
-The app picks up Supabase automatically once both are set - no code change.
-`book_session` in that schema takes an advisory lock, so two people clicking at
-the same moment cannot both take the last place.
+The app picks Supabase up automatically once both are set - no code change.
+`book_session` in that schema takes an advisory lock for the same reason the
+SQLite path takes the write lock.
+
+Storage sits behind one small interface in `src/lib/store/`, so swapping in
+Postgres, MySQL or anything else means writing one file.
 
 **Capacity is a placeholder.** `DEFAULT_CLASS_CAPACITY` in `src/lib/booking.ts`
 is set to 14 because BX has not said how many each class holds. Change that one
@@ -158,7 +170,7 @@ Everything below is a marked placeholder. Search for the bracketed token.
 | Privacy / Terms | `Footer.tsx` | Marked `[TODO]`. |
 | Lead destination | `api/lead/route.ts` | Currently validates and logs. Point it at an inbox or CRM. |
 | Class capacity | `booking.ts` &rarr; `DEFAULT_CLASS_CAPACITY` | Set to 14 as a stand-in. |
-| Booking storage | `.env` | Without Supabase set, bookings vanish on restart. |
+| Booking storage | `.env` | SQLite by default. Supabase needed only for serverless or multi-instance. |
 | `site.url` | `site.ts` | Set the real domain - it feeds canonical URLs and OG tags. |
 
 ## About the photography
