@@ -1,26 +1,63 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ---------------------------------------------------------------------------
+   BX Fitness Hub design tokens
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+   Every value below is a PLACEHOLDER. Swap in the real brand palette and
+   fonts here and the whole site follows - no component edits needed.
+
+   Fonts are supplied by next/font in src/app/layout.tsx, which sets
+   --font-heading and --font-body. To change a font, edit that file.
+--------------------------------------------------------------------------- */
+
+:root {
+  /* Brand - PLACEHOLDER colors */
+  --brand-primary: #e0362c; /* buttons, links, active nav item */
+  --brand-primary-dark: #a82720; /* hover / pressed state of primary */
+  --brand-accent: #f2b705; /* highlights, badges, small accents */
+
+  /* Neutrals - PLACEHOLDER colors */
+  --brand-ink: #14171a; /* body text and headings */
+  --brand-muted: #5c6670; /* secondary text, captions */
+  --brand-surface: #ffffff; /* page background */
+  --brand-surface-alt: #f4f5f7; /* cards, alternating sections */
+  --brand-border: #e2e5e9; /* hairlines, dividers */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --brand-ink: #f2f4f6;
+    --brand-muted: #a0a8b0;
+    --brand-surface: #0e1012;
+    --brand-surface-alt: #181b1f;
+    --brand-border: #2a2f35;
   }
 }
 
+/* Expose the tokens to Tailwind as utilities:
+   bg-brand-primary, text-brand-muted, border-brand-border, font-heading, ... */
+@theme inline {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-dark: var(--brand-primary-dark);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-surface-alt: var(--brand-surface-alt);
+  --color-brand-border: var(--brand-border);
+
+  --font-heading: var(--font-heading);
+  --font-body: var(--font-body);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--brand-surface);
+  color: var(--brand-ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading), system-ui, sans-serif;
 }
