@@ -32,8 +32,8 @@ export default function Gallery() {
   }, [open, close, step]);
 
   return (
-    <section id="gallery" className="relative border-t border-line py-24 lg:py-32">
-      <div className="mx-auto max-w-7xl px-5 lg:px-10">
+    <section id="gallery" className="relative py-24 lg:py-32">
+      <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <SectionHead kicker="Gallery" title="Inside" accent="BX." />
           <Reveal>

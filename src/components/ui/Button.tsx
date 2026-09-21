@@ -27,7 +27,19 @@ export function Button({
   className?: string;
 } & Omit<ComponentProps<typeof Link>, "href" | "className">) {
   const cls = `${base} ${variants[variant]} ${className}`;
-  const external = href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:");
+
+  // Same-page anchors are plain <a>. next/link does not reliably scroll to a
+  // hash on the route it is already on, which is every section link here.
+  if (href.startsWith("#")) {
+    return (
+      <a href={href} className={cls}>
+        {children}
+      </a>
+    );
+  }
+
+  const external =
+    href.startsWith("http") || href.startsWith("tel:") || href.startsWith("mailto:");
 
   if (external) {
     return (

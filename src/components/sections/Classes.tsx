@@ -13,7 +13,7 @@ export default function Classes() {
 
   return (
     <section id="classes" className="relative py-24 lg:py-32">
-      <div className="mx-auto max-w-7xl px-5 lg:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <SectionHead
             kicker="Classes"
@@ -29,10 +29,10 @@ export default function Classes() {
         </div>
 
         {/* Discipline cards */}
-        <div className="mt-14 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {disciplines.map((d, i) => (
             <Reveal key={d.name} delay={(i % 4) * 70}>
-              <article className="group h-full bg-ink p-6 transition-colors hover:bg-charcoal">
+              <article className="group h-full rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent p-6 transition-all duration-500 hover:-translate-y-1 hover:border-lime/40">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-display text-lg leading-tight text-white">{d.name}</h3>
                   <span
@@ -59,7 +59,7 @@ export default function Classes() {
 
         {/* Timetable */}
         <Reveal className="mt-16">
-          <div className="border border-line bg-charcoal">
+          <div className="rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent">
             <div
               role="tablist"
               aria-label="Class timetable by day"

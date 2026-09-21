@@ -77,42 +77,38 @@ export const facilities = [
     copy: "Racks, platforms and plate-loaded machines under the ring lights, with mirrors on every wall.",
     image: "/images/weights-floor.jpg",
     alt: "The BX strength floor at night, lit by ring pendants and warm cove lighting",
-    span: "tall",
   },
   {
     title: "Cardio Deck",
     copy: "A full row of Life Fitness cardio facing the illuminated BX monogram.",
     image: "/images/cardio-rings.jpg",
     alt: "Row of cross-trainers beneath circular LED pendants and the lit BX logo",
-    span: "tall",
   },
   {
     title: "Free Weights",
     copy: "Dumbbells to the far wall, benches, bars and bands - under the PUSH YOUR LIMITS sign.",
     image: "/images/free-weights.jpg",
     alt: "Barbell rack and dumbbell wall lit by angular LED frames",
-    span: "wide",
   },
   {
     title: "Movement Studio",
     copy: "Pale oak, floor-to-ceiling mirrors and daylight. Pilates, yoga, stretching and dance.",
     image: "/images/studio-bright.jpg",
     alt: "Bright mirrored movement studio with pale oak flooring",
-    span: "tall",
   },
   {
-    title: "Recovery & Therapy",
-    copy: "Warm, quiet and low-lit. Mobility, stress relief and physiotherapy with Dr. Youstina.",
+    title: "EightyEight",
+    // TODO: swap for the EightyEight kitchen photo once supplied.
+    copy: "The kitchen downstairs. Real food, on site, for straight after a session.",
     image: "/images/studio-pilates.jpg",
-    alt: "Low-lit therapy studio with warm strip lighting and oak flooring",
-    span: "tall",
+    alt: "EightyEight, the kitchen at BX Fitness Hub",
   },
   {
-    title: "BX Spa & EightyEight",
-    copy: "The spa next door, and the EightyEight kitchen for real food after a session.",
+    title: "BX Spa",
+    // TODO: swap for the BX Spa photo once supplied.
+    copy: "Recovery next door. Warm, quiet and low-lit, with its own reservations line.",
     image: "/images/studio-stretch.jpg",
-    alt: "Studio washed in violet light used for stretch and recovery sessions",
-    span: "wide",
+    alt: "The treatment space at BX Spa",
   },
 ] as const;
 

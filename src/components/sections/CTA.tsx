@@ -20,7 +20,7 @@ export default function CTA() {
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-transparent to-ink" />
       </div>
 
-      <div className="relative mx-auto max-w-4xl px-5 py-28 text-center lg:py-36">
+      <div className="relative mx-auto max-w-4xl px-6 py-28 text-center lg:py-36">
         <Reveal>
           <div className="flex items-center justify-center gap-3">
             <span className="h-px w-8 bg-lime" />

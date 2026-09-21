@@ -20,9 +20,9 @@ export default function Membership() {
   return (
     <section
       id="membership"
-      className="relative border-y border-line bg-charcoal py-24 lg:py-32"
+      className="swell relative py-24 lg:py-32"
     >
-      <div className="mx-auto max-w-7xl px-5 lg:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <SectionHead
           kicker="Membership"
           title="Three ways"
@@ -31,12 +31,14 @@ export default function Membership() {
           align="center"
         />
 
-        <div className="mt-14 grid gap-px border border-line bg-line lg:grid-cols-3">
+        <div className="mt-14 grid gap-4 lg:grid-cols-3">
           {plans.map((p, i) => (
             <Reveal key={p.name} delay={i * 90}>
               <article
-                className={`relative flex h-full flex-col p-8 lg:p-10 ${
-                  p.featured ? "bg-ink" : "bg-charcoal"
+                className={`relative flex h-full flex-col rounded-sm border p-8 transition-all duration-500 lg:p-10 ${
+                  p.featured
+                    ? "border-lime/35 bg-gradient-to-b from-lime/[0.07] to-transparent shadow-[0_30px_70px_-40px_rgba(199,236,30,0.35)]"
+                    : "border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent hover:border-white/20"
                 }`}
               >
                 {p.featured && (

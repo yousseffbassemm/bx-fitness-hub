@@ -20,7 +20,7 @@ function initials(name: string) {
 export default function Coaches() {
   return (
     <section id="coaches" className="relative py-24 lg:py-32">
-      <div className="mx-auto max-w-7xl px-5 lg:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <SectionHead
           kicker="The team"
           title="Eleven coaches."
@@ -28,10 +28,10 @@ export default function Coaches() {
           copy="Everyone on this list teaches on the current timetable."
         />
 
-        <ul className="mt-14 grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {coaches.map((c, i) => (
             <Reveal as="li" key={c.name} delay={(i % 4) * 70}>
-              <article className="group relative h-full bg-ink">
+              <article className="group relative h-full overflow-hidden rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent transition-all duration-500 hover:-translate-y-1 hover:border-lime/40">
                 <div className="relative aspect-[4/5] w-full overflow-hidden bg-charcoal">
                   {c.photo ? (
                     <Image

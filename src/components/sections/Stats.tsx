@@ -50,7 +50,7 @@ function Stat({
   const shown = useCountUp(value, decimals, run);
 
   return (
-    <div className="bg-charcoal p-7 lg:p-9">
+    <div className="rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-7 lg:p-9">
       <p className="font-display text-5xl text-white lg:text-6xl">
         {shown}
         <span className="text-lime">{suffix}</span>
@@ -82,8 +82,8 @@ export default function Stats() {
   }, []);
 
   return (
-    <section className="border-y border-line bg-line">
-      <div ref={ref} className="mx-auto grid max-w-7xl grid-cols-2 gap-px lg:grid-cols-4">
+    <section className="relative">
+      <div ref={ref} className="mx-auto grid max-w-[1600px] grid-cols-2 gap-4 px-6 lg:grid-cols-4 lg:px-12">
         {stats.map((s) => (
           <Stat key={s.label} {...s} run={run} />
         ))}

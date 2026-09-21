@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { nav, site } from "@/lib/site";
 import { Logo } from "./ui/Logo";
@@ -28,17 +27,17 @@ export default function Navbar() {
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
         scrolled || open
-          ? "border-b border-line bg-ink/90 backdrop-blur-xl"
-          : "border-b border-transparent bg-transparent"
+          ? "border-b border-white/10 bg-ink/55 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.9)] backdrop-blur-2xl backdrop-saturate-150"
+          : "border-b border-transparent bg-transparent backdrop-blur-0"
       }`}
     >
       <nav
         aria-label="Primary"
-        className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between gap-6 px-5 lg:px-10"
+        className="mx-auto flex h-[4.5rem] max-w-[1600px] items-center justify-between gap-6 px-6 lg:px-12"
       >
-        <Link href="/" aria-label={`${site.name} - home`} onClick={() => setOpen(false)}>
+        <span onClick={() => setOpen(false)}>
           <Logo />
-        </Link>
+        </span>
 
         <ul className="hidden items-center gap-7 xl:flex">
           {nav.map((item) => (
@@ -106,7 +105,7 @@ export default function Navbar() {
         hidden={!open}
         className="border-t border-line bg-ink xl:hidden"
       >
-        <ul className="px-5 py-2">
+        <ul className="px-6 py-2">
           {nav.map((item) => (
             <li key={item.href} className="border-b border-line/60 last:border-0">
               <a
@@ -119,7 +118,7 @@ export default function Navbar() {
             </li>
           ))}
         </ul>
-        <div className="flex gap-3 px-5 pb-6 pt-2">
+        <div className="flex gap-3 px-6 pb-6 pt-2">
           <a
             href={site.whatsapp.href}
             target="_blank"

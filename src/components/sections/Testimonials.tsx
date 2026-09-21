@@ -20,7 +20,7 @@ function Stars({ value }: { value: number }) {
 export default function Testimonials() {
   return (
     <section className="relative py-24 lg:py-32">
-      <div className="mx-auto max-w-7xl px-5 lg:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-14 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20">
           <div>
             <SectionHead kicker="Members" title="Rated" accent={`${site.rating.value} on Google.`} />
@@ -50,7 +50,7 @@ export default function Testimonials() {
                 delay={i * 80}
                 className={i === 2 ? "sm:col-span-2" : ""}
               >
-                <figure className="h-full border border-line bg-charcoal p-7">
+                <figure className="h-full rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent p-7 transition-colors duration-500 hover:border-white/20">
                   <Stars value={5} />
                   <blockquote className="mt-5 text-[0.95rem] leading-relaxed text-white">
                     &ldquo;{t.quote}&rdquo;

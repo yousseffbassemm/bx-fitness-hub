@@ -31,9 +31,9 @@ export default function PersonalTraining() {
   return (
     <section
       id="training"
-      className="bloom-amber relative overflow-hidden border-y border-line bg-charcoal py-24 lg:py-32"
+      className="bloom-amber swell relative overflow-hidden py-24 lg:py-32"
     >
-      <div className="relative mx-auto max-w-7xl px-5 lg:px-10">
+      <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-14 lg:grid-cols-2 lg:gap-20">
           <div>
             <SectionHead

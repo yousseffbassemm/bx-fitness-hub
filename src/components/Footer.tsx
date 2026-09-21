@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { nav, site } from "@/lib/site";
 import { Logo } from "./ui/Logo";
 
@@ -6,13 +5,11 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-line bg-ink pb-24 pt-16 md:pb-16">
-      <div className="mx-auto max-w-7xl px-5 lg:px-10">
+    <footer className="relative bg-ink pb-24 pt-16 md:pb-16">
+      <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
-            <Link href="/" aria-label={`${site.name} - home`}>
-              <Logo />
-            </Link>
+            <Logo />
             <p className="font-display mt-6 max-w-xs text-xl leading-tight text-white">
               Where movement
               <br />

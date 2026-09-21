@@ -10,13 +10,13 @@ import { Button } from "../ui/Button";
 export default function Hero() {
   return (
     <section className="relative min-h-[100svh] overflow-hidden bg-ink pt-[4.5rem]">
-      <div className="relative mx-auto grid min-h-[calc(100svh-4.5rem)] max-w-7xl grid-cols-1 items-center gap-12 px-5 pb-28 pt-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:px-10 lg:pb-16">
+      <div className="relative mx-auto grid min-h-[calc(100svh-4.5rem)] max-w-[1600px] grid-cols-1 items-center gap-12 px-6 pb-28 pt-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20 lg:px-12 lg:pb-16">
         {/* Type */}
         <div className="relative">
           {/* the thin lime rule BX puts down the edge of every poster */}
           <span
             aria-hidden="true"
-            className="absolute -left-5 top-1 hidden h-32 w-px bg-lime lg:block"
+            className="absolute -left-6 top-1 hidden h-32 w-px bg-lime lg:block"
           />
 
           <div className="flex items-center gap-3">

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, type ElementType, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  type CSSProperties,
+  type ElementType,
+  type ReactNode,
+} from "react";
 
 /**
  * Fades a block in the first time it enters the viewport. Uses one
@@ -12,11 +18,13 @@ export default function Reveal({
   as: Tag = "div",
   delay = 0,
   className = "",
+  style,
 }: {
   children: ReactNode;
   as?: ElementType;
   delay?: number;
   className?: string;
+  style?: CSSProperties;
 }) {
   const ref = useRef<HTMLElement>(null);
 
@@ -50,7 +58,7 @@ export default function Reveal({
     <Tag
       ref={ref}
       className={`reveal ${className}`}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      style={delay ? { ...style, transitionDelay: `${delay}ms` } : style}
     >
       {children}
     </Tag>

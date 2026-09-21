@@ -5,7 +5,7 @@ import SectionHead from "../ui/SectionHead";
 export default function About() {
   return (
     <section id="about" className="bloom-amber relative overflow-hidden py-24 lg:py-32">
-      <div className="relative mx-auto max-w-7xl px-5 lg:px-10">
+      <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
           {/* Stacked plates */}
           <Reveal className="relative">
@@ -37,21 +37,27 @@ export default function About() {
               copy="Every rep gets heavier, every session gets stronger, and every corner is built to push you forward. Dark stone and warm light on the training floors. Oak, mirrors and daylight in the studios. Show up, lock in, go beyond."
             />
 
-            <Reveal delay={90}>
-              <ul className="mt-10 grid gap-px border border-line bg-line sm:grid-cols-2">
-                {[
-                  ["Performance floor", "Racks, platforms, plate-loaded and cable"],
-                  ["Movement studios", "Pilates, yoga, dance, boxing, cycling"],
-                  ["Recovery in-house", "BX Spa, physiotherapy, InBody testing"],
-                  ["EightyEight kitchen", "Real food, on site, after your session"],
-                ].map(([title, copy]) => (
-                  <li key={title} className="bg-charcoal p-6">
-                    <h3 className="font-display text-base text-white">{title}</h3>
+            <ul className="mt-12 grid gap-4 sm:grid-cols-2">
+              {[
+                ["01", "Performance floor", "Racks, platforms, plate-loaded and cable"],
+                ["02", "Movement studios", "Pilates, yoga, dance, boxing, cycling"],
+                ["03", "Recovery in-house", "BX Spa, physiotherapy, InBody testing"],
+                ["04", "EightyEight kitchen", "Real food, on site, after your session"],
+              ].map(([n, title, copy], i) => (
+                <Reveal as="li" key={title} delay={90 + i * 70}>
+                  <article className="group relative h-full overflow-hidden rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-6 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.9)] transition-all duration-500 hover:-translate-y-1 hover:border-lime/45 hover:shadow-[0_26px_60px_-30px_rgba(199,236,30,0.3)]">
+                    {/* lime rule that runs along the top edge on hover */}
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-0 h-px w-0 bg-lime transition-all duration-500 group-hover:w-full"
+                    />
+                    <span className="font-display text-xs tracking-[0.18em] text-lime">{n}</span>
+                    <h3 className="font-display mt-3 text-lg leading-tight text-white">{title}</h3>
                     <p className="mt-2 text-sm leading-relaxed text-grey">{copy}</p>
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
+                  </article>
+                </Reveal>
+              ))}
+            </ul>
           </div>
         </div>
       </div>

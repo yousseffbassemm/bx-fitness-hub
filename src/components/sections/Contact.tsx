@@ -9,9 +9,9 @@ export default function Contact() {
   return (
     <section
       id="contact"
-      className="relative border-t border-line bg-charcoal py-24 lg:py-32"
+      className="swell relative py-24 lg:py-32"
     >
-      <div className="mx-auto max-w-7xl px-5 lg:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-14 lg:grid-cols-2 lg:gap-20">
           {/* Details */}
           <div>
@@ -87,7 +87,7 @@ export default function Contact() {
             </Reveal>
 
             <Reveal delay={150} className="mt-10">
-              <div className="aspect-[16/10] w-full border border-line">
+              <div className="aspect-[16/10] w-full overflow-hidden rounded-sm border border-white/10">
                 <iframe
                   src={mapSrc}
                   title={`Map showing ${site.name} in New Cairo`}
@@ -101,7 +101,7 @@ export default function Contact() {
 
           {/* Form */}
           <Reveal delay={60}>
-            <div className="border border-line bg-ink p-7 lg:sticky lg:top-28 lg:p-10">
+            <div className="rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-7 shadow-[0_30px_70px_-45px_rgba(0,0,0,0.9)] lg:sticky lg:top-28 lg:p-10">
               <div className="flex items-center gap-3">
                 <span className="h-px w-8 bg-lime" />
                 <span className="kicker">Start here</span>

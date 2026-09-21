@@ -10,7 +10,7 @@ import SectionHead from "../ui/SectionHead";
 export default function Facilities() {
   return (
     <section id="facilities" className="relative py-24 lg:py-32">
-      <div className="mx-auto max-w-7xl px-5 lg:px-10">
+      <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <SectionHead
           kicker="Facilities"
           title="Every corner is"
@@ -20,17 +20,14 @@ export default function Facilities() {
 
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {facilities.map((f, i) => (
-            <Reveal
-              key={f.title}
-              delay={(i % 3) * 90}
-              className={f.span === "wide" ? "sm:col-span-2 lg:col-span-1" : ""}
-            >
-              <article className="group relative h-full overflow-hidden bg-charcoal">
-                <div
-                  className={`relative w-full ${
-                    f.span === "wide" ? "aspect-[4/3]" : "aspect-[3/4]"
-                  }`}
-                >
+            <Reveal key={f.title} delay={(i % 3) * 90}>
+              {/*
+                Every card is the same 4:5 box and the photograph fills it
+                absolutely, so no card can end up shorter than its grid row and
+                leave a strip of background showing under the caption.
+              */}
+              <article className="group relative aspect-[4/5] overflow-hidden rounded-sm bg-charcoal">
+                <div className="absolute inset-0">
                   <Image
                     src={f.image}
                     alt={f.alt}
@@ -38,7 +35,7 @@ export default function Facilities() {
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="plate object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/30 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/35 to-transparent" />
                 </div>
 
                 <div className="absolute inset-x-0 bottom-0 p-6">
