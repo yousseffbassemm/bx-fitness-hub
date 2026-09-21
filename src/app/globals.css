@@ -1,63 +1,181 @@
 @import "tailwindcss";
 
-/* ---------------------------------------------------------------------------
-   BX Fitness Hub design tokens
-
-   Every value below is a PLACEHOLDER. Swap in the real brand palette and
-   fonts here and the whole site follows - no component edits needed.
-
-   Fonts are supplied by next/font in src/app/layout.tsx, which sets
-   --font-heading and --font-body. To change a font, edit that file.
---------------------------------------------------------------------------- */
+/* ===========================================================================
+   BX FITNESS HUB - design tokens
+   Sampled from the gym's own photography and campaign artwork:
+   near-black floors, warm amber cove lighting, walnut and oak, and the
+   acid-lime accent BX uses across every post.
+   ========================================================================= */
 
 :root {
-  /* Brand - PLACEHOLDER colors */
-  --brand-primary: #e0362c; /* buttons, links, active nav item */
-  --brand-primary-dark: #a82720; /* hover / pressed state of primary */
-  --brand-accent: #f2b705; /* highlights, badges, small accents */
+  /* Brand accent - the lime from the BX campaign artwork */
+  --bx-lime: #c7ec1e;
+  --bx-lime-dim: #9cbb12;
+  --bx-lime-glow: rgba(199, 236, 30, 0.16);
 
-  /* Neutrals - PLACEHOLDER colors */
-  --brand-ink: #14171a; /* body text and headings */
-  --brand-muted: #5c6670; /* secondary text, captions */
-  --brand-surface: #ffffff; /* page background */
-  --brand-surface-alt: #f4f5f7; /* cards, alternating sections */
-  --brand-border: #e2e5e9; /* hairlines, dividers */
+  /* Ladies-only marker. BX uses this one colour for exactly this meaning. */
+  --bx-pink: #ff2e8a;
+
+  /* The cove lighting washing the walls and stair treads */
+  --bx-amber: #e8a54b;
+  --bx-amber-soft: #f5c87a;
+
+  /* The physical neon on the strength floor */
+  --bx-mint: #3fe0a0;
+
+  /* Surfaces - the dark floors */
+  --bx-black: #08090a;
+  --bx-charcoal: #101214;
+  --bx-raised: #16191c;
+  --bx-line: #23282c;
+
+  /* Type */
+  --bx-white: #ffffff;
+  --bx-grey: #9ba1a6;
+  --bx-grey-dim: #6b7276;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --brand-ink: #f2f4f6;
-    --brand-muted: #a0a8b0;
-    --brand-surface: #0e1012;
-    --brand-surface-alt: #181b1f;
-    --brand-border: #2a2f35;
-  }
-}
-
-/* Expose the tokens to Tailwind as utilities:
-   bg-brand-primary, text-brand-muted, border-brand-border, font-heading, ... */
 @theme inline {
-  --color-brand-primary: var(--brand-primary);
-  --color-brand-primary-dark: var(--brand-primary-dark);
-  --color-brand-accent: var(--brand-accent);
-  --color-brand-ink: var(--brand-ink);
-  --color-brand-muted: var(--brand-muted);
-  --color-brand-surface: var(--brand-surface);
-  --color-brand-surface-alt: var(--brand-surface-alt);
-  --color-brand-border: var(--brand-border);
+  --color-lime: var(--bx-lime);
+  --color-lime-dim: var(--bx-lime-dim);
+  --color-pink: var(--bx-pink);
+  --color-amber: var(--bx-amber);
+  --color-amber-soft: var(--bx-amber-soft);
+  --color-mint: var(--bx-mint);
+  --color-ink: var(--bx-black);
+  --color-charcoal: var(--bx-charcoal);
+  --color-raised: var(--bx-raised);
+  --color-line: var(--bx-line);
+  --color-grey: var(--bx-grey);
+  --color-grey-dim: var(--bx-grey-dim);
 
-  --font-heading: var(--font-heading);
-  --font-body: var(--font-body);
+  --font-display: var(--font-archivo);
+  --font-body: var(--font-inter);
+}
+
+/* --------------------------------------------------------------------- */
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+  background: var(--bx-black);
 }
 
 body {
-  background: var(--brand-surface);
-  color: var(--brand-ink);
-  font-family: var(--font-body), system-ui, sans-serif;
+  background: var(--bx-black);
+  color: var(--bx-white);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-heading), system-ui, sans-serif;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Display type - Archivo narrowed down to match the BX poster lettering */
+.font-display {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-stretch: 82%;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+/* The BX kicker: tiny letterspaced caps over a lime rule */
+.kicker {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bx-grey);
+}
+
+/* Focus states - visible on every dark surface */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--bx-lime);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* --------------------------------------------------------------------- */
+/* Section atmosphere: the amber bloom from the gym's cove lighting       */
+
+.bloom-amber::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    60% 50% at 50% 0%,
+    rgba(232, 165, 75, 0.13) 0%,
+    rgba(232, 165, 75, 0) 70%
+  );
+}
+
+.bloom-lime::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    50% 45% at 85% 100%,
+    var(--bx-lime-glow) 0%,
+    rgba(199, 236, 30, 0) 72%
+  );
+}
+
+/* Hairline grid used on the darkest sections */
+.hairlines {
+  background-image: linear-gradient(to right, var(--bx-line) 1px, transparent 1px);
+  background-size: 25% 100%;
+}
+
+/* --------------------------------------------------------------------- */
+/* Scroll reveal                                                          */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal[data-shown="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* --------------------------------------------------------------------- */
+/* Marquee                                                                */
+
+@keyframes bx-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: bx-marquee 42s linear infinite;
+  will-change: transform;
+}
+
+/* Image treatment - BX shoots dark and warm, so everything is graded to sit
+   on the same black rather than punched up individually. */
+.plate {
+  filter: saturate(0.92) contrast(1.04);
 }
