@@ -30,7 +30,7 @@ export default function PersonalTraining() {
   return (
     <section
       id="training"
-      className="bloom-amber swell relative overflow-hidden py-24 lg:py-32"
+      className="bloom-amber swell relative py-16 lg:py-24"
     >
       <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-14 lg:grid-cols-2 lg:gap-20">

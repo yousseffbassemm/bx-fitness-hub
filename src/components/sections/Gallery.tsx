@@ -32,7 +32,7 @@ export default function Gallery() {
   }, [open, close, step]);
 
   return (
-    <section id="gallery" className="relative py-24 lg:py-32">
+    <section id="gallery" className="relative py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <SectionHead kicker="Gallery" title="Inside" accent="BX." />
@@ -48,30 +48,32 @@ export default function Gallery() {
           </Reveal>
         </div>
 
-        {/* Uneven columns so no two rows read the same */}
-        <div className="mt-14 columns-2 gap-4 lg:columns-3 [&>*]:mb-4">
+        {/*
+          Tall frames take two rows, squares take one. With four of each the
+          row count divides exactly by three, so the mosaic packs flush
+          instead of leaving a short column the way CSS columns did.
+        */}
+        <div className="mt-14 grid auto-rows-[150px] grid-flow-row-dense grid-cols-2 gap-4 sm:auto-rows-[190px] lg:auto-rows-[220px] lg:grid-cols-3">
           {gallery.map((g, i) => (
-            <Reveal key={g.src} delay={(i % 3) * 70}>
+            <Reveal
+              key={g.src}
+              delay={(i % 3) * 70}
+              className={g.ratio === "tall" ? "row-span-2" : "row-span-1"}
+            >
               <button
                 type="button"
                 onClick={() => setOpen(i)}
                 aria-label={`View photo: ${g.alt}`}
-                className="group relative block w-full overflow-hidden bg-charcoal"
+                className="group relative block h-full w-full overflow-hidden rounded-sm bg-charcoal"
               >
-                <span
-                  className={`relative block w-full ${
-                    g.ratio === "tall" ? "aspect-[3/4]" : "aspect-square"
-                  }`}
-                >
-                  <Image
-                    src={g.src}
-                    alt={g.alt}
-                    fill
-                    loading="lazy"
-                    sizes="(max-width: 1024px) 50vw, 33vw"
-                    className="plate object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
-                  />
-                </span>
+                <Image
+                  src={g.src}
+                  alt={g.alt}
+                  fill
+                  loading="lazy"
+                  sizes="(max-width: 1024px) 50vw, 33vw"
+                  className="plate object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+                />
                 <span className="absolute inset-0 bg-ink/0 transition-colors duration-300 group-hover:bg-ink/25" />
                 <span
                   aria-hidden="true"

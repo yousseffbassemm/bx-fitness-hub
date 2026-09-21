@@ -60,7 +60,7 @@ export const nav = [
 export const stats = [
   { value: 4.6, suffix: "", label: "Google rating", note: `${site.rating.count} reviews`, decimals: 1 },
   { value: 15, suffix: "", label: "Classes a week", note: "Members & non-members" },
-  { value: 11, suffix: "", label: "Coaches on the floor", note: "Across 12 disciplines" },
+  { value: 11, suffix: "", label: "Class instructors", note: "Across 12 disciplines" },
   { value: 19, suffix: "h", label: "Open every day", note: "6:00 AM - 1:00 AM" },
 ] as const;
 
@@ -225,28 +225,61 @@ export const disciplines = [
 ] as const;
 
 /* -------------------------------------------------------------------------
-   Coaches - names and disciplines are real (from the published timetable).
-   Portraits have not been supplied, so the cards use lettering instead of
-   stock faces. Add `photo` to a coach and the card switches to the photo.
+   Coaches - BX's personal training team, exactly as presented in the
+   "Coaches" highlight on @bx_fitnesshub: names, certifying body and the
+   specialisations each one lists. Portraits are from the same cards.
+
+   Class instructors are a separate, larger group and are credited against
+   their own sessions in the timetable above.
    ---------------------------------------------------------------------- */
 export type Coach = {
   name: string;
+  credential: string;
   disciplines: string[];
-  photo?: string;
+  photo: string;
 };
 
 export const coaches: Coach[] = [
-  { name: "Kero", disciplines: ["Boxing"] },
-  { name: "Farah", disciplines: ["60 Min Stronger"] },
-  { name: "Diana", disciplines: ["Mat Pilates", "Yoga & Meditation"] },
-  { name: "Yassmin Alaadin", disciplines: ["Pilates", "Stretching"] },
-  { name: "Farida Hosny", disciplines: ["Active Recovery Yoga", "Stress Relief"] },
-  { name: "Ahmed Gomaa", disciplines: ["Core"] },
-  { name: "Nourhan Kamal", disciplines: ["Mobility & Flexibility"] },
-  { name: "Sarah Elshobokshy", disciplines: ["Afro Dance"] },
-  { name: "Nour Sheshtawy", disciplines: ["Zumba"] },
-  { name: "Didos", disciplines: ["Indoor Cycling"] },
-  { name: "Esraa", disciplines: ["Oriental Flow"] },
+  {
+    name: "Ahmed Ayman",
+    credential: "Certified Personal Trainer (NASM)",
+    disciplines: [
+      "Hypertrophy Training",
+      "Physique Transformation",
+      "Athletic Performance",
+    ],
+    photo: "/images/coaches/ahmed-ayman.jpg",
+  },
+  {
+    name: "Ahmed Maged",
+    credential: "Certified Personal Trainer (NASM)",
+    disciplines: ["Bodybuilding & Fat Loss"],
+    photo: "/images/coaches/ahmed-maged.jpg",
+  },
+  {
+    name: "Abdelrahman",
+    credential: "Certified Personal Trainer",
+    disciplines: ["Hypertrophy Training", "Physique Transformation"],
+    photo: "/images/coaches/abdelrahman.jpg",
+  },
+  {
+    name: "Ahmed Gomaa",
+    credential: "Certified Personal Trainer (ACE)",
+    disciplines: ["Movement & Strength Improvement", "Exercise for Stress Management"],
+    photo: "/images/coaches/ahmed-gomaa.jpg",
+  },
+  {
+    name: "Dina",
+    credential: "Certified Personal Trainer (EREPS)",
+    disciplines: ["Posture Correction", "Senior Fitness"],
+    photo: "/images/coaches/dina.jpg",
+  },
+  {
+    name: "Menna",
+    credential: "Certified Personal Trainer",
+    disciplines: ["Athletic Performance", "Strength & Conditioning"],
+    photo: "/images/coaches/menna.jpg",
+  },
 ];
 
 /* -------------------------------------------------------------------------

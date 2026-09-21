@@ -9,7 +9,7 @@ import SectionHead from "../ui/SectionHead";
  */
 export default function Facilities() {
   return (
-    <section id="facilities" className="relative py-24 lg:py-32">
+    <section id="facilities" className="relative py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <SectionHead
           kicker="Facilities"

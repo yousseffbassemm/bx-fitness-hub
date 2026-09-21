@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, Inter } from "next/font/google";
 import Footer from "@/components/Footer";
+import HashScroll from "@/components/HashScroll";
 import MobileBar from "@/components/MobileBar";
 import Navbar from "@/components/Navbar";
 import { site } from "@/lib/site";
@@ -132,6 +133,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
 
+        <HashScroll />
         <Navbar />
         <main id="main" className="flex-1">
           {children}

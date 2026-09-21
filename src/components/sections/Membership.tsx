@@ -20,7 +20,7 @@ export default function Membership() {
   return (
     <section
       id="membership"
-      className="swell relative py-24 lg:py-32"
+      className="swell relative py-16 lg:py-24"
     >
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <SectionHead

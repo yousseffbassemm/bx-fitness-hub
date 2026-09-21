@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  formatDate,
   nextDateForRow,
   sessionId,
   slotKey,
@@ -79,7 +80,7 @@ export default function Classes() {
   }
 
   return (
-    <section id="classes" className="relative py-24 lg:py-32">
+    <section id="classes" className="relative py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <SectionHead
@@ -166,7 +167,7 @@ export default function Classes() {
             >
               {dates[day] && active.sessions.length > 0 && (
                 <p className="kicker mb-5 text-grey-dim">
-                  Next {active.day} &middot; {dates[day]}
+                  Next up &middot; {formatDate(dates[day])}
                 </p>
               )}
 

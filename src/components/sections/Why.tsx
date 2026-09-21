@@ -8,7 +8,7 @@ import SectionHead from "../ui/SectionHead";
  */
 export default function Why() {
   return (
-    <section className="bloom-lime swell relative overflow-hidden py-24 lg:py-32">
+    <section className="bloom-lime swell relative py-16 lg:py-24">
       <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
           <div className="lg:sticky lg:top-28 lg:self-start">

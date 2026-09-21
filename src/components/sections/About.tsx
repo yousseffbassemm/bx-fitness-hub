@@ -4,7 +4,7 @@ import SectionHead from "../ui/SectionHead";
 
 export default function About() {
   return (
-    <section id="about" className="bloom-amber relative overflow-hidden py-24 lg:py-32">
+    <section id="about" className="bloom-amber relative overflow-hidden py-16 lg:py-24">
       <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
           {/* Stacked plates */}
