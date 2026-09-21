@@ -1,55 +1,133 @@
 import Link from "next/link";
+import { nav, site } from "@/lib/site";
+import { Logo } from "./ui/Logo";
 
 export default function Footer() {
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="mt-16 border-t border-brand-border bg-brand-surface-alt">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-3">
-        <div>
-          <h2 className="font-heading text-base font-bold">BX Fitness Hub</h2>
-          {/* TODO: one-line description of the gym */}
-          <p className="mt-2 text-sm text-brand-muted">
-            TODO: short tagline goes here.
+    <footer className="border-t border-line bg-ink pb-24 pt-16 md:pb-16">
+      <div className="mx-auto max-w-7xl px-5 lg:px-10">
+        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div>
+            <Link href="/" aria-label={`${site.name} - home`}>
+              <Logo />
+            </Link>
+            <p className="font-display mt-6 max-w-xs text-xl leading-tight text-white">
+              Where movement
+              <br />
+              meets <span className="text-lime">style.</span>
+            </p>
+            <p className="mt-5 text-xs leading-relaxed text-grey-dim">
+              {site.address.line1}, {site.address.line2}
+              <br />
+              {site.address.region}
+            </p>
+          </div>
+
+          <nav aria-label="Footer">
+            <h2 className="kicker">Explore</h2>
+            <ul className="mt-5 space-y-3">
+              {nav.map((item) => (
+                <li key={item.href}>
+                  <a
+                    href={item.href}
+                    className="text-sm text-grey transition-colors hover:text-lime"
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div>
+            <h2 className="kicker">Contact</h2>
+            <ul className="mt-5 space-y-3 text-sm text-grey">
+              <li>
+                <a href={site.phone.href} className="transition-colors hover:text-lime">
+                  {site.phone.display}
+                </a>
+                <span className="ml-2 text-xs text-grey-dim">Gym</span>
+              </li>
+              <li>
+                <a href={site.spa.href} className="transition-colors hover:text-lime">
+                  {site.spa.display}
+                </a>
+                <span className="ml-2 text-xs text-grey-dim">Spa</span>
+              </li>
+              <li>
+                <a
+                  href={site.whatsapp.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-lime"
+                >
+                  WhatsApp
+                </a>
+              </li>
+              <li className="text-grey-dim">{site.email.display}</li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="kicker">Hours</h2>
+            <p className="mt-5 text-sm text-grey">
+              Monday &ndash; Sunday
+              <br />
+              <span className="font-display text-lg text-white">6AM &ndash; 1AM</span>
+            </p>
+
+            <h2 className="kicker mt-8">Follow</h2>
+            <ul className="mt-5 space-y-3 text-sm text-grey">
+              <li>
+                <a
+                  href={site.social.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-lime"
+                >
+                  @bx_fitnesshub
+                </a>
+              </li>
+              <li>
+                <a
+                  href={site.social.spa}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-lime"
+                >
+                  @bx_spa
+                </a>
+              </li>
+              <li>
+                <a
+                  href={site.social.cafe}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-lime"
+                >
+                  @eightyeight.daily
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-14 flex flex-col gap-4 border-t border-line pt-7 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-grey-dim">
+            &copy; {year} {site.name}. All rights reserved.
           </p>
-        </div>
-
-        <div>
-          <h2 className="font-heading text-base font-bold">Visit us</h2>
-          {/* TODO: real address and opening hours - do not guess these */}
-          <p className="mt-2 text-sm text-brand-muted">TODO: street address</p>
-          <p className="text-sm text-brand-muted">TODO: opening hours</p>
-          <p className="text-sm text-brand-muted">TODO: phone / email</p>
-        </div>
-
-        <div>
-          <h2 className="font-heading text-base font-bold">Pages</h2>
-          <ul className="mt-2 space-y-1 text-sm">
+          <ul className="flex gap-6 text-xs text-grey-dim">
+            {/* TODO: add the real policy pages before launch */}
             <li>
-              <Link href="/classes" className="text-brand-muted hover:text-brand-ink">
-                Classes
-              </Link>
+              <span className="cursor-not-allowed">Privacy Policy [TODO]</span>
             </li>
             <li>
-              <Link href="/trainers" className="text-brand-muted hover:text-brand-ink">
-                Trainers
-              </Link>
-            </li>
-            <li>
-              <Link href="/pricing" className="text-brand-muted hover:text-brand-ink">
-                Pricing
-              </Link>
-            </li>
-            <li>
-              <Link href="/contact" className="text-brand-muted hover:text-brand-ink">
-                Contact
-              </Link>
+              <span className="cursor-not-allowed">Terms [TODO]</span>
             </li>
           </ul>
-          {/* TODO: social media links */}
         </div>
-      </div>
-
-      <div className="border-t border-brand-border px-4 py-4 text-center text-xs text-brand-muted">
-        &copy; {new Date().getFullYear()} BX Fitness Hub. All rights reserved.
       </div>
     </footer>
   );

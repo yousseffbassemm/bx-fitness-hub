@@ -1,17 +1,35 @@
+import About from "@/components/sections/About";
+import CTA from "@/components/sections/CTA";
+import Classes from "@/components/sections/Classes";
+import Coaches from "@/components/sections/Coaches";
+import Contact from "@/components/sections/Contact";
+import Facilities from "@/components/sections/Facilities";
+import Gallery from "@/components/sections/Gallery";
+import Hero from "@/components/sections/Hero";
+import Marquee from "@/components/sections/Marquee";
+import Membership from "@/components/sections/Membership";
+import PersonalTraining from "@/components/sections/PersonalTraining";
+import Stats from "@/components/sections/Stats";
+import Testimonials from "@/components/sections/Testimonials";
+import Why from "@/components/sections/Why";
+
 export default function HomePage() {
   return (
-    <div>
-      <h1 className="text-3xl font-bold sm:text-4xl">Welcome to BX Fitness Hub</h1>
-      <p className="mt-3 max-w-prose text-brand-muted">
-        TODO: write the intro paragraph for the gym.
-      </p>
-
-      {/* TODO: hero section - headline, supporting line, call-to-action button */}
-      {/* TODO: highlights - what makes the gym different (3 short cards) */}
-      {/* TODO: featured classes - pull a few entries from the Classes page */}
-      {/* TODO: membership teaser - link through to /pricing */}
-      {/* TODO: member testimonials */}
-      {/* TODO: closing call-to-action - link through to /contact */}
-    </div>
+    <>
+      <Hero />
+      <Marquee />
+      <About />
+      <Stats />
+      <Facilities />
+      <Why />
+      <Classes />
+      <PersonalTraining />
+      <Coaches />
+      <Membership />
+      <Testimonials />
+      <Gallery />
+      <CTA />
+      <Contact />
+    </>
   );
 }
