@@ -55,6 +55,10 @@ src/
     globals.css         design tokens + shared effects
     api/lead/route.ts   lead form endpoint
     api/classes/        availability + booking endpoints
+    api/staff/          staff login / logout
+    (site)/             the public site (navbar, footer, phone bar)
+    staff/              password-protected bookings list
+  proxy.ts              gates /staff before it renders
   components/
     Navbar.tsx          transparent over the hero, solid once scrolled
     Footer.tsx
@@ -157,6 +161,42 @@ number, or give a discipline its own entry in `CAPACITY_BY_DISCIPLINE`.
 day's bookings, cancellation, a waitlist when a class is full, and a reminder
 the day before. Say the word and I will add them.
 
+## Staff view
+
+`/staff` shows the bookings for the next two weeks, grouped by day and then by
+class: time, class, coach, how full it is, and every member's name and phone
+number, with the numbers tappable to call.
+
+**It is behind a password**, because it holds personal data.
+
+```bash
+node scripts/staff-password.mjs "the password you want"
+```
+
+That prints `STAFF_PASSWORD_HASH` and `STAFF_SESSION_SECRET`. Put both in
+`.env.local`. Without them the staff area refuses every login and says so -
+it never falls open.
+
+How it is protected:
+
+- The password is stored as a **scrypt hash**, so the environment variable is
+  not the password.
+- Signing in sets an **httpOnly, sameSite=lax** cookie (secure in production),
+  holding only an expiry and an HMAC of it. Editing the expiry invalidates the
+  signature.
+- `src/proxy.ts` checks the session **before the route renders**, so names and
+  numbers are never produced for anyone without one - not even into a streamed
+  payload.
+- Sessions last **10 hours**, about a shift.
+- Login is throttled to **8 attempts per IP per 10 minutes**.
+- The pages are `noindex, nofollow`.
+
+Wrong password, tampered cookie, garbage cookie, expired-but-correctly-signed
+cookie, and post-logout all redirect to the login screen with nothing leaked.
+
+Not built: individual staff accounts, an audit trail of who looked, cancelling
+a booking from this screen. Ask if you want them.
+
 ## Still to fill in
 
 Everything below is a marked placeholder. Search for the bracketed token.
@@ -171,6 +211,7 @@ Everything below is a marked placeholder. Search for the bracketed token.
 | Lead destination | `api/lead/route.ts` | Currently validates and logs. Point it at an inbox or CRM. |
 | Class capacity | `booking.ts` &rarr; `DEFAULT_CLASS_CAPACITY` | Set to 14 as a stand-in. |
 | Booking storage | `.env` | SQLite by default. Supabase needed only for serverless or multi-instance. |
+| Staff password | `.env.local` | Run `node scripts/staff-password.mjs`. Until set, `/staff` refuses every login. |
 | `site.url` | `site.ts` | Set the real domain - it feeds canonical URLs and OG tags. |
 
 ## About the photography

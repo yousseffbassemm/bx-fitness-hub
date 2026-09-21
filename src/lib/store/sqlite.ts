@@ -2,7 +2,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { slotKey } from "../booking";
-import type { BookingInput, BookingResult, BookingStore } from "./types";
+import type { BookingInput, BookingResult, BookingRow, BookingStore } from "./types";
 
 /**
  * Bookings on disk, using Node's built-in SQLite - no dependency to install
@@ -66,6 +66,31 @@ export const sqliteStore: BookingStore = {
     const out: Record<string, number> = {};
     for (const r of rows) out[slotKey(r.session_id, r.class_date)] = Number(r.n);
     return out;
+  },
+
+  async list(from, to): Promise<BookingRow[]> {
+    const rows = open()
+      .prepare(
+        `SELECT session_id, class_date, name, phone, created_at
+           FROM bookings
+          WHERE class_date BETWEEN ? AND ?
+          ORDER BY class_date ASC, created_at ASC`,
+      )
+      .all(from, to) as {
+      session_id: string;
+      class_date: string;
+      name: string;
+      phone: string;
+      created_at: string;
+    }[];
+
+    return rows.map((r) => ({
+      sessionId: r.session_id,
+      date: r.class_date,
+      name: r.name,
+      phone: r.phone,
+      createdAt: r.created_at,
+    }));
   },
 
   async book({ sessionId, date, name, phone, capacity }: BookingInput): Promise<BookingResult> {

@@ -1,5 +1,5 @@
 import { slotKey } from "../booking";
-import type { BookingInput, BookingResult, BookingStore } from "./types";
+import type { BookingInput, BookingResult, BookingRow, BookingStore } from "./types";
 
 /**
  * Supabase store, talked to over PostgREST with plain fetch - no client
@@ -39,6 +39,35 @@ export const supabaseStore: BookingStore = {
       out[k] = (out[k] ?? 0) + 1;
     }
     return out;
+  },
+
+  async list(from, to): Promise<BookingRow[]> {
+    const query =
+      `select=session_id,class_date,name,phone,created_at` +
+      `&class_date=gte.${from}&class_date=lte.${to}` +
+      `&order=class_date.asc,created_at.asc`;
+
+    const res = await fetch(`${url}/rest/v1/bookings?${query}`, {
+      headers: headers(),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase list failed: ${res.status}`);
+
+    const data = (await res.json()) as {
+      session_id: string;
+      class_date: string;
+      name: string;
+      phone: string;
+      created_at: string;
+    }[];
+
+    return data.map((r) => ({
+      sessionId: r.session_id,
+      date: r.class_date,
+      name: r.name,
+      phone: r.phone,
+      createdAt: r.created_at,
+    }));
   },
 
   async book({ sessionId, date, name, phone, capacity }: BookingInput): Promise<BookingResult> {

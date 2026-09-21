@@ -1,7 +1,7 @@
 import { slotKey } from "../booking";
-import type { BookingInput, BookingResult, BookingStore } from "./types";
+import type { BookingInput, BookingResult, BookingRow, BookingStore } from "./types";
 
-type Row = { sessionId: string; date: string; phone: string };
+type Row = { sessionId: string; date: string; name: string; phone: string; createdAt: string };
 
 /**
  * Last-resort store, for a runtime with no filesystem and no Supabase.
@@ -25,13 +25,19 @@ export const memoryStore: BookingStore = {
     return out;
   },
 
-  async book({ sessionId, date, phone, capacity }: BookingInput): Promise<BookingResult> {
+  async list(from, to): Promise<BookingRow[]> {
+    return rows
+      .filter((r) => r.date >= from && r.date <= to)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
+  },
+
+  async book({ sessionId, date, name, phone, capacity }: BookingInput): Promise<BookingResult> {
     const mine = rows.filter((r) => r.sessionId === sessionId && r.date === date);
 
     if (mine.some((r) => r.phone === phone)) return { ok: false, reason: "duplicate" };
     if (mine.length >= capacity) return { ok: false, reason: "full" };
 
-    rows.push({ sessionId, date, phone });
+    rows.push({ sessionId, date, name, phone, createdAt: new Date().toISOString() });
     return { ok: true, spotsLeft: capacity - mine.length - 1 };
   },
 };
