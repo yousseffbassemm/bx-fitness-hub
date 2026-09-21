@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { nav, site } from "@/lib/site";
 import { Logo } from "./ui/Logo";
 
@@ -112,6 +113,19 @@ export default function Footer() {
             </li>
             <li>
               <span className="cursor-not-allowed">Terms [TODO]</span>
+            </li>
+            <li>
+              {/*
+                For the front desk. Password-protected and noindex, so it is
+                unobtrusive rather than hidden - the password is the security,
+                not the obscurity.
+              */}
+              <Link
+                href="/staff"
+                className="transition-colors hover:text-grey"
+              >
+                Staff
+              </Link>
             </li>
           </ul>
         </div>

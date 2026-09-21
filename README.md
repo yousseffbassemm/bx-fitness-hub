@@ -167,6 +167,11 @@ the day before. Say the word and I will add them.
 class: time, class, coach, how full it is, and every member's name and phone
 number, with the numbers tappable to call.
 
+Staff reach it from a quiet **Staff** link in the footer, next to the legal
+links, or straight at `/staff`. For the front desk, save `/staff` to the home
+screen - the apple touch icon means it gets the BX mark and behaves like an
+app, which skips the marketing site entirely.
+
 **It is behind a password**, because it holds personal data.
 
 ```bash
