@@ -54,6 +54,7 @@ src/
     page.tsx            the homepage - just an ordered list of sections
     globals.css         design tokens + shared effects
     api/lead/route.ts   lead form endpoint
+    api/classes/        availability + booking endpoints
   components/
     Navbar.tsx          transparent over the hero, solid once scrolled
     Footer.tsx
@@ -63,6 +64,9 @@ src/
     ui/                 Logo, Button, Reveal, SectionHead
   lib/
     site.ts             ALL copy, data, hours, schedule, prices
+    booking.ts          capacity, slot ids, date rules
+    store/              booking storage (memory in dev, Supabase in prod)
+supabase/schema.sql     run this once in Supabase
 public/images/          photography
 ```
 
@@ -79,6 +83,7 @@ component hardcodes business information.
 | Classes, Personal Training, Coaches | Youssef |
 | Membership, Testimonials, Gallery | Karma |
 | CTA, Contact, LeadForm, `api/lead` | Karma |
+| Class booking (`lib/booking.ts`, `lib/store/`, `api/classes/`) | Youssef |
 | `src/lib/site.ts` | Shared - tell the other person before you push |
 
 Tell each other before touching `layout.tsx`, `globals.css` or `site.ts`.
@@ -103,6 +108,41 @@ its width axis so `.font-display` can sit at `font-stretch: 82%`, which matches
 the narrow lettering on BX's own posters. Headline pattern across the site is
 white with one phrase dropped to lime, over a thin lime rule.
 
+## Class booking
+
+People book a place on the site; they are not sent to WhatsApp.
+
+Each row of the timetable shows how many places are left and a **Book** button.
+Booking asks for a name and a phone number only - no account, no payment. The
+phone number is the identity: it is how the booking is found on the door, and
+a number cannot be booked onto the same class twice.
+
+**How the dates work.** The timetable is a weekly pattern, so a booking needs a
+real date. The browser works out which date each row falls on next, in the
+visitor's own timezone, and sends it. The server checks that the date really is
+that weekday and falls inside the booking window before accepting it. A server
+running outside Cairo therefore cannot put someone on the wrong day.
+
+**Storage.** Out of the box, bookings are held in the running Node process.
+That is fine for local work and **useless in production** - they disappear on
+restart and are not shared between instances. To make it real:
+
+1. Create a Supabase project (the free tier is enough).
+2. Run `supabase/schema.sql` in its SQL editor.
+3. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (see `.env.example`).
+
+The app picks up Supabase automatically once both are set - no code change.
+`book_session` in that schema takes an advisory lock, so two people clicking at
+the same moment cannot both take the last place.
+
+**Capacity is a placeholder.** `DEFAULT_CLASS_CAPACITY` in `src/lib/booking.ts`
+is set to 14 because BX has not said how many each class holds. Change that one
+number, or give a discipline its own entry in `CAPACITY_BY_DISCIPLINE`.
+
+**Not built yet**, in rough order of usefulness: a screen for BX to see the
+day's bookings, cancellation, a waitlist when a class is full, and a reminder
+the day before. Say the word and I will add them.
+
 ## Still to fill in
 
 Everything below is a marked placeholder. Search for the bracketed token.
@@ -116,6 +156,9 @@ Everything below is a marked placeholder. Search for the bracketed token.
 | Coach portraits | `site.ts` &rarr; `coaches` | Cards letter the name until a `photo` is set. Drop files in `public/images/coaches/`. |
 | Privacy / Terms | `Footer.tsx` | Marked `[TODO]`. |
 | Lead destination | `api/lead/route.ts` | Currently validates and logs. Point it at an inbox or CRM. |
+| Class capacity | `booking.ts` &rarr; `DEFAULT_CLASS_CAPACITY` | Set to 14 as a stand-in. |
+| Booking storage | `.env` | Without Supabase set, bookings vanish on restart. |
+| EightyEight / BX Spa photos | `site.ts` &rarr; `facilities` | Both marked TODO, using stand-in studio shots. |
 | `site.url` | `site.ts` | Set the real domain - it feeds canonical URLs and OG tags. |
 
 ## About the photography
