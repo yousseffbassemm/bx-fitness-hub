@@ -153,14 +153,12 @@ Everything below is a marked placeholder. Search for the bracketed token.
 | --- | --- | --- |
 | `[MONTHLY PRICE]` `[ANNUAL PRICE]` `[COUPLES PRICE]` | `site.ts` &rarr; `plans` | BX does not publish prices; they are quoted on request. The **benefits listed are real**. |
 | `[EMAIL ADDRESS]` | `site.ts` &rarr; `site.email` | No public email exists yet. |
-| `[STREET / BUILDING]` | `site.ts` &rarr; `site.address` | Google only lists the plus code `2G7J+M62`. |
 | `[MEMBER QUOTE 1-3]` | `site.ts` &rarr; `testimonials` | The 4.6 / 76 reviews figure is real; the quotes are not. Only publish reviews you have permission to use. |
-| Coach portraits | `site.ts` &rarr; `coaches` | Cards letter the name until a `photo` is set. Drop files in `public/images/coaches/`. |
+| Team photo | `PersonalTraining.tsx` | Using a free-weights shot. BX's TEAM highlight is video only, so there is no group photo to pull. |
 | Privacy / Terms | `Footer.tsx` | Marked `[TODO]`. |
 | Lead destination | `api/lead/route.ts` | Currently validates and logs. Point it at an inbox or CRM. |
 | Class capacity | `booking.ts` &rarr; `DEFAULT_CLASS_CAPACITY` | Set to 14 as a stand-in. |
 | Booking storage | `.env` | Without Supabase set, bookings vanish on restart. |
-| EightyEight / BX Spa photos | `site.ts` &rarr; `facilities` | Both marked TODO, using stand-in studio shots. |
 | `site.url` | `site.ts` | Set the real domain - it feeds canonical URLs and OG tags. |
 
 ## About the photography

@@ -23,8 +23,9 @@ export const site = {
     line2: "New Cairo 1",
     region: "Cairo Governorate 4760001",
     country: "EG",
-    // PLACEHOLDER - Google only lists a plus code, no street name.
-    street: "[STREET / BUILDING]",
+    // No street name is published anywhere; this is the landmark BX Spa
+    // gives out, and it is how people actually find the place.
+    street: "Right in front of Mivida",
   },
   coords: { lat: 30.0139089, lng: 31.5308549 },
   maps: "https://maps.app.goo.gl/FNZzPn2zp4Ntb3pEA",
@@ -37,6 +38,13 @@ export const site = {
     instagram: "https://www.instagram.com/bx_fitnesshub/",
     spa: "https://www.instagram.com/bx_spa/",
     cafe: "https://www.instagram.com/eightyeight.daily/",
+  },
+
+  // BX Spa runs as its own thing next door, with its own line and tagline.
+  spaBrand: {
+    name: "BX Spa",
+    tagline: "The Art Of Stillness",
+    maps: "https://maps.app.goo.gl/ghTXuENG2AHWDXmcA",
   },
 
   // PLACEHOLDER - swap for the real domain once it is registered.
@@ -94,17 +102,15 @@ export const facilities = [
   },
   {
     title: "EightyEight",
-    // TODO: swap for the EightyEight kitchen photo once supplied.
-    copy: "The kitchen downstairs. Real food, on site, for straight after a session.",
-    image: "/images/studio-pilates.jpg",
-    alt: "EightyEight, the kitchen at BX Fitness Hub",
+    copy: "The coffee shop on site. Salads, protein and proper coffee, straight after a session.",
+    image: "/images/eightyeight.jpg",
+    alt: "Salads, iced coffee and shakes in EightyEight branded cups at the BX coffee shop",
   },
   {
     title: "BX Spa",
-    // TODO: swap for the BX Spa photo once supplied.
-    copy: "Recovery next door. Warm, quiet and low-lit, with its own reservations line.",
-    image: "/images/studio-stretch.jpg",
-    alt: "The treatment space at BX Spa",
+    copy: "Recovery next door. Hammam, sauna and massage - the art of stillness.",
+    image: "/images/bx-spa.jpg",
+    alt: "Moroccan tea service on a brass tray in the warm light of BX Spa",
   },
 ] as const;
 
