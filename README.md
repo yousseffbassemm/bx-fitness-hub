@@ -1,7 +1,8 @@
 # BX Fitness Hub
 
-Website for BX Fitness Hub, built with Next.js (App Router), TypeScript and
-Tailwind CSS.
+Website for **BX Fitness Hub**, a gym in New Cairo. *Where movement meets style.*
+
+Built with Next.js 16 (App Router), TypeScript and Tailwind CSS v4.
 
 ## Setup on a fresh Mac
 
@@ -11,28 +12,26 @@ You need [Homebrew](https://brew.sh) first. Then:
 brew install node          # installs Node and npm
 git clone https://github.com/yousseffbassemm/bx-fitness-hub.git
 cd bx-fitness-hub
-npm install                # installs project dependencies
-npm run dev                # starts the dev server
+npm install
+npm run dev
 ```
 
-Open <http://localhost:3000>. The page reloads as you edit files.
-
-Other scripts:
+Open <http://localhost:3000>.
 
 ```bash
-npm run build   # production build - run this before pushing
+npm run build   # production build - run before pushing
 npm run lint    # ESLint
 ```
 
 ## Daily Git routine
 
-**Before you start working:**
+**Before you start:**
 
 ```bash
 git pull
 ```
 
-**After you finish a piece of work:**
+**After a piece of work:**
 
 ```bash
 git add .
@@ -40,83 +39,109 @@ git commit -m "describe what you changed"
 git push
 ```
 
-Pull first, every time. It keeps the two of us from ending up with conflicting
-copies of `main`.
-
 Two rules:
 
-- **Never force-push and never rewrite history** (no `git push --force`, no
-  `git rebase` on pushed commits). It deletes the other person's work.
-- If `git push` is rejected, run `git pull` and resolve any conflict, then push
-  again. Do not reach for `--force`.
+- **Never force-push and never rewrite history.** No `git push --force`, no
+  `git rebase` on commits that are already pushed.
+- If `git push` is rejected, `git pull`, resolve the conflict, push again.
 
-## Who owns what
-
-| Area | Owner |
-| --- | --- |
-| Layout, shared components (`src/components/`), theme | Youssef |
-| Home (`/`) | Youssef |
-| Classes (`/classes`) | Youssef |
-| Trainers (`/trainers`) | Karma |
-| Pricing (`/pricing`) | Karma |
-| Contact (`/contact`) | Karma |
-
-Stick to your own files where you can. If you need a change in a shared file
-(`src/app/layout.tsx`, `src/components/`, `src/app/globals.css`), tell the
-other person before you push it.
-
-## Project structure
+## Where everything lives
 
 ```
 src/
   app/
-    layout.tsx        root layout - Navbar + Footer wrap every page
-    globals.css       Tailwind import + brand design tokens
-    page.tsx          Home
-    classes/page.tsx
-    trainers/page.tsx
-    pricing/page.tsx
-    contact/page.tsx
+    layout.tsx          fonts, SEO metadata, LocalBusiness JSON-LD
+    page.tsx            the homepage - just an ordered list of sections
+    globals.css         design tokens + shared effects
+    api/lead/route.ts   lead form endpoint
   components/
-    Navbar.tsx
+    Navbar.tsx          transparent over the hero, solid once scrolled
     Footer.tsx
-public/               static files (images, icons)
+    MobileBar.tsx       sticky Call / WhatsApp / Join bar on phones
+    LeadForm.tsx        contact form with validation
+    sections/           one file per homepage section
+    ui/                 Logo, Button, Reveal, SectionHead
+  lib/
+    site.ts             ALL copy, data, hours, schedule, prices
+public/images/          photography
 ```
 
-## Brand colors and fonts
+**`src/lib/site.ts` is the file you edit most.** Phone numbers, opening hours,
+the class timetable, coaches, membership perks and prices all live there. No
+component hardcodes business information.
 
-All brand values are **placeholders** right now and live in two files:
+## Work split
 
-- `src/app/globals.css` - colors, as CSS variables on `:root`
-- `src/app/layout.tsx` - the two fonts, loaded through `next/font`
+| Area | Owner |
+| --- | --- |
+| Layout, Navbar, Footer, design tokens, `ui/` | Youssef |
+| Hero, About, Stats, Facilities, Why | Youssef |
+| Classes, Personal Training, Coaches | Youssef |
+| Membership, Testimonials, Gallery | Karma |
+| CTA, Contact, LeadForm, `api/lead` | Karma |
+| `src/lib/site.ts` | Shared - tell the other person before you push |
 
-The colors are exposed to Tailwind, so use them as normal utility classes
-rather than hardcoding hex values:
+Tell each other before touching `layout.tsx`, `globals.css` or `site.ts`.
 
-```tsx
-<p className="text-brand-muted">...</p>
-<button className="bg-brand-primary hover:bg-brand-primary-dark">...</button>
-<h2 className="font-heading">...</h2>
-```
+## Design direction
 
-Available: `brand-primary`, `brand-primary-dark`, `brand-accent`, `brand-ink`,
-`brand-muted`, `brand-surface`, `brand-surface-alt`, `brand-border`, plus the
-`font-heading` and `font-body` families.
+Taken from the gym itself, not from a stock "gym website" palette.
 
-Swap the placeholder values in those two files and the whole site updates.
+| Token | Value | Where it comes from |
+| --- | --- | --- |
+| `--bx-lime` | `#c7ec1e` | The acid lime BX uses on every post |
+| `--bx-pink` | `#ff2e8a` | **Ladies-only marker only.** Do not reuse it decoratively |
+| `--bx-amber` | `#e8a54b` | The warm cove lighting on the walls and stair treads |
+| `--bx-mint` | `#3fe0a0` | The physical PUSH YOUR LIMITS neon on the strength floor |
+| `--bx-black` | `#08090a` | The training floor |
+| `--bx-charcoal` | `#101214` | Raised surfaces |
 
-## Content placeholders
+Use them as Tailwind utilities: `text-lime`, `bg-charcoal`, `border-line`.
 
-Pages currently contain a heading and `TODO` comments only. Real gym details -
-prices, class schedules, trainer names, the address - are **not** in the repo
-yet. Confirm each one before adding it; do not guess.
+Type is **Archivo** for display and **Inter** for body. Archivo is loaded with
+its width axis so `.font-display` can sit at `font-stretch: 82%`, which matches
+the narrow lettering on BX's own posters. Headline pattern across the site is
+white with one phrase dropped to lime, over a thin lime rule.
+
+## Still to fill in
+
+Everything below is a marked placeholder. Search for the bracketed token.
+
+| Placeholder | Where | Note |
+| --- | --- | --- |
+| `[MONTHLY PRICE]` `[ANNUAL PRICE]` `[COUPLES PRICE]` | `site.ts` &rarr; `plans` | BX does not publish prices; they are quoted on request. The **benefits listed are real**. |
+| `[EMAIL ADDRESS]` | `site.ts` &rarr; `site.email` | No public email exists yet. |
+| `[STREET / BUILDING]` | `site.ts` &rarr; `site.address` | Google only lists the plus code `2G7J+M62`. |
+| `[MEMBER QUOTE 1-3]` | `site.ts` &rarr; `testimonials` | The 4.6 / 76 reviews figure is real; the quotes are not. Only publish reviews you have permission to use. |
+| Coach portraits | `site.ts` &rarr; `coaches` | Cards letter the name until a `photo` is set. Drop files in `public/images/coaches/`. |
+| Privacy / Terms | `Footer.tsx` | Marked `[TODO]`. |
+| Lead destination | `api/lead/route.ts` | Currently validates and logs. Point it at an inbox or CRM. |
+| `site.url` | `site.ts` | Set the real domain - it feeds canonical URLs and OG tags. |
+
+## About the photography
+
+`public/images/` holds frames captured from the gym's own Instagram and cropped
+to remove the baked-in campaign text. They top out around **1000-1100px**, which
+is fine for cards and the gallery but thin for anything full-bleed on a large
+desktop.
+
+Before launch, replace them with original files from BX's photographer, keeping
+the same filenames. Nothing in the code needs to change.
+
+## Notes
+
+- The class timetable in `site.ts` is transcribed from BX's **September 2026**
+  schedule card. It changes monthly - update it when BX posts a new one.
+- Ladies-only sessions are flagged `ladiesOnly: true` and render in pink,
+  matching how BX marks them on their own schedule.
+- No gym facts are invented. Hours, phone numbers, rating, coach names, class
+  names and membership benefits all come from BX's Instagram or Google listing.
 
 ## Style notes
 
-- Mobile-first: write the small-screen styles first, then add `sm:` / `md:`
-  variants for larger screens.
-- Keep components simple. A component is a Server Component by default; only
-  add `"use client"` when you need state or browser events (as `Navbar.tsx`
-  does).
-- Run `npm run build` before pushing so you do not push code that fails to
-  compile.
+- Mobile-first: write the small-screen styles, then add `sm:` / `md:` / `lg:`.
+- Server Components by default. Add `"use client"` only when you need state or
+  browser events - `Navbar`, `Classes`, `Gallery`, `Stats` and `LeadForm` do.
+- Keep animation behind `Reveal`, which already respects
+  `prefers-reduced-motion`.
+- Run `npm run build` before pushing.
