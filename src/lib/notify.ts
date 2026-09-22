@@ -24,17 +24,33 @@ type Enquiry = {
   goal: string;
 };
 
+/** Sending is possible at all. Who it reaches is decided per message. */
 export function notifyConfigured() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.NOTIFY_EMAIL_TO);
+  return Boolean(process.env.RESEND_API_KEY);
 }
 
-async function sendEmail(subject: string, text: string, replyTo?: string) {
-  const key = process.env.RESEND_API_KEY;
-  const to = process.env.NOTIFY_EMAIL_TO;
-  // A verified sender at the gym's own domain; Resend rejects anything else.
-  const from = process.env.NOTIFY_EMAIL_FROM ?? "BX Fitness Hub <onboarding@resend.dev>";
+/** The BX inbox that gets told, if one is configured. */
+const staffInbox = () => process.env.NOTIFY_EMAIL_TO?.trim() || null;
 
-  if (!key || !to) return false;
+async function sendEmail(
+  to: string | string[],
+  subject: string,
+  text: string,
+  replyTo?: string,
+) {
+  const key = process.env.RESEND_API_KEY;
+  /*
+    The sender has to be an address at a domain verified with the provider.
+    An invented one is refused outright - there is no way to send "from" a
+    domain nobody has proved they own, which is the whole point of the check.
+    Until BX has a domain and it is verified, this falls back to the
+    provider's own sandbox sender, which works and looks like what it is.
+  */
+  const from = process.env.NOTIFY_EMAIL_FROM?.trim() || "BX Fitness Hub <onboarding@resend.dev>";
+
+  if (!key) return false;
+  const recipients = (Array.isArray(to) ? to : [to]).map((a) => a.trim()).filter(Boolean);
+  if (!recipients.length) return false;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -44,7 +60,7 @@ async function sendEmail(subject: string, text: string, replyTo?: string) {
     },
     body: JSON.stringify({
       from,
-      to: to.split(",").map((a) => a.trim()),
+      to: recipients,
       subject,
       text,
       ...(replyTo ? { reply_to: replyTo } : {}),
@@ -66,8 +82,43 @@ async function sendEmail(subject: string, text: string, replyTo?: string) {
 export async function notifyNewEnquiry(lead: Enquiry) {
   if (!notifyConfigured()) return;
 
+  /*
+    Two different messages to two different people.
+
+    The person who filled the form in gets a confirmation, because "we'll be
+    in touch" on a screen they are about to close is not much of a promise -
+    an email is something they can look back at, and it tells them the number
+    BX will call.
+
+    The gym gets the details, so nobody has to remember to open a screen.
+  */
   try {
     await sendEmail(
+      lead.email,
+      "We've got your details - BX Fitness Hub",
+      [
+        `Hi ${lead.name.split(" ")[0]},`,
+        "",
+        "Thanks for getting in touch. Somebody from BX will call you on",
+        `${lead.phone} about ${lead.goal.toLowerCase()}.`,
+        "",
+        "If you would rather not wait, the gym is on 010 4000 1413,",
+        "open six in the morning until one at night, every day.",
+        "",
+        "BX Fitness Hub",
+        "In front of Gate 6, Mivida, New Cairo",
+      ].join("\n"),
+    );
+  } catch (error) {
+    await report("confirm enquiry to sender", error);
+  }
+
+  const inbox = staffInbox();
+  if (!inbox) return;
+
+  try {
+    await sendEmail(
+      inbox.split(","),
       `New enquiry: ${lead.name}`,
       [
         `${lead.name} asked to be contacted.`,
@@ -90,10 +141,14 @@ export async function notifyNewEnquiry(lead: Enquiry) {
 
 /** Someone moved off the waitlist into a real place. */
 export async function notifyPromoted(name: string, phone: string, when: string) {
-  if (!notifyConfigured()) return;
+  const inbox = staffInbox();
+  // Bookings ask for a name and a phone number, not an email, so the member
+  // cannot be told directly - somebody at the gym has to call them.
+  if (!notifyConfigured() || !inbox) return;
 
   try {
     await sendEmail(
+      inbox.split(","),
       `A place came free: call ${name}`,
       [
         `${name} was on the waitlist and now has a place.`,

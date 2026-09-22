@@ -365,6 +365,41 @@ already handled a layer up.
 
 ## Telling somebody something happened
 
+Two emails go out when an enquiry arrives: a confirmation to the person who
+filled the form in, and a copy of the details to BX. Also one when a waitlist
+place frees and somebody needs calling - that one can only go to the gym,
+because a booking asks for a name and a phone number, not an email.
+
+### The sender, and why it is limiting
+
+An email's `from` has to be an address at a domain verified with the
+provider. There is no way to send "from" a domain nobody has proved they own -
+that check is the entire point of it. So an invented address like
+`noreply@bxfitnesshub.com` is refused outright, and until BX owns a domain and
+verifies it, `NOTIFY_EMAIL_FROM` has to be the provider's sandbox sender.
+
+**That sandbox sender can only deliver to the Resend account holder's own
+address.** Tested, not assumed: a confirmation to the account owner arrived,
+and the copy to a different address came back
+
+```
+403 You can only send testing emails to your own email address
+```
+
+So today the email side works for exactly one inbox. For it to reach real
+members and a real BX inbox, somebody has to:
+
+1. point a domain at the site,
+2. add it in Resend and set the DNS records it asks for,
+3. set `NOTIFY_EMAIL_FROM=BX Fitness Hub <noreply@that-domain>`.
+
+Until then the enquiry is still saved and still on the Enquiries screen - the
+email is a nudge, never the record, and a refused send is recorded on the
+Problems screen rather than failing the form. Verified: the test enquiry
+saved and answered 200 while the staff copy was being refused.
+
+
+
 Optional, and off unless configured. Set `RESEND_API_KEY` and
 `NOTIFY_EMAIL_TO` in `.env.local` and an email goes out when an enquiry
 arrives, and when a waitlist place comes free and somebody needs calling.
