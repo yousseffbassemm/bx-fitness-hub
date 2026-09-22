@@ -134,6 +134,15 @@ link down with it.
 | `npm run dev:url` | print the addresses again |
 | `npm run dev:stop` | stop it (the login agent will restart it; `uninstall-login` to stop it for good) |
 
+While it runs it also holds the Mac awake, with `caffeinate` tied to the
+watchdog's own process - a sleeping laptop is an unreachable website, and this
+one sleeps after a minute idle. Nothing is left changed behind it: stop the
+watchdog and the Mac sleeps normally again. `NO_CAFFEINATE=1` turns it off.
+
+What it cannot do is keep a closed laptop awake. Clamshell sleep happens
+below this level, so the lid staying open is the actual requirement - which
+is the clearest sign that a laptop is not a server.
+
 It survives a reboot too: `scripts/dev-watchdog.sh install-login` registers a
 launch agent that starts it at login and restarts it if it is ever killed -
 verified by `kill -9`, which came back in two seconds.

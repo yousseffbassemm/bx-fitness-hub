@@ -164,6 +164,23 @@ tunnel_stop() {
 
 # --- the loop that does the actual watching ------------------------------
 supervise() {
+  # Keep the Mac awake for as long as this is running.
+  #
+  # A sleeping laptop is an unreachable website, and pmset on this machine
+  # sleeps after a minute idle - so the link handed to a phone would work
+  # until nobody touched the keyboard for sixty seconds. -i stops idle sleep
+  # and -s stops system sleep on power; the display is deliberately left to
+  # sleep normally, because keeping a screen lit all night is a battery cost
+  # with nothing to show for it.
+  #
+  # -w ties it to this process: when the watchdog stops, the Mac is free to
+  # sleep again. Nothing is left changed behind it, which is why this is not
+  # a pmset setting.
+  if command -v caffeinate >/dev/null 2>&1 && [ "${NO_CAFFEINATE:-}" != "1" ]; then
+    caffeinate -is -w $$ &
+    say "keeping the Mac awake while serving"
+  fi
+
   # One at a time. Two supervisors both hold a server and a tunnel, and each
   # one's cleanup kills the other's - which looks like a tunnel that keeps
   # dying and coming back under a new name.
