@@ -181,15 +181,26 @@ supervise() {
     say "keeping the Mac awake while serving"
   fi
 
-  # One at a time. Two supervisors both hold a server and a tunnel, and each
-  # one's cleanup kills the other's - which looks like a tunnel that keeps
-  # dying and coming back under a new name.
-  local other
-  other="$(cat "$PIDFILE" 2>/dev/null)"
-  if [ -n "$other" ] && [ "$other" != "$$" ] && kill -0 "$other" 2>/dev/null; then
-    say "another watchdog is already running (pid $other) - standing down"
-    exit 0
-  fi
+  # One at a time.
+  #
+  # Asked of the process table, not of a pid file. The file version looked
+  # right and failed in practice: `stop` deletes it, so launchd's own respawn
+  # and a hand-started copy could both find it missing and both claim to be
+  # the only one. Six supervisors and four servers accumulated that way over
+  # a single session, fighting over the port - EADDRINUSE in the log and a
+  # site that answered or did not depending on which one won.
+  #
+  # A process cannot lie about existing, so ask about processes.
+  local others
+  others="$(pgrep -f "dev-watchdog.sh __supervise" 2>/dev/null | grep -v "^$$\$" || true)"
+  for other in $others; do
+    # Only stand down for one that is genuinely older, so two starting at the
+    # same moment cannot both defer and leave nothing running.
+    if [ "$other" -lt "$$" ] && kill -0 "$other" 2>/dev/null; then
+      say "another watchdog is already running (pid $other) - standing down"
+      exit 0
+    fi
+  done
 
   # A kill -9, or launchd kickstarting this job, skips the trap below. If a
   # tunnel is still up and still has an address, keep it: it is pointed at the
