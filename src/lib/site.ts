@@ -369,34 +369,100 @@ export const plans = [
 /* -------------------------------------------------------------------------
    Reviews - real, read from Google Maps on 22 September 2026.
 
-   BX has two listings and both are quoted here: BX Fitness Hub (4.6 from 76)
-   and BX Spa (4.9 from 35), which Google places "inside BX Fitness Hub, in
-   front of Gate 6". Between them these are every written review Google shows
-   - the rest of those 111 ratings carry no text.
+   Reached through the reviews tab directly (the !9m1!1b1 form of the place
+   URL), which loads the full list rather than the three the overview panel
+   shows. Of BX Fitness Hub's 76 ratings, 28 carry written text; these are the
+   five-star ones, gym first. Quotes are verbatim and complete.
 
-   Quotes are verbatim; some are excerpts, cut at a sentence, because Google
-   truncates long reviews in its own interface.
-
-   This is a snapshot and will go stale. The durable, licensed way to show
-   them is the Google Places API - see README.
+   A snapshot. The durable, licensed way to show them is the Google Places
+   API - see README.
    ---------------------------------------------------------------------- */
 export type Review = {
   name: string;
   rating: number;
   when: string;
   quote: string;
-  excerpt: boolean;
   source: "BX Fitness Hub" | "BX Spa";
 };
 
 export const reviews: Review[] = [
+  {
+    name: "Sally Moh",
+    rating: 5,
+    when: "2 months ago",
+    quote:
+      "Amazing gym with great equipment, a clean environment, and a very friendly staff. The trainers are professional and always willing to help. The atmosphere is motivating, and I can see real progress in my fitness journey. Highly recommended!",
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "Yassine Ghanem",
+    rating: 5,
+    when: "3 months ago",
+    quote:
+      "Excellent gym! Very clean, the machines are top quality and always well maintained. The best part is that it's not overcrowded, so you can work out comfortably and focus on your training. Definitely one of the best gyms I've been to.",
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "begad zaki",
+    rating: 5,
+    when: "2 months ago",
+    quote:
+      "Excellent gym with a clean, modern, and well-maintained facility. The equipment is high quality, and there's a great variety for both strength training and cardio. The staff are friendly, professional, and always willing to help.",
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "mohamed hazem",
+    rating: 5,
+    when: "a year ago",
+    quote:
+      "The equipment is top-notch, the facility is always clean, and the staff is super friendly and helpful. The trainers are knowledgeable and genuinely care about your progress. There's a great variety of classes, and the atmosphere is motivating.",
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "Omar Lahrichi",
+    rating: 5,
+    when: "2 months ago",
+    quote:
+      "Took a yearly membership. Place is clean and great equipment! Staff is amazing. The place got a spa too!",
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "Basant Nour",
+    rating: 5,
+    when: "4 months ago",
+    quote:
+      "Great gym with very good and clean equipment and friendly staff. I really recommend it.",
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "SaifEldin Almughanni",
+    rating: 5,
+    when: "2 months ago",
+    quote: "It has a lot of equipment and a very nice sauna.",
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "Ula'a Al-Shami",
+    rating: 5,
+    when: "4 months ago",
+    quote:
+      "Exceptional experience. The spa is very clean, pleasant and full of good vibes and aesthetics. Making an appointment through Hana was very easy, she is responsive and friendly. Siham was amazing, very professional and respectful. A very delightful experience!",
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "huda ahmed",
+    rating: 5,
+    when: "7 months ago",
+    quote:
+      "One of the best spas I've visited. I tried the Moroccan bath and massage. Souad was exceptional, highly professional, attentive, and very friendly. The entire experience was deeply relaxing and went beyond my expectations.",
+    source: "BX Fitness Hub",
+  },
   {
     name: "Sara Bhaya",
     rating: 5,
     when: "4 months ago",
     quote:
       "Best spa ever! I came from Spain for vacation and found this place, amazing staff and amazing spa. Lovely jacuzzi when you are done, with tea and biscuits. Recommend highly!",
-    excerpt: false,
     source: "BX Fitness Hub",
   },
   {
@@ -405,17 +471,7 @@ export const reviews: Review[] = [
     when: "3 weeks ago",
     quote:
       "I had an amazing experience! The environment is clean, friendly and the staff were very professional. I highly recommend to anyone who's looking to have a luxurious experience.",
-    excerpt: false,
     source: "BX Spa",
-  },
-  {
-    name: "Mari",
-    rating: 5,
-    when: "5 months ago",
-    quote:
-      "The best Moroccan hammam I've ever experienced! Everything was so relaxing and well done from start to finish. Suad, Basma, and Lubnah were all so kind, welcoming, and made the whole experience even better.",
-    excerpt: true,
-    source: "BX Fitness Hub",
   },
   {
     name: "Sado Mado",
@@ -423,25 +479,6 @@ export const reviews: Review[] = [
     when: "3 weeks ago",
     quote:
       "Greatest experience of my life. I did the Moroccan hammam with Rahma. The spa was so clean and the staff was so welcoming. I can't wait to come back again!",
-    excerpt: false,
-    source: "BX Spa",
-  },
-  {
-    name: "MonaAbd",
-    rating: 5,
-    when: "4 months ago",
-    quote:
-      "Went for a full package hammam and 90 minutes massage and it was AMAZING. The location is women only section, very clean and luxury vibe. Sauna, steam room and jacuzzi.",
-    excerpt: true,
-    source: "BX Fitness Hub",
-  },
-  {
-    name: "Yousra Harifadja",
-    rating: 5,
-    when: "2 months ago",
-    quote:
-      "My experience was incredible. I went here with my sister and it was amazing. Siham and Ibtissem did our hammam and they were so nice and professional. I loved it!",
-    excerpt: true,
     source: "BX Spa",
   },
 ];
