@@ -23,6 +23,7 @@ const rows: BookingRow[] = [];
 const leads: LeadRow[] = [];
 const staff = new Map<string, StaffUser>();
 const content = new Map<string, unknown>();
+const uploads = new Map<string, { mime: string; bytes: Uint8Array }>();
 let nextId = 1;
 let nextLeadId = 1;
 
@@ -55,6 +56,14 @@ export const memoryStore: BookingStore = {
 
   async setContent(key, value) {
     content.set(key, value);
+  },
+
+  async saveUpload(id, mime, bytes) {
+    uploads.set(id, { mime, bytes });
+  },
+
+  async getUpload(id) {
+    return uploads.get(id) ?? null;
   },
 
   async setStaffRole(username, role) {

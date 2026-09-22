@@ -272,9 +272,26 @@ correctly with an empty database, an unreachable database falls back to the
 code rather than taking the page down, and anything not yet editable simply
 keeps using the code.
 
-Only price, period and the one-line blurb are editable. What each plan
-includes is a list of real, checked benefits, and the layout depends on which
-plan is featured - both stay in the code where a change gets reviewed.
+**Prices.** Price, period and the one-line blurb. What each plan includes is
+a list of real, checked benefits, and the layout depends on which plan is
+featured - both stay in the code where a change gets reviewed.
+
+**Coaches.** Add, remove, reorder, rename, and upload a portrait. The cards
+are a tall fixed shape and portraits are not, so each coach carries a crop
+position, set with four buttons that show the result as the site will render
+it. That used to be a developer editing a file - it is the thing that took
+the most rounds to get right by hand.
+
+Uploaded images go in the store as bytes, not onto disk: a serverless host
+has a read-only filesystem and anything written to it goes away with the
+instance. They are served from `/api/photo/<id>`, where the id is a hash of
+the file's contents - so the URL can be cached forever, and re-uploading the
+same photograph is a no-op. Uploads are checked on their first few bytes
+rather than on the Content-Type they claim, and capped at 6MB.
+
+A coach with no uploaded photo falls back to the image in the code, matched
+by name, so the team can be reordered or renamed without re-uploading
+everything first.
 
 The marketing page is prerendered, so saving calls `revalidatePath("/")`.
 Without it a price would change in the database and the page would go on

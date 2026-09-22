@@ -144,6 +144,17 @@ function migrate(next: DatabaseSync) {
     )
   `);
 
+  // Uploaded images. id is a content hash, so re-uploading the same file
+  // lands on the same row and the URL can be cached indefinitely.
+  next.exec(`
+    CREATE TABLE IF NOT EXISTS uploads (
+      id         TEXT PRIMARY KEY,
+      mime       TEXT NOT NULL,
+      bytes      BLOB NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
   next.exec("CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings (class_date)");
   next.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_unique
@@ -261,6 +272,19 @@ export const sqliteStore: BookingStore = {
            edited_at = excluded.edited_at`,
       )
       .run(key, JSON.stringify(value), editedBy);
+  },
+
+  async saveUpload(id, mime, bytes) {
+    open()
+      .prepare("INSERT OR IGNORE INTO uploads (id, mime, bytes) VALUES (?, ?, ?)")
+      .run(id, mime, bytes);
+  },
+
+  async getUpload(id) {
+    const row = open()
+      .prepare("SELECT mime, bytes FROM uploads WHERE id = ?")
+      .get(id) as { mime: string; bytes: Uint8Array } | undefined;
+    return row ? { mime: row.mime, bytes: new Uint8Array(row.bytes) } : null;
   },
 
   async setStaffRole(username, role) {

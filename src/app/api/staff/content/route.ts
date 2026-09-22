@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/staff/guard";
-import { savePlans, type EditablePlan } from "@/lib/content";
+import {
+  saveCoaches,
+  savePlans,
+  type EditableCoach,
+  type EditablePlan,
+} from "@/lib/content";
 
 export const runtime = "nodejs";
 
@@ -25,26 +30,47 @@ export async function PUT(request: Request) {
 
   const { key, value } = (body ?? {}) as Record<string, unknown>;
 
-  if (key !== "plans") {
+  if (!Array.isArray(value)) {
+    return NextResponse.json({ error: "Expected a list." }, { status: 400 });
+  }
+
+  if (key === "plans") {
+    const plans = value as EditablePlan[];
+    const blank = plans.find(
+      (p) => !String(p?.price ?? "").trim() || !String(p?.period ?? "").trim(),
+    );
+    if (blank) {
+      return NextResponse.json(
+        { error: "Every plan needs a price and a period." },
+        { status: 400 },
+      );
+    }
+    await savePlans(plans, auth.username);
+  } else if (key === "coaches") {
+    const coaches = value as EditableCoach[];
+
+    if (coaches.length === 0) {
+      return NextResponse.json(
+        { error: "Keep at least one coach - an empty section looks broken." },
+        { status: 400 },
+      );
+    }
+    const nameless = coaches.find((c) => !String(c?.name ?? "").trim());
+    if (nameless) {
+      return NextResponse.json({ error: "Every coach needs a name." }, { status: 400 });
+    }
+    const unphotographed = coaches.find(
+      (c) => !c?.photoId && !String(c?.name ?? "").trim(),
+    );
+    if (unphotographed) {
+      return NextResponse.json({ error: "Every coach needs a photo." }, { status: 400 });
+    }
+
+    await saveCoaches(coaches, auth.username);
+  } else {
     return NextResponse.json({ error: "Unknown section." }, { status: 400 });
   }
-  if (!Array.isArray(value)) {
-    return NextResponse.json({ error: "Expected a list of plans." }, { status: 400 });
-  }
 
-  const plans = value as EditablePlan[];
-
-  const blank = plans.find(
-    (p) => !String(p?.price ?? "").trim() || !String(p?.period ?? "").trim(),
-  );
-  if (blank) {
-    return NextResponse.json(
-      { error: "Every plan needs a price and a period." },
-      { status: 400 },
-    );
-  }
-
-  await savePlans(plans, auth.username);
   revalidatePath("/");
 
   return NextResponse.json({ ok: true });

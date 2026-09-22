@@ -115,6 +115,34 @@ export const supabaseStore: BookingStore = {
     if (!res.ok) throw new Error(`Supabase setContent failed: ${res.status}`);
   },
 
+  async saveUpload(id, mime, bytes) {
+    // base64 through PostgREST: bytea over JSON has no clean representation,
+    // and an image of this size is not worth a second transport for.
+    const res = await fetch(`${url}/rest/v1/uploads`, {
+      method: "POST",
+      headers: { ...headers(), Prefer: "resolution=ignore-duplicates" },
+      body: JSON.stringify({
+        id,
+        mime,
+        bytes_b64: Buffer.from(bytes).toString("base64"),
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase saveUpload failed: ${res.status}`);
+  },
+
+  async getUpload(id) {
+    const res = await fetch(
+      `${url}/rest/v1/uploads?select=mime,bytes_b64&id=eq.${encodeURIComponent(id)}`,
+      { headers: headers(), cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`Supabase getUpload failed: ${res.status}`);
+    const [row] = (await res.json()) as { mime: string; bytes_b64: string }[];
+    return row
+      ? { mime: row.mime, bytes: new Uint8Array(Buffer.from(row.bytes_b64, "base64")) }
+      : null;
+  },
+
   async setStaffRole(username, role) {
     const res = await fetch(
       `${url}/rest/v1/staff_users?username=eq.${encodeURIComponent(username)}`,

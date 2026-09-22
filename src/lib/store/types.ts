@@ -115,5 +115,18 @@ export interface BookingStore {
   getContent<T>(key: string): Promise<T | null>;
   setContent(key: string, value: unknown, editedBy: string): Promise<void>;
 
+  /**
+   * Uploaded images, stored as bytes rather than written to disk.
+   *
+   * A filesystem is not something every host gives you - on a serverless
+   * platform the disk is read-only and anything written to it vanishes with
+   * the instance - so an upload that must outlive a deploy belongs in the
+   * same store as everything else. The id is a hash of the content, which
+   * makes the URL safe to cache forever and makes uploading the same file
+   * twice a no-op.
+   */
+  saveUpload(id: string, mime: string, bytes: Uint8Array): Promise<void>;
+  getUpload(id: string): Promise<{ mime: string; bytes: Uint8Array } | null>;
+
   readonly name: string;
 }

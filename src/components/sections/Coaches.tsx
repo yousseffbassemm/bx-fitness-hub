@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { coaches } from "@/lib/site";
+import { getCoaches } from "@/lib/content";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
 
@@ -7,7 +7,11 @@ import SectionHead from "../ui/SectionHead";
  * The personal training team. Class instructors are a separate, larger group
  * and are credited against their own sessions in the timetable.
  */
-export default function Coaches() {
+export default async function Coaches() {
+  // Saved from the staff screen where it has been edited, from the code
+  // where it has not - see lib/content.ts.
+  const coaches = await getCoaches();
+
   return (
     <section id="coaches" className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
@@ -31,7 +35,8 @@ export default function Coaches() {
                     alt={`${c.name}, personal trainer at BX Fitness Hub`}
                     fill
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw"
-                    className="plate object-cover object-top transition-transform duration-700 group-hover:scale-105 group-data-[near=true]:scale-105"
+                    style={{ objectPosition: c.focus }}
+                    className="plate object-cover transition-transform duration-700 group-hover:scale-105 group-data-[near=true]:scale-105"
                   />
                   {/* keeps the tops of the cards reading as one row */}
                   <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-transparent to-transparent" />
