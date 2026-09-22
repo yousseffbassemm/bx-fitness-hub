@@ -76,9 +76,36 @@ export const site = {
     maps: "https://maps.app.goo.gl/ghTXuENG2AHWDXmcA",
   },
 
-  // PLACEHOLDER - swap for the real domain once it is registered.
-  url: "https://bxfitnesshub.com",
+  /*
+    PLACEHOLDER - BX has not given us a domain.
+
+    bxfitnesshub.com was a guess and does not resolve, which is worse than
+    an obvious gap: it reads like a real address, and it is what the page
+    hands to OpenGraph, to the JSON-LD and to metadataBase. Sharing the link
+    anywhere fetched the preview image from a domain nobody owns, so the
+    preview simply came back empty.
+
+    Set NEXT_PUBLIC_SITE_URL at deploy time and everything follows from it.
+    Until then it points at this machine, which is wrong but is at least
+    honestly wrong.
+  */
+  url: process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000",
 } as const;
+
+/**
+ * Is this still a stand-in rather than a fact?
+ *
+ * The note at the top of this file claimed placeholders were never published
+ * anywhere public. They were: the footer and the contact block both printed
+ * "[EMAIL ADDRESS]" to every visitor, next to a "Privacy Policy [TODO]".
+ * Anything in square brackets is scaffolding, and scaffolding does not go on
+ * the site - the row is left out until there is something true to put in it.
+ *
+ * The prices are the deliberate exception. They are marked as showing
+ * as-is on the Pricing screen, and a membership card with no price at all
+ * reads as broken rather than as unfinished.
+ */
+export const isPlaceholder = (value: string) => /^\[.+\]$/.test(value.trim());
 
 export const nav = [
   { href: "#about", label: "About" },

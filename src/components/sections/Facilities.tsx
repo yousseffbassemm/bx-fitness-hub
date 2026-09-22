@@ -25,7 +25,7 @@ export default async function Facilities() {
           className="mt-9 grid gap-4 sm:mt-14 sm:grid-cols-2 lg:grid-cols-3"
         >
           {facilities.map((f, i) => (
-            <Reveal key={f.title} variant="scale" delay={(i % 3) * 90}>
+            <Reveal key={i} variant="scale" delay={(i % 3) * 90}>
               {/*
                 Every card is the same box and the photograph fills it
                 absolutely, so no card can end up shorter than its grid row and

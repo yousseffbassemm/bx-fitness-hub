@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { notifyNewEnquiry } from "@/lib/notify";
+// Aliased: this file already has a LIMITS for field lengths.
+import { LIMITS as RATE, allow, callerKey, tooManyMessage } from "@/lib/rate-limit";
 import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
@@ -13,11 +15,17 @@ import { getStore } from "@/lib/store";
  * at /staff alongside the bookings.
  */
 export const dynamic = "force-dynamic";
+// The store is node:sqlite; this cannot run on the Edge.
+export const runtime = "nodejs";
 
 /** Long enough for a real answer, short enough that the column stays sane. */
 const LIMITS = { name: 80, phone: 24, email: 160, goal: 120 } as const;
 
 export async function POST(request: Request) {
+  if (!allow(callerKey(request), RATE.lead.limit, RATE.lead.windowMs)) {
+    return NextResponse.json({ error: tooManyMessage }, { status: 429 });
+  }
+
   let body: unknown;
 
   try {
@@ -35,6 +43,20 @@ export async function POST(request: Request) {
   if (missing.length) {
     return NextResponse.json(
       { error: `Missing field(s): ${missing.join(", ")}` },
+      { status: 400 },
+    );
+  }
+
+  /*
+    The form marks the field type="email", but the browser is not the only
+    thing that can post here - and an address that is not one becomes a
+    confirmation the provider refuses, which lands in Problems as a failure
+    nobody can act on. Deliberately loose: one @, something either side, a
+    dot in the domain. Anything stricter starts rejecting real addresses.
+  */
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email as string).trim())) {
+    return NextResponse.json(
+      { error: "That email address does not look right." },
       { status: 400 },
     );
   }

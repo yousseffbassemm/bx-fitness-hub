@@ -7,6 +7,9 @@ import {
   saveGallery,
   savePlans,
   saveSchedule,
+  defaultCoachValues,
+  defaultFacilityValues,
+  defaultGalleryValues,
   type EditableCoach,
   type EditableFacility,
   type EditableGalleryItem,
@@ -65,11 +68,22 @@ export async function PUT(request: Request) {
     if (nameless) {
       return NextResponse.json({ error: "Every coach needs a name." }, { status: 400 });
     }
+    /*
+      A coach with no uploaded photo borrows the one from the code, matched
+      by name - so only a name the code has never heard of actually needs
+      one. This used to read `!c.photoId && !c.name`, which the check above
+      has already ruled out, so it never fired once and a new coach could be
+      saved with no photograph at all and an empty frame on the site.
+    */
+    const known = new Set(defaultCoachValues().map((c) => c.name));
     const unphotographed = coaches.find(
-      (c) => !c?.photoId && !String(c?.name ?? "").trim(),
+      (c) => !c?.photoId && !known.has(String(c?.name ?? "").trim()),
     );
     if (unphotographed) {
-      return NextResponse.json({ error: "Every coach needs a photo." }, { status: 400 });
+      return NextResponse.json(
+        { error: `${unphotographed.name} is new, so they need a photo.` },
+        { status: 400 },
+      );
     }
 
     await saveCoaches(coaches, auth.username);
@@ -106,12 +120,33 @@ export async function PUT(request: Request) {
     if (items.some((f) => !String(f?.title ?? "").trim())) {
       return NextResponse.json({ error: "Every facility needs a name." }, { status: 400 });
     }
+    // Same rule as coaches: only one the code has no photo for needs its own.
+    const knownFacilities = new Set(defaultFacilityValues().map((f) => f.title));
+    const bare = items.find(
+      (f) => !f?.photoId && !knownFacilities.has(String(f?.title ?? "").trim()),
+    );
+    if (bare) {
+      return NextResponse.json(
+        { error: `${bare.title} is new, so it needs a photo.` },
+        { status: 400 },
+      );
+    }
     await saveFacilities(items, auth.username);
   } else if (key === "gallery") {
     const items = value as EditableGalleryItem[];
     if (items.length === 0) {
       return NextResponse.json(
         { error: "Keep at least one photo." },
+        { status: 400 },
+      );
+    }
+    const knownPhotos = new Set(defaultGalleryValues().map((g) => g.alt));
+    const missing = items.find(
+      (g) => !g?.photoId && !knownPhotos.has(String(g?.alt ?? "").trim()),
+    );
+    if (missing) {
+      return NextResponse.json(
+        { error: "A new photo needs an image, not just a description." },
         { status: 400 },
       );
     }

@@ -23,6 +23,16 @@ const MAX_ATTEMPTS = 8;
 
 function tooManyAttempts(ip: string) {
   const now = Date.now();
+
+  // Sweep expired entries. The watchdog keeps this process up for days, and
+  // an address that tried once and never came back should not be remembered
+  // for all of them.
+  if (attempts.size > 1000) {
+    for (const [key, seen] of attempts) {
+      if (now - seen.first > WINDOW_MS) attempts.delete(key);
+    }
+  }
+
   const entry = attempts.get(ip);
 
   if (!entry || now - entry.first > WINDOW_MS) {

@@ -369,13 +369,26 @@ export async function getFacilities(): Promise<FacilityItem[]> {
     }));
   }
 
-  return saved.map((f, i) => ({
-    title: f.title,
-    copy: f.copy,
-    alt: f.alt,
-    photo: f.photoId ? uploadUrl(f.photoId) : (defaultFacilities[i]?.image ?? ""),
-    focus: f.focus || "center",
-  }));
+  /*
+    A facility with no uploaded photo borrows the one from the code, matched
+    by title - the same way coaches are matched by name.
+
+    It used to be matched by position, which quietly came apart the moment
+    anyone used the Up and Down buttons on the Facilities screen: every card
+    here is seeded with photoId null, so the text moved and the photographs
+    stayed where they were, leaving each card wearing its neighbour's.
+  */
+  return saved.map((f, i) => {
+    const fromCode =
+      defaultFacilities.find((d) => d.title === f.title) ?? defaultFacilities[i];
+    return {
+      title: f.title,
+      copy: f.copy,
+      alt: f.alt,
+      photo: f.photoId ? uploadUrl(f.photoId) : (fromCode?.image ?? ""),
+      focus: f.focus || "center",
+    };
+  });
 }
 
 export async function getEditableFacilities(): Promise<EditableFacility[]> {
@@ -442,11 +455,17 @@ export async function getGallery(): Promise<GalleryItem[]> {
     }));
   }
 
-  return saved.map((g, i) => ({
-    alt: g.alt,
-    ratio: g.ratio === "tall" ? ("tall" as const) : ("square" as const),
-    src: g.photoId ? uploadUrl(g.photoId) : (defaultGallery[i]?.src ?? ""),
-  }));
+  // Matched by its description rather than its position, for the reason
+  // getFacilities gives: the mosaic can be reordered, and seven of these
+  // eight carry no uploaded photo of their own.
+  return saved.map((g, i) => {
+    const fromCode = defaultGallery.find((d) => d.alt === g.alt) ?? defaultGallery[i];
+    return {
+      alt: g.alt,
+      ratio: g.ratio === "tall" ? ("tall" as const) : ("square" as const),
+      src: g.photoId ? uploadUrl(g.photoId) : (fromCode?.src ?? ""),
+    };
+  });
 }
 
 export async function getEditableGallery(): Promise<EditableGalleryItem[]> {

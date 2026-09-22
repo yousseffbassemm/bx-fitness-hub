@@ -1,4 +1,4 @@
-import { site } from "@/lib/site";
+import { isPlaceholder, site } from "@/lib/site";
 import LeadForm from "../LeadForm";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
@@ -54,10 +54,12 @@ export default function Contact() {
                     </a>
                   </dd>
                 </div>
-                <div className="grid grid-cols-[6.5rem_1fr] gap-4 py-5">
-                  <dt className="kicker pt-1">Email</dt>
-                  <dd className="text-sm text-grey">{site.email.display}</dd>
-                </div>
+                {!isPlaceholder(site.email.display) && (
+                  <div className="grid grid-cols-[6.5rem_1fr] gap-4 py-5">
+                    <dt className="kicker pt-1">Email</dt>
+                    <dd className="text-sm text-grey">{site.email.display}</dd>
+                  </div>
+                )}
               </dl>
             </Reveal>
 

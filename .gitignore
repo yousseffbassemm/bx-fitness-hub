@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the template, which carries the names of the keys and none of
+# their values. It is the only record of what a new deploy has to be given,
+# so it is the one file here that has to travel with the repo.
+!.env.example
 
 # vercel
 .vercel

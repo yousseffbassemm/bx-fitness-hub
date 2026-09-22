@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { nav, site } from "@/lib/site";
+import { isPlaceholder, nav, site } from "@/lib/site";
 import Reveal from "./ui/Reveal";
 import { Logo } from "./ui/Logo";
 
@@ -60,7 +60,11 @@ export default function Footer() {
                 </a>
                 <span className="ml-2 text-xs text-grey-dim">Spa</span>
               </li>
-              <li className="text-grey-dim">{site.email.display}</li>
+              {/* Left out until BX gives us one, rather than printing the
+                  stand-in at visitors. */}
+              {!isPlaceholder(site.email.display) && (
+                <li className="text-grey-dim">{site.email.display}</li>
+              )}
             </ul>
           </Reveal>
 
@@ -117,13 +121,15 @@ export default function Footer() {
             &copy; {year} {site.name}. All rights reserved.
           </p>
           <ul className="flex gap-6 text-xs text-grey-dim">
-            {/* TODO: add the real policy pages before launch */}
-            <li>
-              <span className="cursor-not-allowed">Privacy Policy [TODO]</span>
-            </li>
-            <li>
-              <span className="cursor-not-allowed">Terms [TODO]</span>
-            </li>
+            {/*
+              A Privacy Policy and Terms belong here, and this is not the
+              place they get written: they are BX's to give, and inventing
+              them would be inventing a promise on their behalf. What was
+              here read "Privacy Policy [TODO]" and "Terms [TODO]" in the
+              footer of the live site - a dead link that says the site is
+              unfinished is worse than no link, so nothing shows until there
+              is a real page to point at.
+            */}
             <li>
               {/*
                 For the front desk. Password-protected and noindex, so it is

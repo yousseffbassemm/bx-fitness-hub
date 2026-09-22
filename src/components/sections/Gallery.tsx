@@ -68,7 +68,9 @@ export default function Gallery({ gallery }: { gallery: GalleryItem[] }) {
         >
           {gallery.map((g, i) => (
             <Reveal
-              key={g.alt}
+              // Not the description: it is editable now, and two photos
+              // described alike would collide into one key.
+              key={i}
               variant="scale" delay={(i % 3) * 80}
               className={g.ratio === "tall" ? "row-span-2" : "row-span-1"}
             >

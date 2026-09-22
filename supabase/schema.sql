@@ -54,7 +54,8 @@ security definer
 set search_path = public
 as $$
 declare
-  taken int;
+  taken   int;
+  v_token text;
 begin
   perform pg_advisory_xact_lock(hashtext(p_session_id || '|' || p_date::text));
 
@@ -68,10 +69,22 @@ begin
     return json_build_object('ok', false, 'reason', 'full', 'spots_left', 0);
   end if;
 
-  insert into public.bookings (session_id, class_date, name, phone)
-  values (p_session_id, p_date, p_name, p_phone);
+  -- The member's own handle on this booking, the thing the "cancel your
+  -- place" link in their confirmation is made of. promote_from_waitlist
+  -- mints one; this did not, so on Supabase every ordinary booking came
+  -- back without one and the link led to /b/undefined - a 404 for everyone
+  -- who booked the normal way. 16 bytes as hex, matching the other stores
+  -- and the [a-f0-9]{16,64} the page checks.
+  v_token := encode(gen_random_bytes(16), 'hex');
 
-  return json_build_object('ok', true, 'spots_left', p_capacity - taken - 1);
+  insert into public.bookings (session_id, class_date, name, phone, token)
+  values (p_session_id, p_date, p_name, p_phone, v_token);
+
+  return json_build_object(
+    'ok', true,
+    'spots_left', p_capacity - taken - 1,
+    'token', v_token
+  );
 exception
   when unique_violation then
     return json_build_object('ok', false, 'reason', 'duplicate');

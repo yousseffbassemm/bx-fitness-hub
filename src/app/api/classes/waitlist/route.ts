@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { findSessionIn, isDateValidForRow } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
 import { report } from "@/lib/report";
+import { LIMITS, allow, callerKey, tooManyMessage } from "@/lib/rate-limit";
 import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -10,6 +11,10 @@ const PHONE = /^[+\d][\d\s-]{8,17}$/;
 
 /** Join the waitlist for a class that is already full. */
 export async function POST(request: Request) {
+  if (!allow(callerKey(request), LIMITS.booking.limit, LIMITS.booking.windowMs)) {
+    return NextResponse.json({ error: tooManyMessage }, { status: 429 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();

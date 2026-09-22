@@ -195,7 +195,7 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
 
                     return (
                       <li
-                        key={`${s.time}-${s.discipline}`}
+                        key={id}
                         className="grid grid-cols-[5.5rem_1fr] items-center gap-4 py-5 sm:grid-cols-[7rem_1fr_auto_auto]"
                       >
                         <span className="font-display self-start text-sm text-lime sm:self-center">

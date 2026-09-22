@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import { capacityFor, findSessionIn, isDateValidForRow } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
 import { report } from "@/lib/report";
+import { LIMITS, allow, callerKey, tooManyMessage } from "@/lib/rate-limit";
 import { getStore } from "@/lib/store";
+
+// The store is node:sqlite; this cannot run on the Edge.
+export const runtime = "nodejs";
 
 const PHONE = /^[+\d][\d\s-]{8,17}$/;
 
 export async function POST(request: Request) {
+  if (!allow(callerKey(request), LIMITS.booking.limit, LIMITS.booking.windowMs)) {
+    return NextResponse.json({ error: tooManyMessage }, { status: 429 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -34,6 +42,11 @@ export async function POST(request: Request) {
 
   if (typeof name !== "string" || name.trim().length < 2) {
     return NextResponse.json({ error: "Please give a name" }, { status: 400 });
+  }
+  // A ceiling, as the enquiry form has. Nothing legitimate is this long, and
+  // without one the column takes whatever is sent.
+  if (name.trim().length > 80) {
+    return NextResponse.json({ error: "That name is too long" }, { status: 400 });
   }
 
   if (typeof phone !== "string" || !PHONE.test(phone.trim())) {

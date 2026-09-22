@@ -3,6 +3,9 @@ import { capacityFor } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
 import { getStore } from "@/lib/store";
 
+// The store is node:sqlite; this cannot run on the Edge.
+export const runtime = "nodejs";
+
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /**

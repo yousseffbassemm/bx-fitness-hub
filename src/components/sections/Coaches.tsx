@@ -27,7 +27,7 @@ export default async function Coaches() {
           className="mt-9 grid grid-cols-2 gap-4 sm:mt-14 sm:grid-cols-3 lg:grid-cols-6"
         >
           {coaches.map((c, i) => (
-            <Reveal as="li" key={c.name} variant="scale" delay={(i % 6) * 80}>
+            <Reveal as="li" key={i} variant="scale" delay={(i % 6) * 80}>
               <article className="surface group relative h-full overflow-hidden rounded-md">
                 <div className="photo-inset relative aspect-[4/5] w-full overflow-hidden">
                   <Image

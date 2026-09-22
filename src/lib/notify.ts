@@ -1,4 +1,5 @@
 import { report } from "./report";
+import { site } from "./site";
 
 /**
  * Telling somebody at BX that an enquiry has arrived.
@@ -102,11 +103,15 @@ export async function notifyNewEnquiry(lead: Enquiry) {
         "Thanks for getting in touch. Somebody from BX will call you on",
         `${lead.phone} about ${lead.goal.toLowerCase()}.`,
         "",
-        "If you would rather not wait, the gym is on 010 4000 1413,",
-        "open six in the morning until one at night, every day.",
+        // From site.ts rather than typed out here. These were the right
+        // number and the right address, but only until somebody changed
+        // them in the one file meant to own them and this quietly went on
+        // telling people the old ones.
+        `If you would rather not wait, the gym is on ${site.phone.display},`,
+        `open ${site.hours.display.toLowerCase()}.`,
         "",
-        "BX Fitness Hub",
-        "In front of Gate 6, Mivida, New Cairo",
+        site.name,
+        `${site.address.street}, ${site.address.line2}`,
       ].join("\n"),
     );
   } catch (error) {
