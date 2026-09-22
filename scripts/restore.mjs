@@ -13,11 +13,12 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { backupDir } from "./backup-dir.mjs";
 import { execSync } from "node:child_process";
 
 const root = path.resolve(import.meta.dirname, "..");
 const live = process.env.BOOKINGS_DB_PATH ?? path.join(root, ".data", "bookings.db");
-const dir = process.env.BACKUP_DIR ?? path.join(root, ".backups");
+const dir = backupDir();
 
 function counts(file) {
   const db = new DatabaseSync(file, { readOnly: true });

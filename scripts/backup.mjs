@@ -19,11 +19,12 @@
 import { mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { backupDir, configPath, saveBackupDir } from "./backup-dir.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const source =
   process.env.BOOKINGS_DB_PATH ?? path.join(root, ".data", "bookings.db");
-const dir = process.env.BACKUP_DIR ?? path.join(root, ".backups");
+const dir = backupDir();
 
 /** How many to keep. Beyond this the oldest are removed. */
 const KEEP = Number(process.env.BACKUP_KEEP ?? 30);
@@ -52,6 +53,27 @@ function existing() {
   } catch {
     return [];
   }
+}
+
+// --- where do they go -----------------------------------------------------
+const setDirAt = process.argv.indexOf("--set-dir");
+if (setDirAt !== -1) {
+  const wanted = process.argv[setDirAt + 1];
+  if (!wanted) {
+    console.error("Usage: node scripts/backup.mjs --set-dir <folder>");
+    process.exit(1);
+  }
+  const resolved = path.resolve(wanted.replace(/^~/, process.env.HOME ?? "~"));
+  mkdirSync(resolved, { recursive: true });
+  saveBackupDir(resolved);
+  console.log(`\nBackups will go to ${resolved}`);
+  console.log(`  remembered in ${configPath()}\n`);
+  process.exit(0);
+}
+
+if (process.argv.includes("--where")) {
+  console.log(`\n${backupDir()}\n`);
+  process.exit(0);
 }
 
 if (process.argv.includes("--list")) {
@@ -90,7 +112,10 @@ const stamp =
   `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}` +
   `_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
 
-const partial = path.join(dir, `.partial-${stamp}.db`);
+// The pid is in here so two runs that overlap cannot write the same
+// temporary file. The final name is minute-stamped, so two in one minute
+// simply replace each other, which is the right outcome.
+const partial = path.join(dir, `.partial-${stamp}-${process.pid}.db`);
 const target = path.join(dir, `bx-${stamp}.db`);
 
 rmSync(partial, { force: true });

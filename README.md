@@ -53,14 +53,23 @@ server still has the database open.
 
 ### Where they go
 
-`.backups/`, next to the code and git-ignored. **That is one disk.** Point
-`BACKUP_DIR` at a folder that syncs off the machine - iCloud Drive, Dropbox,
-an external disk - and the same schedule covers a dead Mac:
-
 ```bash
-BACKUP_DIR="$HOME/Library/Mobile Documents/com~apple~CloudDocs/bx-backups" npm run backup
+npm run backup -- --where                 # the current folder
+npm run backup -- --set-dir "<folder>"    # change it, permanently
 ```
 
+The choice is remembered in `.backup-dir` next to the code, which is
+git-ignored because it is a property of the machine rather than the project.
+It is a file rather than a shell variable because three different things take
+backups - a person, the watchdog and the login agent - and they do not share
+an environment.
+
+On this machine it points at iCloud Drive, so the backups leave the disk they
+are backing up. Any synced folder works: Dropbox, an external drive, a
+network share. Unset, it falls back to `.backups/` beside the code, which is
+better than nothing and worse than off the machine.
+
+`BACKUP_DIR` in the environment still overrides everything, for a one-off.
 `BACKUP_KEEP` changes how many are kept (default 30).
 
 On Supabase this is all handled by Supabase's own backups instead; these
