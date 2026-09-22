@@ -32,6 +32,11 @@ CHECK_TIMEOUT=10
 FAILS_BEFORE_RESTART=5
 BOOT_GRACE=90
 
+LABEL="com.bx.devwatchdog"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+SUPPORT="$HOME/Library/Application Support/bx-fitness-hub"
+LAUNCHER="$SUPPORT/watchdog-launcher.sh"
+
 stamp() { date '+%Y-%m-%d %H:%M:%S'; }
 say()   { echo "[$(stamp)] $*" >>"$LOG"; }
 
@@ -45,12 +50,19 @@ lan_ip() {
 
 alive() { [ -n "${1:-}" ] && kill -0 "$1" 2>/dev/null; }
 
+agent_loaded() { launchctl list 2>/dev/null | grep -q "$LABEL"; }
+agent_on()  { launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null || launchctl load "$PLIST" 2>/dev/null; }
+agent_off() { launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || launchctl unload "$PLIST" 2>/dev/null; }
+
 watchdog_pid() { [ -f "$PIDFILE" ] && cat "$PIDFILE" 2>/dev/null; }
 
 healthy() { curl -fsS -m "$CHECK_TIMEOUT" -o /dev/null "$HEALTH"; }
 
 # --- the loop that does the actual watching ------------------------------
 supervise() {
+  # Written here rather than by `start`, so a copy launched by launchd at
+  # login is just as findable to status/stop as one started by hand.
+  echo $$ >"$PIDFILE"
   say "watchdog up (pid $$), port $PORT"
   trap 'say "watchdog asked to stop"; kill "$(cat "$CHILDFILE" 2>/dev/null)" 2>/dev/null; rm -f "$PIDFILE" "$CHILDFILE"; exit 0' TERM INT
 
@@ -112,7 +124,6 @@ case "${1:-start}" in
 
     : >"$LOG"
     nohup "$0" __supervise >/dev/null 2>&1 &
-    echo $! >"$PIDFILE"
     disown 2>/dev/null || true
 
     printf "Starting"
@@ -126,6 +137,13 @@ case "${1:-start}" in
     ;;
 
   stop)
+    # launchd would only start it straight back, so say so rather than
+    # leaving someone wondering why the link refuses to die.
+    if agent_loaded; then
+      echo "Running as a login agent, which restarts it on sight."
+      echo "To stop it for good:  $0 uninstall-login"
+      echo "Stopping it for now anyway; the agent will bring it back."
+    fi
     pid="$(watchdog_pid)"
     alive "$pid" && kill "$pid" 2>/dev/null && echo "Watchdog stopped."
     child="$(cat "$CHILDFILE" 2>/dev/null)"
@@ -157,36 +175,80 @@ case "${1:-start}" in
   log) tail -n "${2:-40}" -f "$LOG" ;;
 
   install-login)
-    plist="$HOME/Library/LaunchAgents/com.bx.devwatchdog.plist"
-    mkdir -p "$(dirname "$plist")"
-    cat >"$plist" <<PLIST
+    # Any copy started by hand has to go first, or launchd starts a second
+    # one, the second cannot bind the port, and the link ends up served by
+    # whichever won - or by neither.
+    if agent_loaded; then agent_off; sleep 1; fi
+    pid="$(watchdog_pid)"
+    if alive "$pid"; then echo "Stopping the hand-started watchdog (pid $pid) first."; "$0" stop >/dev/null 2>&1; sleep 2; fi
+
+    # launchd refuses to *execute* a file inside ~/Desktop, ~/Documents or
+    # ~/Downloads - it fails with "Operation not permitted" before the script
+    # runs at all. Reading those folders from a process already running is
+    # fine, so the agent points at a stub kept outside them, and the stub runs
+    # the real script out of the project.
+    mkdir -p "$SUPPORT"
+    cat >"$LAUNCHER" <<LAUNCH
+#!/bin/bash
+# Written by dev-watchdog.sh install-login. Kept outside the project because
+# launchd will not exec a file from a protected folder; this reads it instead.
+cd "$ROOT" || exit 1
+exec /bin/bash "$ROOT/scripts/dev-watchdog.sh" __supervise
+LAUNCH
+    chmod +x "$LAUNCHER"
+
+    # launchd starts with a bare PATH, which will not have node on it.
+    node_dir="$(dirname "$(command -v node)")"
+
+    mkdir -p "$(dirname "$PLIST")"
+    cat >"$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.bx.devwatchdog</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>$ROOT/scripts/dev-watchdog.sh</string>
-    <string>__supervise</string>
-  </array>
+  <key>Label</key><string>$LABEL</string>
+  <key>ProgramArguments</key><array><string>$LAUNCHER</string></array>
   <key>WorkingDirectory</key><string>$ROOT</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>$node_dir:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>PORT</key><string>$PORT</string>
+  </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
+  <key>ProcessType</key><string>Interactive</string>
   <key>StandardOutPath</key><string>$LOG</string>
   <key>StandardErrorPath</key><string>$LOG</string>
 </dict>
 </plist>
 PLIST
-    launchctl unload "$plist" 2>/dev/null
-    launchctl load "$plist" && echo "Installed. The link now comes back on its own after a reboot."
-    echo "Undo with: $0 uninstall-login"
+
+    if agent_on; then
+      printf "Loading"
+      for _ in $(seq 1 60); do
+        curl -fs -m 3 -o /dev/null "$HEALTH" 2>/dev/null && break
+        printf "."; sleep 2
+      done
+      echo
+      "$0" status
+      if curl -fs -m 5 -o /dev/null "$HEALTH" 2>/dev/null; then
+        echo "Login agent: installed - the link comes back on its own after a reboot."
+      else
+        echo "Login agent: loaded, but the server did not come up. See: $0 log"
+      fi
+      "$0" url
+      echo "  Undo with: $0 uninstall-login"
+    else
+      echo "Could not load the agent. Plist written to $PLIST"
+      exit 1
+    fi
     ;;
 
   uninstall-login)
-    plist="$HOME/Library/LaunchAgents/com.bx.devwatchdog.plist"
-    launchctl unload "$plist" 2>/dev/null
-    rm -f "$plist" && echo "Removed. It will no longer start at login."
+    agent_off
+    rm -f "$PLIST" "$LAUNCHER"
+    echo "Login agent removed. It will no longer come back after a reboot."
+    echo "The watchdog is still running for this session; '$0 stop' ends it."
     ;;
 
   *) echo "usage: $0 start|stop|restart|status|log|url|install-login|uninstall-login"; exit 1 ;;
