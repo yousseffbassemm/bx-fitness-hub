@@ -15,10 +15,17 @@ const nextConfig: NextConfig = {
    * survives the address changing. This has no effect on a production build.
    */
   allowedDevOrigins: [
+    // Same network: whatever the router or a phone's hotspot hands out.
     "192.168.*.*",
     "10.*.*.*",
     "172.*.*.*",
+    // The Bonjour name, which survives the address changing.
     "*.local",
+    // The public tunnel. Without this the page still renders, but every
+    // dev-only request is refused, React never finishes hydrating, and the
+    // result is a site that looks loaded and does nothing: no scroll reveals,
+    // no carousel, no booking form.
+    "*.trycloudflare.com",
   ],
 };
 

@@ -86,10 +86,35 @@ npm run dev:url
 interface, so it is already answering on the new one. Use the address rather
 than the `.local` name, which often does not resolve over a hotspot.
 
-What does *not* work is leaving the Mac at home and opening the link from
-somewhere else. Nothing is published to the internet - this is a link on
-whatever network the two devices share. Reaching it from outside would need a
-tunnel, which puts the unfinished site on a public URL.
+### A public link
+
+For showing the site to someone who is not on the network:
+
+```bash
+npm run tunnel:on      # prints a https://<words>.trycloudflare.com address
+npm run tunnel:off     # kills it
+```
+
+This is a Cloudflare quick tunnel - no account, nothing registered. The
+watchdog keeps it alive alongside the server.
+
+Know what it means before using it:
+
+- **It is public.** Anyone with the address can open it, and the address is
+  the only thing protecting it. It is not indexed, but it is not private.
+- **The address changes** every time the tunnel restarts, which includes
+  every watchdog restart. `npm run dev:url` prints the current one.
+- **The staff area stays locked** - checked from the public side: `/staff`
+  redirects, the bookings API returns nothing without a session, and a wrong
+  password is still a 401 behind the same rate limit.
+- **Bookings and the contact form are live.** Anyone on that address can fill
+  a class or send a lead, and it writes to the real store.
+- Turn it off when you are done. `npm run tunnel:off`.
+
+`allowedDevOrigins` in `next.config.ts` has to include `*.trycloudflare.com`
+for this to work at all. Without it the page renders and then does nothing -
+no reveals, no carousel, no form - because the dev requests are refused and
+React never finishes hydrating.
 
 Two things to know. The phone has to be on the same Wi-Fi - this is a link on
 your network, not a public one, and nothing is exposed to the internet. And

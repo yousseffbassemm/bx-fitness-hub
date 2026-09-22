@@ -17,7 +17,10 @@
 #
 set -uo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# pwd -P, not pwd: there is a symlink at the old ~/Desktop path pointing here,
+# and the logical path would record *that* - which is the one macOS will not
+# let a login agent read. The physical path is the only one worth writing down.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 PORT="${PORT:-3000}"
 STATE="${TMPDIR:-/tmp}"
 PIDFILE="$STATE/bx-watchdog.pid"
@@ -36,6 +39,10 @@ LABEL="com.bx.devwatchdog"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 SUPPORT="$HOME/Library/Application Support/bx-fitness-hub"
 LAUNCHER="$SUPPORT/watchdog-launcher.sh"
+TUNNEL_FLAG="$SUPPORT/tunnel-enabled"      # present = run a public tunnel
+TUNNEL_URL="$SUPPORT/tunnel-url"           # the address it is currently on
+TUNNEL_PID="$STATE/bx-tunnel.pid"
+TUNNEL_LOG="$STATE/bx-tunnel.log"
 
 stamp() { date '+%Y-%m-%d %H:%M:%S'; }
 say()   { echo "[$(stamp)] $*" >>"$LOG"; }
@@ -73,13 +80,77 @@ watchdog_pid() { [ -f "$PIDFILE" ] && cat "$PIDFILE" 2>/dev/null; }
 
 healthy() { curl -fsS -m "$CHECK_TIMEOUT" -o /dev/null "$HEALTH"; }
 
+tunnel_wanted() { [ -f "$TUNNEL_FLAG" ]; }
+
+# Start a quick tunnel and wait for Cloudflare to name it.
+#
+# These are anonymous and disposable: no account, and a fresh random hostname
+# every single time one starts. So the address is read back out of the log and
+# written where `url` can find it, rather than being something anyone can
+# memorise or hard-code.
+# Every quick tunnel gets its own random hostname, so a stray second copy is
+# not a harmless duplicate - it is a second address, and the one written down
+# may be the one that is no longer serving. Anything already running for this
+# port goes first. Matched on the port so an unrelated cloudflared is left be.
+tunnel_kill_strays() {
+  pkill -f "cloudflared tunnel --no-autoupdate --url http://127.0.0.1:$PORT" 2>/dev/null
+  sleep 1
+  pkill -9 -f "cloudflared tunnel --no-autoupdate --url http://127.0.0.1:$PORT" 2>/dev/null
+  rm -f "$TUNNEL_PID"
+  return 0
+}
+
+tunnel_start() {
+  tunnel_wanted || return 0
+  command -v cloudflared >/dev/null 2>&1 || { say "tunnel: cloudflared not installed"; return 1; }
+
+  tunnel_kill_strays
+  : >"$TUNNEL_LOG"
+  cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:$PORT" \
+    >>"$TUNNEL_LOG" 2>&1 &
+  echo $! >"$TUNNEL_PID"
+
+  local url=""
+  for _ in $(seq 1 40); do
+    url="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null | head -1)"
+    [ -n "$url" ] && break
+    sleep 1
+  done
+
+  if [ -n "$url" ]; then
+    echo "$url" >"$TUNNEL_URL"
+    say "tunnel: $url"
+  else
+    say "tunnel: did not come up - see $TUNNEL_LOG"
+    rm -f "$TUNNEL_URL"
+  fi
+}
+
+tunnel_stop() {
+  tunnel_kill_strays
+  rm -f "$TUNNEL_URL"
+}
+
 # --- the loop that does the actual watching ------------------------------
 supervise() {
+  # One at a time. Two supervisors both hold a server and a tunnel, and each
+  # one's cleanup kills the other's - which looks like a tunnel that keeps
+  # dying and coming back under a new name.
+  local other
+  other="$(cat "$PIDFILE" 2>/dev/null)"
+  if [ -n "$other" ] && [ "$other" != "$$" ] && kill -0 "$other" 2>/dev/null; then
+    say "another watchdog is already running (pid $other) - standing down"
+    exit 0
+  fi
+
+  # A kill -9, or launchd kickstarting this job, skips the trap below and
+  # leaves the old tunnel running. Clear it before anything else.
+  tunnel_kill_strays
   # Written here rather than by `start`, so a copy launched by launchd at
   # login is just as findable to status/stop as one started by hand.
   echo $$ >"$PIDFILE"
   say "watchdog up (pid $$), port $PORT"
-  trap 'say "watchdog asked to stop"; kill "$(cat "$CHILDFILE" 2>/dev/null)" 2>/dev/null; rm -f "$PIDFILE" "$CHILDFILE"; exit 0' TERM INT
+  trap 'say "watchdog asked to stop"; tunnel_stop; kill "$(cat "$CHILDFILE" 2>/dev/null)" 2>/dev/null; rm -f "$PIDFILE" "$CHILDFILE"; exit 0' TERM INT
 
   while true; do
     say "starting next dev on 0.0.0.0:$PORT"
@@ -95,8 +166,18 @@ supervise() {
       sleep 3; waited=$((waited + 3))
     done
 
+    tunnel_start
+
     local fails=0
     while alive "$server"; do
+      # The tunnel is watched too. It gets a new hostname when it comes back,
+      # which is why the address is written to a file rather than announced
+      # once and assumed to hold.
+      if tunnel_wanted && ! alive "$(cat "$TUNNEL_PID" 2>/dev/null)"; then
+        say "tunnel: died - restarting"
+        tunnel_start
+      fi
+
       if healthy; then
         fails=0
       else
@@ -113,6 +194,7 @@ supervise() {
       sleep "$CHECK_EVERY"
     done
 
+    tunnel_stop
     wait "$server" 2>/dev/null
     rm -f "$CHILDFILE"
     say "server stopped - back in 2s"
@@ -168,7 +250,27 @@ case "${1:-start}" in
     rm -f "$PIDFILE" "$CHILDFILE"
     ;;
 
-  restart) "$0" stop; sleep 1; "$0" start ;;
+  restart)
+    # Under launchd, a plain stop/start races: killing the watchdog makes
+    # KeepAlive respawn it immediately, and the `start` that follows can
+    # bring up a second one that then fights for the port. kickstart -k is
+    # the same restart done by the thing that owns the process.
+    if agent_loaded; then
+      if launchctl kickstart -k "gui/$(id -u)/$LABEL" 2>/dev/null; then
+        printf "Restarting"
+        for _ in $(seq 1 45); do
+          curl -fs -m 3 -o /dev/null "$HEALTH" 2>/dev/null && break
+          printf "."; sleep 2
+        done
+        echo
+      else
+        echo "launchctl kickstart failed; falling back."
+        "$0" stop; sleep 2; "$0" start
+      fi
+    else
+      "$0" stop; sleep 1; "$0" start
+    fi
+    ;;
 
   status)
     pid="$(watchdog_pid)"
@@ -190,6 +292,14 @@ case "${1:-start}" in
       fi
     done
     [ -n "$host" ] && echo "  or:            http://$host.local:$PORT   (name, not address)"
+    if [ -s "$TUNNEL_URL" ]; then
+      echo
+      echo "  Anywhere:      $(cat "$TUNNEL_URL")"
+      echo "                 public - anyone with this address can open it."
+    elif tunnel_wanted; then
+      echo
+      echo "  Anywhere:      (tunnel starting - run this again in a moment)"
+    fi
     echo
     echo "  The phone has to be on the same network as the Mac - the home"
     echo "  Wi-Fi, or the Mac tethered to the phone's own hotspot."
@@ -197,6 +307,45 @@ case "${1:-start}" in
     ;;
 
   log) tail -n "${2:-40}" -f "$LOG" ;;
+
+  tunnel)
+    case "${2:-status}" in
+      on)
+        command -v cloudflared >/dev/null 2>&1 || {
+          echo "cloudflared is not installed.  brew install cloudflared"; exit 1; }
+        mkdir -p "$SUPPORT"; : >"$TUNNEL_FLAG"
+        echo "Tunnel on. Restarting the watchdog so it picks it up."
+        "$0" restart >/dev/null 2>&1
+        printf "Waiting for Cloudflare to name it"
+        for _ in $(seq 1 45); do
+          [ -s "$TUNNEL_URL" ] && break
+          printf "."; sleep 1
+        done
+        echo
+        if [ -s "$TUNNEL_URL" ]; then
+          "$0" url
+          echo "  Off again with: $0 tunnel off"
+        else
+          echo "It did not come up. See: tail -n 40 $TUNNEL_LOG"
+          exit 1
+        fi
+        ;;
+      off)
+        rm -f "$TUNNEL_FLAG" "$TUNNEL_URL"
+        tunnel_stop
+        echo "Tunnel off - that address is dead now. The local links still work."
+        "$0" restart >/dev/null 2>&1
+        "$0" status
+        ;;
+      *)
+        if tunnel_wanted; then
+          if [ -s "$TUNNEL_URL" ]; then echo "Tunnel: $(cat "$TUNNEL_URL")"; else echo "Tunnel: on, no address yet"; fi
+        else
+          echo "Tunnel: off"
+        fi
+        ;;
+    esac
+    ;;
 
   install-login)
     # Any copy started by hand has to go first, or launchd starts a second
@@ -275,5 +424,5 @@ PLIST
     echo "The watchdog is still running for this session; '$0 stop' ends it."
     ;;
 
-  *) echo "usage: $0 start|stop|restart|status|log|url|install-login|uninstall-login"; exit 1 ;;
+  *) echo "usage: $0 start|stop|restart|status|log|url|tunnel on|off|install-login|uninstall-login"; exit 1 ;;
 esac

@@ -11,7 +11,10 @@
     "dev:stop": "scripts/dev-watchdog.sh stop",
     "dev:status": "scripts/dev-watchdog.sh status",
     "dev:log": "scripts/dev-watchdog.sh log",
-    "dev:url": "scripts/dev-watchdog.sh url"
+    "dev:url": "scripts/dev-watchdog.sh url",
+    "tunnel:on": "scripts/dev-watchdog.sh tunnel on",
+    "tunnel:off": "scripts/dev-watchdog.sh tunnel off",
+    "tunnel:status": "scripts/dev-watchdog.sh tunnel status"
   },
   "dependencies": {
     "next": "16.3.5",

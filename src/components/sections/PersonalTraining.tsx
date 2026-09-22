@@ -69,16 +69,24 @@ export default function PersonalTraining() {
           </div>
 
           <Reveal variant="right" delay={60} className="relative">
-            <div className="relative aspect-[4/3] w-full sm:aspect-[4/5] lg:sticky lg:top-28">
-              <Image
-                src={freeWeights}
-                alt="The free-weights floor at BX under angular LED frames"
-                fill
-                sizes="(max-width: 1024px) 100vw, 45vw"
-                className="plate object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-transparent" />
-              <span aria-hidden="true" className="absolute -right-px -top-px h-16 w-px bg-lime" />
+            {/*
+              Sticky and relative are separate boxes on purpose. Both on one
+              element means lg:sticky wins at desktop width, and a fill image
+              wants a relative, absolute or fixed parent - Next warns about
+              exactly this in the dev console.
+            */}
+            <div className="lg:sticky lg:top-28">
+              <div className="relative aspect-[4/3] w-full sm:aspect-[4/5]">
+                <Image
+                  src={freeWeights}
+                  alt="The free-weights floor at BX under angular LED frames"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 45vw"
+                  className="plate object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-transparent" />
+                <span aria-hidden="true" className="absolute -right-px -top-px h-16 w-px bg-lime" />
+              </div>
             </div>
           </Reveal>
         </div>
