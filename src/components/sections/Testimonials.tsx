@@ -1,4 +1,5 @@
-import { reviews, site } from "@/lib/site";
+import { getReviews } from "@/lib/reviews";
+import { site } from "@/lib/site";
 import ReviewCarousel from "../ReviewCarousel";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
@@ -29,7 +30,9 @@ function GoogleG({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-export default function Testimonials() {
+export default async function Testimonials() {
+  const feed = await getReviews();
+
   return (
     <section className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
       {/* Heading is contained; the deck runs the full width so there are always
@@ -39,12 +42,12 @@ export default function Testimonials() {
           <SectionHead
             kicker="Members"
             title="Rated"
-            accent={`${site.rating.value} on Google.`}
+            accent={`${feed.rating} on Google.`}
           />
           <Reveal delay={90} variant="right">
             <div className="flex items-center gap-4">
-              <Stars value={site.rating.value} />
-              <span className="text-sm text-grey">{site.rating.count} reviews</span>
+              <Stars value={feed.rating} />
+              <span className="text-sm text-grey">{feed.total} reviews</span>
             </div>
             <a
               href={site.maps}
@@ -60,19 +63,30 @@ export default function Testimonials() {
       </div>
 
       <Reveal variant="fade" delay={140} className="mt-12">
-        <ReviewCarousel reviews={reviews} />
+        <ReviewCarousel reviews={feed.reviews} />
       </Reveal>
 
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <Reveal variant="fade">
           <p className="mx-auto mt-8 max-w-3xl text-center text-xs leading-relaxed text-grey-dim">
-            Real reviews, quoted in full, read from Google on 22 September
-            2026 across BX&apos;s two listings &mdash; BX Fitness Hub (4.6 from
-            76) and BX Spa (4.9 from 35). Twenty-eight of those ratings carry
-            written text; these are twelve of them. Google shows all of them,
-            including the critical ones, at the link above. This is a snapshot;
-            see the README for wiring the Google Places API so it stays
-            current.
+            {feed.live ? (
+              <>
+                Live from Google, refreshed daily. Google returns the reviews
+                it chooses, which is up to five and may include a critical one.
+                All of them, including the ones not shown here, are at the link
+                above.
+              </>
+            ) : (
+              <>
+                Real reviews, quoted in full, read from Google on 22 September
+                2026 across BX&apos;s two listings &mdash; BX Fitness Hub (4.6
+                from 76) and BX Spa (4.9 from 35). Twenty-eight of those
+                ratings carry written text; these are twelve of them. Google
+                shows all of them, including the critical ones, at the link
+                above. This is a snapshot; see the README for wiring the Google
+                Places API so it stays current.
+              </>
+            )}
           </p>
         </Reveal>
       </div>

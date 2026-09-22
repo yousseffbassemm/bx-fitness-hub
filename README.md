@@ -339,6 +339,30 @@ number, or give a discipline its own entry in `CAPACITY_BY_DISCIPLINE`.
 day's bookings, cancellation, a waitlist when a class is full, and a reminder
 the day before. Say the word and I will add them.
 
+## Google reviews
+
+Unset, the site shows the twelve reviews read by hand into `site.ts` on 22
+September 2026. Set `GOOGLE_PLACES_API_KEY` and `GOOGLE_PLACE_ID` and they
+come from Google instead, cached for a day in `site_content` and picked up by
+the page within the hour.
+
+**Read this before turning it on.** The Places API returns at most **five**
+reviews, Google chooses which, and it may include a critical one. You would
+be trading twelve curated five-star reviews for five live ones you do not
+pick. That is a decision about the gym's shopfront, not a technical detail.
+
+What it buys: new reviews appear on their own, and a review the author edits
+or deletes stops being quoted. The snapshot can only get more wrong.
+
+If Google refuses - a bad key, a quota, a network blip - the section falls
+back to the snapshot rather than emptying, and the refusal is recorded on the
+Problems screen. Verified with a deliberately invalid key.
+
+One trap worth recording: the fetch must not use `cache: "no-store"`. That
+marks the whole route dynamic and drops the marketing page out of
+prerendering - a page that exists to be fast, made slow, to avoid a cache
+already handled a layer up.
+
 ## Telling somebody something happened
 
 Optional, and off unless configured. Set `RESEND_API_KEY` and

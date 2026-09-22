@@ -14,6 +14,17 @@ import Stats from "@/components/sections/Stats";
 import Testimonials from "@/components/sections/Testimonials";
 import Why from "@/components/sections/Why";
 
+/*
+  Regenerated at most once an hour.
+
+  The page is prerendered, so without this the Google reviews would be
+  fetched once at build time and "refreshed daily" would never refresh -
+  they would be as frozen as the hand-read snapshot they replaced, just
+  less honest about it. Editing prices, coaches or the timetable still
+  updates the page immediately, because saving calls revalidatePath.
+*/
+export const revalidate = 3600;
+
 export default async function HomePage() {
   return (
     <>
