@@ -35,6 +35,12 @@ function Stars({ value }: { value: number }) {
  * neighbours fall away - smaller, dimmer and progressively blurred the
  * further they sit from the centre.
  *
+ * The deck runs forever: the set of reviews is laid out three times over and
+ * the scroll position is quietly moved back a full set whenever it wanders
+ * out of the middle copy. Because the copies are identical, the card under
+ * the finger at the moment of the jump is the same card afterwards, so it
+ * cannot be seen.
+ *
  * The track is a real scroll container with scroll snapping rather than a
  * hand-written slider. That is what keeps a swipe smooth: the momentum,
  * rubber-banding and snap all come from the browser's own scrolling, which no
@@ -42,13 +48,54 @@ function Stars({ value }: { value: number }) {
  * measured here is how far each card sits from the centre, which drives the
  * blur and scale.
  */
+/** How many times the set is laid end to end. Three is the fewest that keeps
+ *  a full set of cards on either side of the one being looked at. */
+const COPIES = 3;
+
+/** Width of one full set of cards, measured rather than assumed. */
+function setWidth(el: HTMLElement, setLen: number) {
+  const kids = el.children as HTMLCollectionOf<HTMLElement>;
+  const first = kids[0];
+  const next = kids[setLen];
+  return first && next ? next.offsetLeft - first.offsetLeft : 0;
+}
+
 export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
   const track = useRef<HTMLUListElement>(null);
   const frame = useRef(0);
+  const idle = useRef(0);
+  /* Drag state lives up here so the wrap-around can correct it: if the deck
+     jumps a set-width mid-drag, the anchor the drag measures against has to
+     move by the same amount or the card leaps out from under the cursor. */
+  const drag = useRef({ down: false, startX: 0, startLeft: 0, moved: false });
+
+  const slides = Array.from({ length: COPIES }, () => reviews).flat();
+
+  /**
+   * Keep the scroll position inside the middle copy. Called before painting,
+   * so the correction and the blur it implies land in the same frame.
+   */
+  const wrap = useCallback(() => {
+    const el = track.current;
+    if (!el) return;
+    const w = setWidth(el, reviews.length);
+    if (w <= 0) return;
+    const base = (el.children[reviews.length] as HTMLElement | undefined)?.offsetLeft;
+    if (base === undefined) return;
+
+    let delta = 0;
+    if (el.scrollLeft < base - w / 2) delta = w;
+    else if (el.scrollLeft > base + w / 2) delta = -w;
+    if (!delta) return;
+
+    el.scrollLeft += delta;
+    if (drag.current.down) drag.current.startLeft += delta;
+  }, [reviews.length]);
 
   const paint = useCallback(() => {
     const el = track.current;
     if (!el) return;
+    wrap();
 
     const mid = el.scrollLeft + el.clientWidth / 2;
     for (const card of Array.from(el.children) as HTMLElement[]) {
@@ -62,9 +109,17 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
       card.style.setProperty("--ad", Math.min(1, Math.abs(clamped)).toFixed(3));
       card.dataset.active = Math.abs(clamped) < 0.5 ? "true" : "false";
     }
-  }, []);
+  }, [wrap]);
 
   const onScroll = useCallback(() => {
+    const el = track.current;
+    if (el) {
+      el.dataset.scrolling = "true";
+      window.clearTimeout(idle.current);
+      idle.current = window.setTimeout(() => {
+        delete el.dataset.scrolling;
+      }, 180);
+    }
     // One paint per frame; a scroll event can fire far more often than that.
     if (frame.current) return;
     frame.current = requestAnimationFrame(() => {
@@ -81,8 +136,9 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
     // the section's own reveal both shift offsets after the first paint, and
     // centring against stale numbers leaves the deck sitting off to one side.
     const centre = () => {
-      const cards = Array.from(el.children) as HTMLElement[];
-      const middle = cards[Math.floor(cards.length / 2)];
+      // The first card of the middle copy, so there is a full set to scroll
+      // through in either direction before the first wrap.
+      const middle = el.children[reviews.length] as HTMLElement | undefined;
       if (!middle) return;
       el.scrollLeft = middle.offsetLeft + middle.offsetWidth / 2 - el.clientWidth / 2;
       paint();
@@ -98,45 +154,43 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
       ro.disconnect();
       clearTimeout(settle);
       window.removeEventListener("load", onLoad);
+      window.clearTimeout(idle.current);
       if (frame.current) cancelAnimationFrame(frame.current);
     };
-  }, [paint]);
+  }, [paint, reviews.length]);
 
   /* Drag with a mouse. Touch already works, because the track really scrolls. */
   useEffect(() => {
     const el = track.current;
     if (!el) return;
 
-    let down = false;
-    let startX = 0;
-    let startLeft = 0;
-    let moved = false;
+    const d = drag.current;
 
     const start = (e: PointerEvent) => {
       if (e.pointerType !== "mouse") return;
-      down = true;
-      moved = false;
-      startX = e.clientX;
-      startLeft = el.scrollLeft;
+      d.down = true;
+      d.moved = false;
+      d.startX = e.clientX;
+      d.startLeft = el.scrollLeft;
       el.style.scrollSnapType = "none";
       el.style.cursor = "grabbing";
     };
 
     const move = (e: PointerEvent) => {
-      if (!down) return;
-      const dx = e.clientX - startX;
-      if (Math.abs(dx) > 3) moved = true;
-      el.scrollLeft = startLeft - dx;
+      if (!d.down) return;
+      const dx = e.clientX - d.startX;
+      if (Math.abs(dx) > 3) d.moved = true;
+      el.scrollLeft = d.startLeft - dx;
     };
 
     const end = () => {
-      if (!down) return;
-      down = false;
+      if (!d.down) return;
+      d.down = false;
       el.style.cursor = "";
       // Handing snapping back lets the browser settle it, instead of this
       // trying to animate to a target and fighting the user's momentum.
       el.style.scrollSnapType = "";
-      if (moved) {
+      if (d.moved) {
         const cards = Array.from(el.children) as HTMLElement[];
         const mid = el.scrollLeft + el.clientWidth / 2;
         let best = cards[0];
@@ -183,7 +237,7 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
         onScroll={onScroll}
         tabIndex={0}
         aria-label="Reviews from Google, use the arrow keys to move between them"
-        className="review-track flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4 focus-visible:outline-none"
+        className="review-track flex snap-x snap-mandatory gap-6 overflow-x-auto focus-visible:outline-none"
         onKeyDown={(e) => {
           if (e.key === "ArrowRight") {
             e.preventDefault();
@@ -195,8 +249,13 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
           }
         }}
       >
-        {reviews.map((r) => (
-          <li key={r.name} className="review-slide snap-center">
+        {slides.map((r, i) => (
+          <li
+            key={i}
+            className="review-slide snap-center"
+            /* Only one copy is read out; the other two are scenery. */
+            aria-hidden={i < reviews.length || i >= reviews.length * 2 ? true : undefined}
+          >
             <figure className="surface flex h-full flex-col rounded-lg p-7">
               <div className="flex items-center justify-between gap-3">
                 <Stars value={r.rating} />
@@ -219,7 +278,6 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
                     {r.name}
                   </span>
                   {r.when} &middot; {r.source}
-                  {r.excerpt && <span className="ml-1.5">&middot; excerpt</span>}
                 </span>
               </figcaption>
             </figure>
@@ -244,8 +302,14 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
         >
           &#8594;
         </button>
-        <span className="ml-1 text-xs text-grey-dim">Swipe, drag or use the arrow keys</span>
       </div>
+
+      {/* Its own centred line rather than a third item in the arrow row, which
+          pushed the arrows off-centre. */}
+      <p className="mt-3 text-center text-xs text-grey-dim">
+        <span className="sm:hidden">Swipe to browse</span>
+        <span className="hidden sm:inline">Swipe, drag or use the arrow keys</span>
+      </p>
     </div>
   );
 }
