@@ -7,6 +7,8 @@
 -- Run this once in the Supabase SQL editor, then set SUPABASE_URL and
 -- SUPABASE_SERVICE_ROLE_KEY. The app switches over on its own.
 
+-- Only gen_random_uuid is used, and that is core Postgres since 13. Kept
+-- because an older database may still need it; nothing here depends on it.
 create extension if not exists pgcrypto;
 
 create table if not exists public.bookings (
@@ -75,7 +77,13 @@ begin
   -- back without one and the link led to /b/undefined - a 404 for everyone
   -- who booked the normal way. 16 bytes as hex, matching the other stores
   -- and the [a-f0-9]{16,64} the page checks.
-  v_token := encode(gen_random_bytes(16), 'hex');
+  -- gen_random_uuid is core Postgres; gen_random_bytes is pgcrypto, which
+  -- Supabase installs into the extensions schema. These functions pin
+  -- search_path to public, so the pgcrypto call was unresolvable and every
+  -- booking came back "function gen_random_bytes(integer) does not exist".
+  -- Stripping the dashes off a uuid gives the same 32 hex characters the
+  -- other stores produce, with nothing to install.
+  v_token := replace(gen_random_uuid()::text, '-', '');
 
   insert into public.bookings (session_id, class_date, name, phone, token)
   values (p_session_id, p_date, p_name, p_phone, v_token);
@@ -261,7 +269,12 @@ $$;
 create or replace function promote_from_waitlist(
   p_session_id text, p_class_date date, p_capacity int
 ) returns json language plpgsql as $$
-declare v_taken int; v_next waitlist%rowtype; v_token text; v_id bigint;
+-- v_id is the new booking's id, and bookings.id is a uuid. It was declared
+-- bigint here, left over from before that column changed, so every
+-- promotion failed on the RETURNING with "invalid input syntax for type
+-- bigint" - the waitlist accepted people and could never move one of them
+-- into a place.
+declare v_taken int; v_next waitlist%rowtype; v_token text; v_id uuid;
 begin
   perform pg_advisory_xact_lock(hashtext(p_session_id || p_class_date::text));
 
@@ -276,7 +289,13 @@ begin
    order by created_at, id limit 1;
   if not found then return null; end if;
 
-  v_token := encode(gen_random_bytes(16), 'hex');
+  -- gen_random_uuid is core Postgres; gen_random_bytes is pgcrypto, which
+  -- Supabase installs into the extensions schema. These functions pin
+  -- search_path to public, so the pgcrypto call was unresolvable and every
+  -- booking came back "function gen_random_bytes(integer) does not exist".
+  -- Stripping the dashes off a uuid gives the same 32 hex characters the
+  -- other stores produce, with nothing to install.
+  v_token := replace(gen_random_uuid()::text, '-', '');
 
   insert into bookings (session_id, class_date, name, phone, token, promoted_at)
   values (p_session_id, p_class_date, v_next.name, v_next.phone, v_token, now())
