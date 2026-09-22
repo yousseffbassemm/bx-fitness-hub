@@ -9,6 +9,8 @@ export type BookingTarget = {
   date: string;
   session: Session;
   spotsLeft: number | null;
+  /** Booking a free place, or joining the queue for a full one. */
+  mode: "book" | "waitlist";
 };
 
 /**
@@ -32,6 +34,9 @@ export default function BookingDialog({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
+  const [manageUrl, setManageUrl] = useState<string | null>(null);
+  const [position, setPosition] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const panel = useRef<HTMLDivElement>(null);
@@ -81,8 +86,10 @@ export default function BookingDialog({
       return setError("Please enter a phone number we can reach you on.");
 
     setState("sending");
+    const waiting = target.mode === "waitlist";
+
     try {
-      const res = await fetch("/api/classes/book", {
+      const res = await fetch(waiting ? "/api/classes/waitlist" : "/api/classes/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -96,10 +103,36 @@ export default function BookingDialog({
 
       if (!res.ok) {
         setState("idle");
-        return setError(data.error ?? "Could not take that booking.");
+        return setError(
+          data.error ?? (waiting ? "Could not add you to the list." : "Could not take that booking."),
+        );
+      }
+
+      if (waiting) {
+        setPosition(data.position ?? null);
+        setState("done");
+        return;
       }
 
       onBooked(target.id, target.date, data.spotsLeft);
+      if (data.token) {
+        const url = `${window.location.origin}/b/${data.token}`;
+        setManageUrl(url);
+        /*
+          Remembered on this device so the timetable can show "you are
+          booked" and offer the cancel link again later. Wrapped because
+          private browsing throws on write, and a booking that succeeded
+          must not look like a failure over a convenience.
+        */
+        try {
+          const key = "bx:bookings";
+          const saved = JSON.parse(localStorage.getItem(key) ?? "{}");
+          saved[`${target.id}|${target.date}`] = data.token;
+          localStorage.setItem(key, JSON.stringify(saved));
+        } catch {
+          // No local storage: the link on screen is still the way back.
+        }
+      }
       setState("done");
     } catch {
       setState("idle");
@@ -161,21 +194,65 @@ export default function BookingDialog({
                 className="font-display done-step mt-6 text-3xl text-lime"
                 style={{ animationDelay: "0.35s" }}
               >
-                You&apos;re in.
+                {target.mode === "waitlist" ? "You're on the list." : "You're in."}
               </h2>
               <p
                 className="done-step mt-4 text-sm leading-relaxed text-grey"
                 style={{ animationDelay: "0.45s" }}
               >
-                {target.session.discipline} with {target.session.coach},{" "}
-                {formatDate(target.date)} at {target.session.time}. Come 10
-                minutes early if it&apos;s your first time.
+                {target.mode === "waitlist" ? (
+                  <>
+                    {position ? `Number ${position} for ` : "For "}
+                    {target.session.discipline}, {formatDate(target.date)} at{" "}
+                    {target.session.time}. If a place frees up it is yours, and
+                    we will call you on the number you gave us.
+                  </>
+                ) : (
+                  <>
+                    {target.session.discipline} with {target.session.coach},{" "}
+                    {formatDate(target.date)} at {target.session.time}. Come 10
+                    minutes early if it&apos;s your first time.
+                  </>
+                )}
               </p>
+              {manageUrl && (
+                <div
+                  className="done-step mt-6 rounded-sm border border-white/10 bg-ink/60 p-4 text-left"
+                  style={{ animationDelay: "0.5s" }}
+                >
+                  <p className="kicker mb-2">If you cannot make it</p>
+                  <p className="text-xs leading-relaxed text-grey">
+                    Use this link to give your place up, so somebody else can
+                    take it.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <code className="min-w-0 flex-1 truncate rounded-sm bg-charcoal px-3 py-2 text-[0.7rem] text-grey-dim">
+                      {manageUrl}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(manageUrl);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        } catch {
+                          // Clipboard refused; the link is on screen to copy.
+                        }
+                      }}
+                      className="font-display shrink-0 rounded-sm border border-white/15 px-3 py-2 text-[0.68rem] tracking-[0.1em] text-grey hover:border-lime hover:text-lime"
+                    >
+                      {copied ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={onClose}
-                className="font-display done-step mt-7 w-full rounded-sm bg-lime py-3.5 text-[0.8rem] tracking-[0.14em] text-ink transition-colors hover:bg-white"
-                style={{ animationDelay: "0.55s" }}
+                className="font-display done-step mt-6 w-full rounded-sm bg-lime py-3.5 text-[0.8rem] tracking-[0.14em] text-ink transition-colors hover:bg-white"
+                style={{ animationDelay: "0.6s" }}
               >
                 Done
               </button>
@@ -185,7 +262,9 @@ export default function BookingDialog({
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <span className="h-px w-8 bg-lime" />
-                <span className="kicker">Book a place</span>
+                <span className="kicker">
+                  {target.mode === "waitlist" ? "Join the waitlist" : "Book a place"}
+                </span>
               </div>
               <button
                 type="button"
@@ -212,10 +291,16 @@ export default function BookingDialog({
               </p>
             )}
 
-            {target.spotsLeft !== null && (
-              <p className="mt-3 text-xs text-grey-dim">
-                {target.spotsLeft} {target.spotsLeft === 1 ? "place" : "places"} left
+            {target.mode === "waitlist" ? (
+              <p className="mt-3 text-xs text-amber">
+                This class is full. We will call you if a place frees up.
               </p>
+            ) : (
+              target.spotsLeft !== null && (
+                <p className="mt-3 text-xs text-grey-dim">
+                  {target.spotsLeft} {target.spotsLeft === 1 ? "place" : "places"} left
+                </p>
+              )
             )}
 
             <div className="mt-7 space-y-4">
@@ -264,7 +349,13 @@ export default function BookingDialog({
               disabled={state === "sending"}
               className="font-display mt-6 w-full rounded-sm bg-lime py-4 text-[0.8rem] tracking-[0.14em] text-ink transition-colors hover:bg-white disabled:opacity-60"
             >
-              {state === "sending" ? "Booking…" : "Confirm Place"}
+              {state === "sending"
+                ? target.mode === "waitlist"
+                  ? "Adding…"
+                  : "Booking…"
+                : target.mode === "waitlist"
+                  ? "Join the waitlist"
+                  : "Confirm Place"}
             </button>
             </form>
           )}

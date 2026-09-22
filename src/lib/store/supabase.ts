@@ -10,6 +10,7 @@ import type {
   RestoreResult,
   StaffRole,
   StaffUser,
+  WaitlistRow,
 } from "./types";
 
 /**
@@ -67,8 +68,136 @@ const toStaff = (r: StaffPayload): StaffUser => ({
   lastLoginAt: r.last_login_at,
 });
 
+type WaitPayload = {
+  id: number;
+  session_id: string;
+  class_date: string;
+  name: string;
+  phone: string;
+  created_at: string;
+  promoted_at: string | null;
+};
+
+const toWait = (r: WaitPayload): WaitlistRow => ({
+  id: String(r.id),
+  sessionId: r.session_id,
+  date: r.class_date,
+  name: r.name,
+  phone: r.phone,
+  createdAt: r.created_at,
+  promotedAt: r.promoted_at,
+});
+
 export const supabaseStore: BookingStore = {
   name: "supabase",
+
+  async getByToken(token) {
+    if (!token) return null;
+    const res = await fetch(
+      `${url}/rest/v1/bookings?select=*&token=eq.${encodeURIComponent(token)}`,
+      { headers: headers(), cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`Supabase getByToken failed: ${res.status}`);
+    const [r] = (await res.json()) as Record<string, string | null>[];
+    if (!r) return null;
+    return {
+      id: String(r.id),
+      sessionId: r.session_id as string,
+      date: r.class_date as string,
+      name: r.name as string,
+      phone: r.phone as string,
+      createdAt: r.created_at as string,
+      cancelledAt: r.cancelled_at,
+      token: r.token ?? null,
+      promotedAt: r.promoted_at ?? null,
+    };
+  },
+
+  async joinWaitlist({ sessionId, date, name, phone }) {
+    const res = await fetch(`${url}/rest/v1/rpc/join_waitlist`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        p_session_id: sessionId,
+        p_class_date: date,
+        p_name: name,
+        p_phone: phone,
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase joinWaitlist failed: ${res.status}`);
+    const out = (await res.json()) as { ok: boolean; position: number };
+    return out.ok
+      ? { ok: true as const, position: out.position }
+      : { ok: false as const, reason: "duplicate" as const };
+  },
+
+  async listWaitlist(from, to) {
+    const res = await fetch(
+      `${url}/rest/v1/waitlist?select=*&class_date=gte.${from}&class_date=lte.${to}&order=created_at`,
+      { headers: headers(), cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`Supabase listWaitlist failed: ${res.status}`);
+    return ((await res.json()) as WaitPayload[]).map(toWait);
+  },
+
+  async promoteFromWaitlist(sessionId, date, capacity) {
+    // Behind an advisory lock in SQL, same as book_session: this runs the
+    // moment a place frees and must not race someone taking it.
+    const res = await fetch(`${url}/rest/v1/rpc/promote_from_waitlist`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        p_session_id: sessionId,
+        p_class_date: date,
+        p_capacity: capacity,
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase promoteFromWaitlist failed: ${res.status}`);
+    const out = (await res.json()) as Record<string, string | null> | null;
+    if (!out || !out.id) return null;
+    return {
+      id: String(out.id),
+      sessionId: out.session_id as string,
+      date: out.class_date as string,
+      name: out.name as string,
+      phone: out.phone as string,
+      createdAt: out.created_at as string,
+      cancelledAt: null,
+      token: out.token ?? null,
+      promotedAt: out.promoted_at ?? null,
+    };
+  },
+
+  async listPromoted(from, to) {
+    const res = await fetch(
+      `${url}/rest/v1/bookings?select=*&class_date=gte.${from}&class_date=lte.${to}` +
+        `&promoted_at=not.is.null&cancelled_at=is.null&order=class_date`,
+      { headers: headers(), cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`Supabase listPromoted failed: ${res.status}`);
+    return ((await res.json()) as Record<string, string | null>[]).map((r) => ({
+      id: String(r.id),
+      sessionId: r.session_id as string,
+      date: r.class_date as string,
+      name: r.name as string,
+      phone: r.phone as string,
+      createdAt: r.created_at as string,
+      cancelledAt: r.cancelled_at,
+      token: r.token ?? null,
+      promotedAt: r.promoted_at ?? null,
+    }));
+  },
+
+  async markTold(id) {
+    await fetch(`${url}/rest/v1/bookings?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: headers(),
+      body: JSON.stringify({ promoted_at: null }),
+      cache: "no-store",
+    });
+  },
 
   async findStaffUser(username) {
     const res = await fetch(
@@ -259,6 +388,8 @@ export const supabaseStore: BookingStore = {
       phone: string;
       created_at: string;
       cancelled_at: string | null;
+      token?: string | null;
+      promoted_at?: string | null;
     }[];
 
     return data.map((r) => ({
@@ -269,6 +400,8 @@ export const supabaseStore: BookingStore = {
       phone: r.phone,
       createdAt: r.created_at,
       cancelledAt: r.cancelled_at,
+      token: r.token ?? null,
+      promotedAt: r.promoted_at ?? null,
     }));
   },
 
@@ -291,6 +424,8 @@ export const supabaseStore: BookingStore = {
       phone: string;
       created_at: string;
       cancelled_at: string | null;
+      token?: string | null;
+      promoted_at?: string | null;
     }[];
 
     if (!r) return null;
@@ -302,6 +437,8 @@ export const supabaseStore: BookingStore = {
       phone: r.phone,
       createdAt: r.created_at,
       cancelledAt: r.cancelled_at,
+      token: r.token ?? null,
+      promotedAt: r.promoted_at ?? null,
     };
   },
 
@@ -353,10 +490,11 @@ export const supabaseStore: BookingStore = {
       ok: boolean;
       reason?: "full" | "duplicate";
       spots_left?: number;
+      token?: string;
     };
 
     return data.ok
-      ? { ok: true, spotsLeft: data.spots_left ?? 0 }
+      ? { ok: true, spotsLeft: data.spots_left ?? 0, token: data.token ?? "" }
       : { ok: false, reason: data.reason ?? "full" };
   },
 };

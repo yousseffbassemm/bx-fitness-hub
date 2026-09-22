@@ -10,6 +10,7 @@ import type {
   RestoreResult,
   StaffRole,
   StaffUser,
+  WaitlistRow,
 } from "./types";
 
 /**
@@ -24,6 +25,13 @@ const leads: LeadRow[] = [];
 const staff = new Map<string, StaffUser>();
 const content = new Map<string, unknown>();
 const uploads = new Map<string, { mime: string; bytes: Uint8Array }>();
+const waiting: WaitlistRow[] = [];
+let nextWaitId = 1;
+
+const token = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
 let nextId = 1;
 let nextLeadId = 1;
 
@@ -64,6 +72,77 @@ export const memoryStore: BookingStore = {
 
   async getUpload(id) {
     return uploads.get(id) ?? null;
+  },
+
+  async getByToken(t) {
+    return rows.find((r) => r.token === t) ?? null;
+  },
+
+  async joinWaitlist({ sessionId, date, name, phone }) {
+    const already = waiting.some(
+      (w) =>
+        w.sessionId === sessionId &&
+        w.date === date &&
+        w.phone === phone &&
+        w.promotedAt === null,
+    );
+    if (already) return { ok: false as const, reason: "duplicate" as const };
+
+    waiting.push({
+      id: String(nextWaitId++),
+      sessionId,
+      date,
+      name,
+      phone,
+      createdAt: new Date().toISOString(),
+      promotedAt: null,
+    });
+
+    return {
+      ok: true as const,
+      position: waiting.filter(
+        (w) => w.sessionId === sessionId && w.date === date && w.promotedAt === null,
+      ).length,
+    };
+  },
+
+  async listWaitlist(from, to) {
+    return waiting.filter((w) => w.date >= from && w.date <= to);
+  },
+
+  async promoteFromWaitlist(sessionId, date, capacity) {
+    if (live(sessionId, date).length >= capacity) return null;
+    const next = waiting.find(
+      (w) => w.sessionId === sessionId && w.date === date && w.promotedAt === null,
+    );
+    if (!next) return null;
+
+    next.promotedAt = new Date().toISOString();
+    const row: BookingRow = {
+      id: String(nextId++),
+      sessionId,
+      date,
+      name: next.name,
+      phone: next.phone,
+      createdAt: new Date().toISOString(),
+      cancelledAt: null,
+      token: token(),
+      promotedAt: new Date().toISOString(),
+    };
+    rows.push(row);
+    return row;
+  },
+
+  async listPromoted(from, to) {
+    return rows.filter(
+      (r) =>
+        r.date >= from && r.date <= to && r.promotedAt !== null && r.cancelledAt === null,
+    );
+  },
+
+  async markTold(id) {
+    const row = rows.find((r) => r.id === id);
+    if (row) row.promotedAt = null;
   },
 
   async setStaffRole(username, role) {
@@ -156,6 +235,7 @@ export const memoryStore: BookingStore = {
     if (mine.some((r) => r.phone === phone)) return { ok: false, reason: "duplicate" };
     if (mine.length >= capacity) return { ok: false, reason: "full" };
 
+    const mineToken = token();
     rows.push({
       id: String(nextId++),
       sessionId,
@@ -164,7 +244,9 @@ export const memoryStore: BookingStore = {
       phone,
       createdAt: new Date().toISOString(),
       cancelledAt: null,
+      token: mineToken,
+      promotedAt: null,
     });
-    return { ok: true, spotsLeft: capacity - mine.length - 1 };
+    return { ok: true, spotsLeft: capacity - mine.length - 1, token: mineToken };
   },
 };

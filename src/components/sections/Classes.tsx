@@ -238,15 +238,30 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
                         </span>
 
                         <span className="col-span-2 sm:col-span-1 sm:justify-self-end">
+                          {/*
+                            A full class used to be a dead end. It is an
+                            invitation now: the demand is worth capturing, and
+                            a place given up later has somewhere to go.
+                          */}
                           <button
                             type="button"
-                            disabled={full || !date}
+                            disabled={!date}
                             onClick={() =>
-                              setTarget({ id, date, session: s, spotsLeft: left })
+                              setTarget({
+                                id,
+                                date,
+                                session: s,
+                                spotsLeft: left,
+                                mode: full ? "waitlist" : "book",
+                              })
                             }
-                            className="font-display w-full rounded-sm border border-lime/50 px-5 py-2.5 text-[0.74rem] tracking-[0.12em] text-lime transition-all duration-300 hover:bg-lime hover:text-ink active:scale-[0.96] active:bg-lime active:text-ink disabled:cursor-not-allowed disabled:border-white/10 disabled:text-grey-dim disabled:hover:bg-transparent sm:w-auto"
+                            className={`font-display w-full rounded-sm px-5 py-2.5 text-[0.74rem] tracking-[0.12em] transition-all duration-300 active:scale-[0.96] disabled:cursor-not-allowed disabled:border-white/10 disabled:text-grey-dim sm:w-auto ${
+                              full
+                                ? "border border-white/25 text-grey hover:border-white hover:bg-white hover:text-ink active:bg-white active:text-ink"
+                                : "border border-lime/50 text-lime hover:bg-lime hover:text-ink active:bg-lime active:text-ink"
+                            }`}
                           >
-                            {full ? "Full" : "Book"}
+                            {full ? "Join waitlist" : "Book"}
                           </button>
                         </span>
                       </li>

@@ -7,7 +7,7 @@ export type BookingInput = {
 };
 
 export type BookingResult =
-  | { ok: true; spotsLeft: number }
+  | { ok: true; spotsLeft: number; token: string }
   | { ok: false; reason: "full" | "duplicate" };
 
 /** A row as staff see it. Carries personal data - never expose it publicly. */
@@ -18,8 +18,18 @@ export type BookingRow = {
   name: string;
   phone: string;
   createdAt: string;
-  /** Set when staff cancelled it. The row is kept either way. */
+  /** Set when it was cancelled, by staff or by the member. Row is kept. */
   cancelledAt: string | null;
+  /**
+   * The member's own handle on this booking.
+   *
+   * Unguessable and specific to one booking, so someone can cancel their own
+   * place without an account and without being able to reach anyone else's.
+   * Null on bookings taken before self-cancelling existed.
+   */
+  token: string | null;
+  /** Promoted from the waitlist and not yet told. */
+  promotedAt: string | null;
 };
 
 export type CancelResult = { ok: true } | { ok: false; reason: "not-found" };
@@ -67,6 +77,18 @@ export type StaffUser = {
   lastLoginAt: string | null;
 };
 
+/** Someone waiting for a place on a class that was full. */
+export type WaitlistRow = {
+  id: string;
+  sessionId: string;
+  date: string;
+  name: string;
+  phone: string;
+  createdAt: string;
+  /** Set when a place freed and this entry became a booking. */
+  promotedAt: string | null;
+};
+
 export interface BookingStore {
   /** Places taken per "sessionId|date". Cancelled bookings do not count. */
   counts(from: string, to: string): Promise<Record<string, number>>;
@@ -75,10 +97,32 @@ export interface BookingStore {
   list(from: string, to: string): Promise<BookingRow[]>;
   /** One booking by id, or null. */
   get(id: string): Promise<BookingRow | null>;
+  /** One booking by the member's own token, or null. */
+  getByToken(token: string): Promise<BookingRow | null>;
   /** Soft cancel: frees the place, keeps the record. */
   cancel(id: string): Promise<CancelResult>;
   /** Undo a cancellation, if the class has not filled up since. */
   restore(id: string, capacity: number): Promise<RestoreResult>;
+
+  /** Put someone on the waitlist for a class that is full. */
+  joinWaitlist(input: Omit<BookingInput, "capacity">): Promise<
+    { ok: true; position: number } | { ok: false; reason: "duplicate" }
+  >;
+  /** Everyone waiting, oldest first, for a date range. Staff view only. */
+  listWaitlist(from: string, to: string): Promise<WaitlistRow[]>;
+  /**
+   * Turn the longest-waiting entry for a slot into a booking, if there is
+   * room. Called when a place frees.
+   */
+  promoteFromWaitlist(
+    sessionId: string,
+    date: string,
+    capacity: number,
+  ): Promise<BookingRow | null>;
+  /** Bookings that came off the waitlist and still need telling. */
+  listPromoted(from: string, to: string): Promise<BookingRow[]>;
+  /** Mark a promoted booking as told. */
+  markTold(id: string): Promise<void>;
 
   /** Record an enquiry from the "Start here" form. */
   saveLead(input: LeadInput): Promise<{ ok: true; id: string }>;

@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { randomBytes } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { slotKey } from "../booking";
 import type {
@@ -13,6 +14,7 @@ import type {
   RestoreResult,
   StaffRole,
   StaffUser,
+  WaitlistRow,
 } from "./types";
 
 /**
@@ -155,6 +157,40 @@ function migrate(next: DatabaseSync) {
     )
   `);
 
+  // The member's own handle on a booking, and whether they still need
+  // telling that a waitlist place came free. Added rather than rebuilt: the
+  // bookings already in here are real.
+  const bookingCols = next.prepare("PRAGMA table_info(bookings)").all() as {
+    name: string;
+  }[];
+  if (!bookingCols.some((c) => c.name === "token")) {
+    next.exec("ALTER TABLE bookings ADD COLUMN token TEXT");
+    next.exec("CREATE UNIQUE INDEX IF NOT EXISTS bookings_token_idx ON bookings (token)");
+  }
+  if (!bookingCols.some((c) => c.name === "promoted_at")) {
+    next.exec("ALTER TABLE bookings ADD COLUMN promoted_at TEXT");
+  }
+
+  // People waiting for a class that was full. One live entry per phone per
+  // slot, same rule as bookings, for the same reason.
+  next.exec(`
+    CREATE TABLE IF NOT EXISTS waitlist (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id   TEXT NOT NULL,
+      class_date   TEXT NOT NULL,
+      name         TEXT NOT NULL,
+      phone        TEXT NOT NULL,
+      created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      promoted_at  TEXT
+    )
+  `);
+  next.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS waitlist_live_unique
+      ON waitlist (session_id, class_date, phone)
+      WHERE promoted_at IS NULL
+  `);
+  next.exec("CREATE INDEX IF NOT EXISTS waitlist_date_idx ON waitlist (class_date)");
+
   next.exec("CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings (class_date)");
   next.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_unique
@@ -182,6 +218,36 @@ function open() {
 function isUniqueViolation(error: unknown) {
   return error instanceof Error && error.message.includes("UNIQUE constraint failed");
 }
+
+type BookingDbRow = {
+  id: number;
+  session_id: string;
+  class_date: string;
+  name: string;
+  phone: string;
+  created_at: string;
+  cancelled_at: string | null;
+  token: string | null;
+  promoted_at: string | null;
+};
+
+const BOOKING_COLUMNS =
+  "id, session_id, class_date, name, phone, created_at, cancelled_at, token, promoted_at";
+
+const toBooking = (r: BookingDbRow): BookingRow => ({
+  id: String(r.id),
+  sessionId: r.session_id,
+  date: r.class_date,
+  name: r.name,
+  phone: r.phone,
+  createdAt: r.created_at,
+  cancelledAt: r.cancelled_at,
+  token: r.token,
+  promotedAt: r.promoted_at,
+});
+
+/** The member's handle on their booking. Long enough not to be guessed. */
+const newToken = () => randomBytes(16).toString("hex");
 
 function liveCount(d: DatabaseSync, sessionId: string, date: string) {
   const { n } = d
@@ -363,7 +429,7 @@ export const sqliteStore: BookingStore = {
   async list(from, to): Promise<BookingRow[]> {
     const rows = open()
       .prepare(
-        `SELECT id, session_id, class_date, name, phone, created_at, cancelled_at
+        `SELECT ${BOOKING_COLUMNS}
            FROM bookings
           WHERE class_date BETWEEN ? AND ?
           ORDER BY class_date ASC, created_at ASC`,
@@ -376,47 +442,26 @@ export const sqliteStore: BookingStore = {
       phone: string;
       created_at: string;
       cancelled_at: string | null;
+      token: string | null;
+      promoted_at: string | null;
     }[];
 
-    return rows.map((r) => ({
-      id: String(r.id),
-      sessionId: r.session_id,
-      date: r.class_date,
-      name: r.name,
-      phone: r.phone,
-      createdAt: r.created_at,
-      cancelledAt: r.cancelled_at,
-    }));
+    return rows.map(toBooking);
   },
 
   async get(id): Promise<BookingRow | null> {
     const r = open()
-      .prepare(
-        `SELECT id, session_id, class_date, name, phone, created_at, cancelled_at
-           FROM bookings WHERE id = ?`,
-      )
-      .get(id) as
-      | {
-          id: number;
-          session_id: string;
-          class_date: string;
-          name: string;
-          phone: string;
-          created_at: string;
-          cancelled_at: string | null;
-        }
-      | undefined;
+      .prepare(`SELECT ${BOOKING_COLUMNS} FROM bookings WHERE id = ?`)
+      .get(id) as BookingDbRow | undefined;
+    return r ? toBooking(r) : null;
+  },
 
-    if (!r) return null;
-    return {
-      id: String(r.id),
-      sessionId: r.session_id,
-      date: r.class_date,
-      name: r.name,
-      phone: r.phone,
-      createdAt: r.created_at,
-      cancelledAt: r.cancelled_at,
-    };
+  async getByToken(token): Promise<BookingRow | null> {
+    if (!token) return null;
+    const r = open()
+      .prepare(`SELECT ${BOOKING_COLUMNS} FROM bookings WHERE token = ?`)
+      .get(token) as BookingDbRow | undefined;
+    return r ? toBooking(r) : null;
   },
 
   async cancel(id): Promise<CancelResult> {
@@ -462,6 +507,130 @@ export const sqliteStore: BookingStore = {
     }
   },
 
+  /* ---------------------------------------------------------------- */
+  /* Waitlist                                                          */
+
+  async joinWaitlist({ sessionId, date, name, phone }) {
+    const d = open();
+    try {
+      d.prepare(
+        "INSERT INTO waitlist (session_id, class_date, name, phone) VALUES (?, ?, ?, ?)",
+      ).run(sessionId, date, name, phone);
+    } catch (error) {
+      if (isUniqueViolation(error)) return { ok: false as const, reason: "duplicate" as const };
+      throw error;
+    }
+
+    const { n } = d
+      .prepare(
+        `SELECT COUNT(*) AS n FROM waitlist
+          WHERE session_id = ? AND class_date = ? AND promoted_at IS NULL`,
+      )
+      .get(sessionId, date) as { n: number };
+
+    return { ok: true as const, position: Number(n) };
+  },
+
+  async listWaitlist(from, to): Promise<WaitlistRow[]> {
+    const rows = open()
+      .prepare(
+        `SELECT id, session_id, class_date, name, phone, created_at, promoted_at
+           FROM waitlist
+          WHERE class_date BETWEEN ? AND ?
+          ORDER BY datetime(created_at), id`,
+      )
+      .all(from, to) as {
+      id: number;
+      session_id: string;
+      class_date: string;
+      name: string;
+      phone: string;
+      created_at: string;
+      promoted_at: string | null;
+    }[];
+
+    return rows.map((r) => ({
+      id: String(r.id),
+      sessionId: r.session_id,
+      date: r.class_date,
+      name: r.name,
+      phone: r.phone,
+      createdAt: r.created_at,
+      promotedAt: r.promoted_at,
+    }));
+  },
+
+  /**
+   * Move the longest-waiting person into the freed place.
+   *
+   * Under the same write lock as a booking, because this runs the moment a
+   * place frees and must not race a member taking that place themselves -
+   * otherwise a class can end up one over capacity.
+   */
+  async promoteFromWaitlist(sessionId, date, capacity): Promise<BookingRow | null> {
+    const d = open();
+
+    d.exec("BEGIN IMMEDIATE");
+    try {
+      if (liveCount(d, sessionId, date) >= capacity) {
+        d.exec("ROLLBACK");
+        return null;
+      }
+
+      const next = d
+        .prepare(
+          `SELECT id, name, phone FROM waitlist
+            WHERE session_id = ? AND class_date = ? AND promoted_at IS NULL
+            ORDER BY datetime(created_at), id
+            LIMIT 1`,
+        )
+        .get(sessionId, date) as { id: number; name: string; phone: string } | undefined;
+
+      if (!next) {
+        d.exec("ROLLBACK");
+        return null;
+      }
+
+      const token = newToken();
+      const info = d
+        .prepare(
+          `INSERT INTO bookings (session_id, class_date, name, phone, token, promoted_at)
+           VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+        )
+        .run(sessionId, date, next.name, next.phone, token);
+
+      d.prepare("UPDATE waitlist SET promoted_at = datetime('now') WHERE id = ?").run(next.id);
+      d.exec("COMMIT");
+
+      const row = d
+        .prepare(`SELECT ${BOOKING_COLUMNS} FROM bookings WHERE id = ?`)
+        .get(info.lastInsertRowid) as BookingDbRow;
+      return toBooking(row);
+    } catch (error) {
+      d.exec("ROLLBACK");
+      // Already booked despite being on the list - nothing to promote.
+      if (isUniqueViolation(error)) return null;
+      throw error;
+    }
+  },
+
+  async listPromoted(from, to): Promise<BookingRow[]> {
+    const rows = open()
+      .prepare(
+        `SELECT ${BOOKING_COLUMNS} FROM bookings
+          WHERE class_date BETWEEN ? AND ?
+            AND promoted_at IS NOT NULL
+            AND cancelled_at IS NULL
+          ORDER BY class_date, datetime(promoted_at)`,
+      )
+      .all(from, to) as BookingDbRow[];
+    return rows.map(toBooking);
+  },
+
+  async markTold(id) {
+    open().prepare("UPDATE bookings SET promoted_at = NULL WHERE id = ?").run(id);
+  },
+
   async book({ sessionId, date, name, phone, capacity }: BookingInput): Promise<BookingResult> {
     const d = open();
 
@@ -475,12 +644,13 @@ export const sqliteStore: BookingStore = {
         return { ok: false, reason: "full" };
       }
 
+      const token = newToken();
       d.prepare(
-        "INSERT INTO bookings (session_id, class_date, name, phone) VALUES (?, ?, ?, ?)",
-      ).run(sessionId, date, name, phone);
+        "INSERT INTO bookings (session_id, class_date, name, phone, token) VALUES (?, ?, ?, ?, ?)",
+      ).run(sessionId, date, name, phone, token);
 
       d.exec("COMMIT");
-      return { ok: true, spotsLeft: capacity - taken - 1 };
+      return { ok: true, spotsLeft: capacity - taken - 1, token };
     } catch (error) {
       d.exec("ROLLBACK");
       if (isUniqueViolation(error)) return { ok: false, reason: "duplicate" };

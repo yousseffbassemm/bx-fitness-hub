@@ -30,6 +30,11 @@ export async function PATCH(request: Request) {
   if (typeof id !== "string" || !id) {
     return NextResponse.json({ error: "Missing booking id" }, { status: 400 });
   }
+  if (action === "told") {
+    await (await getStore()).markTold(id);
+    return NextResponse.json({ ok: true });
+  }
+
   if (action !== "cancel" && action !== "restore") {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
@@ -38,6 +43,7 @@ export async function PATCH(request: Request) {
 
   try {
     if (action === "cancel") {
+      const booking = await store.get(id);
       const result = await store.cancel(id);
       if (!result.ok) {
         return NextResponse.json(
@@ -45,7 +51,26 @@ export async function PATCH(request: Request) {
           { status: 404 },
         );
       }
-      return NextResponse.json({ ok: true });
+
+      /*
+        Offer the freed place to the waitlist, exactly as a member cancelling
+        their own does. A place given back is only worth having if someone
+        else can take it, and staff cancelling on the phone is the commonest
+        way one comes back.
+      */
+      let promoted = null;
+      if (booking) {
+        const slot = findSessionIn(await getSchedule(), booking.sessionId);
+        if (slot) {
+          promoted = await store.promoteFromWaitlist(
+            booking.sessionId,
+            booking.date,
+            capacityFor(slot.session.discipline),
+          );
+        }
+      }
+
+      return NextResponse.json({ ok: true, promoted: promoted?.name ?? null });
     }
 
     // Restore needs the capacity of the class the booking belongs to.

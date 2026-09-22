@@ -9,6 +9,7 @@ import { getSchedule } from "@/lib/content";
 import { getStore } from "@/lib/store";
 import BookingRowActions from "@/components/staff/BookingRowActions";
 import PageHeader from "@/components/staff/PageHeader";
+import PromotedActions from "@/components/staff/PromotedActions";
 
 // Bookings change constantly; never serve a cached list.
 export const dynamic = "force-dynamic";
@@ -39,6 +40,16 @@ export default async function StaffPage(props: PageProps<"/staff">) {
   const liveCount = rows.filter((r) => r.cancelledAt === null).length;
 
   const schedule = await getSchedule();
+
+  /*
+    People who were moved off the waitlist into a real place and have not
+    been told yet. A waitlist that silently promotes someone who never finds
+    out is worse than no waitlist: the place is taken and nobody uses it.
+  */
+  const promoted = await store.listPromoted(from, to);
+  const waitlist = (await store.listWaitlist(from, to)).filter(
+    (w) => w.promotedAt === null,
+  );
 
   /*
     Bookings whose class is no longer on the timetable used to be skipped
@@ -114,6 +125,77 @@ export default async function StaffPage(props: PageProps<"/staff">) {
           </form>
         }
       />
+
+      {promoted.length > 0 && (
+        <section className="mt-10 rounded-sm border border-lime/40 bg-lime/[0.06] p-5">
+          <h2 className="font-display text-base text-lime">
+            {promoted.length} {promoted.length === 1 ? "person" : "people"} moved off
+            the waitlist &mdash; call {promoted.length === 1 ? "them" : "them"}
+          </h2>
+          <p className="mt-2 text-xs leading-relaxed text-grey">
+            A place came free and they now have it. They do not know yet.
+          </p>
+          <ul className="mt-4 divide-y divide-white/8">
+            {promoted.map((row) => {
+              const slot = findSessionIn(schedule, row.sessionId);
+              return (
+                <li
+                  key={row.id}
+                  className="flex flex-wrap items-center justify-between gap-3 py-3"
+                >
+                  <span className="text-sm text-white">{row.name}</span>
+                  <a
+                    href={`tel:${row.phone.replace(/\s/g, "")}`}
+                    className="text-sm tabular-nums text-grey hover:text-lime"
+                  >
+                    {row.phone}
+                  </a>
+                  <span className="text-xs text-grey-dim">
+                    {slot ? `${slot.session.discipline}, ` : ""}
+                    {formatDate(row.date)}
+                  </span>
+                  <PromotedActions id={row.id} name={row.name} />
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {waitlist.length > 0 && (
+        <section className="mt-10 rounded-sm border border-white/10 bg-charcoal p-5">
+          <h2 className="font-display text-base text-white">
+            {waitlist.length} waiting for a place
+          </h2>
+          <p className="mt-2 text-xs leading-relaxed text-grey-dim">
+            In the order they joined. The longest waiting gets the next place
+            that frees, automatically.
+          </p>
+          <ul className="mt-4 divide-y divide-white/8">
+            {waitlist.map((w) => {
+              const slot = findSessionIn(schedule, w.sessionId);
+              return (
+                <li
+                  key={w.id}
+                  className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm"
+                >
+                  <span className="text-grey">{w.name}</span>
+                  <a
+                    href={`tel:${w.phone.replace(/\s/g, "")}`}
+                    className="tabular-nums text-grey-dim hover:text-lime"
+                  >
+                    {w.phone}
+                  </a>
+                  <span className="text-xs text-grey-dim">
+                    {slot ? `${slot.session.discipline}, ` : ""}
+                    {formatDate(w.date)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {orphaned.length > 0 && (
         <section className="mt-12 rounded-sm border border-amber/40 bg-amber/[0.06] p-5">
