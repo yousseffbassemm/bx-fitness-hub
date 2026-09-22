@@ -29,7 +29,7 @@ export default function StaffLoginPage() {
         {configured ? (
           <>
             <p className="mt-3 text-sm leading-relaxed text-grey">
-              Enter the staff password to see today&apos;s list.
+              Sign in with your own username to see today&apos;s list.
             </p>
             {/* The form reads ?next= , so it needs a boundary on a
                 prerendered page. */}
@@ -49,10 +49,9 @@ export default function StaffLoginPage() {
               The staff area is not configured on this server. Generate the two
               values with{" "}
               <code className="text-white">
-                node scripts/staff-password.mjs &lt;password&gt;
+                node scripts/staff-user.mjs add &lt;username&gt;
               </code>{" "}
-              and set <code className="text-white">STAFF_PASSWORD_HASH</code> and{" "}
-              <code className="text-white">STAFF_SESSION_SECRET</code>.
+              and set <code className="text-white">STAFF_SESSION_SECRET</code>.
             </p>
           </div>
         )}

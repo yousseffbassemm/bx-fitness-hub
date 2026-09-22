@@ -8,6 +8,7 @@ import type {
   LeadInput,
   LeadRow,
   RestoreResult,
+  StaffUser,
 } from "./types";
 
 /**
@@ -49,8 +50,72 @@ const toLead = (r: LeadPayload): LeadRow => ({
   handledAt: r.handled_at,
 });
 
+type StaffPayload = {
+  username: string;
+  password_hash: string;
+  created_at: string;
+  last_login_at: string | null;
+};
+
+const toStaff = (r: StaffPayload): StaffUser => ({
+  username: r.username,
+  passwordHash: r.password_hash,
+  createdAt: r.created_at,
+  lastLoginAt: r.last_login_at,
+});
+
 export const supabaseStore: BookingStore = {
   name: "supabase",
+
+  async findStaffUser(username) {
+    const res = await fetch(
+      `${url}/rest/v1/staff_users?select=*&username=eq.${encodeURIComponent(username)}`,
+      { headers: headers(), cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`Supabase findStaffUser failed: ${res.status}`);
+    const [row] = (await res.json()) as StaffPayload[];
+    return row ? toStaff(row) : null;
+  },
+
+  async upsertStaffUser(username, passwordHash) {
+    const res = await fetch(`${url}/rest/v1/staff_users`, {
+      method: "POST",
+      headers: { ...headers(), Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify({ username, password_hash: passwordHash }),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase upsertStaffUser failed: ${res.status}`);
+  },
+
+  async listStaffUsers() {
+    const res = await fetch(`${url}/rest/v1/staff_users?select=*&order=username`, {
+      headers: headers(),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase listStaffUsers failed: ${res.status}`);
+    return ((await res.json()) as StaffPayload[]).map(toStaff);
+  },
+
+  async touchStaffLogin(username) {
+    await fetch(
+      `${url}/rest/v1/staff_users?username=eq.${encodeURIComponent(username)}`,
+      {
+        method: "PATCH",
+        headers: headers(),
+        body: JSON.stringify({ last_login_at: new Date().toISOString() }),
+        cache: "no-store",
+      },
+    );
+  },
+
+  async deleteStaffUser(username) {
+    const res = await fetch(
+      `${url}/rest/v1/staff_users?username=eq.${encodeURIComponent(username)}`,
+      { method: "DELETE", headers: { ...headers(), Prefer: "return=representation" }, cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`Supabase deleteStaffUser failed: ${res.status}`);
+    return ((await res.json()) as StaffPayload[]).length > 0;
+  },
 
   async saveLead(input: LeadInput) {
     const res = await fetch(`${url}/rest/v1/leads`, {

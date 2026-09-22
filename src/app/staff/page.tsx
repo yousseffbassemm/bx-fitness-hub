@@ -5,6 +5,8 @@ import {
   formatDate,
   toISODate,
 } from "@/lib/booking";
+import { cookies } from "next/headers";
+import { STAFF_COOKIE, readSessionToken } from "@/lib/staff/session";
 import { getStore } from "@/lib/store";
 import BookingRowActions from "@/components/staff/BookingRowActions";
 import LeadRowActions from "@/components/staff/LeadRowActions";
@@ -34,6 +36,12 @@ export default async function StaffPage(props: PageProps<"/staff">) {
   const until = new Date(from);
   until.setDate(until.getDate() + BOOKING_WINDOW_DAYS);
   const to = toISODate(until);
+
+  // proxy.ts has already refused anyone without a valid session, so this is
+  // only for showing whose shift it is.
+  const signedInAs = await readSessionToken(
+    (await cookies()).get(STAFF_COOKIE)?.value,
+  );
 
   const store = await getStore();
   const rows = await store.list(from, to);
@@ -87,6 +95,9 @@ export default async function StaffPage(props: PageProps<"/staff">) {
           <div className="flex items-center gap-2.5 text-white">
             <Mark className="h-8 w-8" />
             <span className="kicker">Staff</span>
+            {signedInAs && (
+              <span className="text-xs text-grey-dim">&middot; {signedInAs}</span>
+            )}
           </div>
           <h1 className="font-display mt-5 text-3xl text-white sm:text-4xl">
             {liveCount} {liveCount === 1 ? "booking" : "bookings"}

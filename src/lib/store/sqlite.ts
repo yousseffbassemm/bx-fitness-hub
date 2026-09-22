@@ -11,6 +11,7 @@ import type {
   LeadInput,
   LeadRow,
   RestoreResult,
+  StaffUser,
 } from "./types";
 
 /**
@@ -96,6 +97,17 @@ function migrate(next: DatabaseSync) {
   `);
   next.exec("CREATE INDEX IF NOT EXISTS leads_created_idx ON leads (created_at DESC)");
 
+  // Staff accounts. One row per person, so a sign-in is attributable and
+  // removing someone does not mean changing a password everyone else shares.
+  next.exec(`
+    CREATE TABLE IF NOT EXISTS staff_users (
+      username      TEXT PRIMARY KEY,
+      password_hash TEXT NOT NULL,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      last_login_at TEXT
+    )
+  `);
+
   next.exec("CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings (class_date)");
   next.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_unique
@@ -154,8 +166,58 @@ function toLead(r: {
   };
 }
 
+type StaffRow = {
+  username: string;
+  password_hash: string;
+  created_at: string;
+  last_login_at: string | null;
+};
+
+const toStaff = (r: StaffRow): StaffUser => ({
+  username: r.username,
+  passwordHash: r.password_hash,
+  createdAt: r.created_at,
+  lastLoginAt: r.last_login_at,
+});
+
 export const sqliteStore: BookingStore = {
   name: "sqlite",
+
+  async findStaffUser(username) {
+    const row = open()
+      .prepare("SELECT * FROM staff_users WHERE username = ?")
+      .get(username) as StaffRow | undefined;
+    return row ? toStaff(row) : null;
+  },
+
+  async upsertStaffUser(username, passwordHash) {
+    open()
+      .prepare(
+        `INSERT INTO staff_users (username, password_hash) VALUES (?, ?)
+         ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash`,
+      )
+      .run(username, passwordHash);
+  },
+
+  async listStaffUsers() {
+    const rows = open()
+      .prepare("SELECT * FROM staff_users ORDER BY username")
+      .all() as StaffRow[];
+    return rows.map(toStaff);
+  },
+
+  async touchStaffLogin(username) {
+    open()
+      .prepare("UPDATE staff_users SET last_login_at = datetime('now') WHERE username = ?")
+      .run(username);
+  },
+
+  async deleteStaffUser(username) {
+    const info = open()
+      .prepare("DELETE FROM staff_users WHERE username = ?")
+      .run(username);
+    return Number(info.changes) > 0;
+  },
 
   async saveLead(input: LeadInput) {
     const info = open()

@@ -278,73 +278,38 @@ stored and nobody was told.
 
 ## Staff view
 
-`/staff` shows the bookings for the next two weeks, grouped by day and then by
-class: time, class, coach, how full it is, and every member's name and phone
-number, with the numbers tappable to call.
+`/staff` shows the enquiries and the bookings. It is gated twice: `src/proxy.ts`
+refuses the pages before they render, so no member's name or number is ever
+produced for someone without a session, and each state-changing API route
+checks for itself.
 
-Staff reach it from a quiet **Staff** link in the footer, next to the legal
-links, or straight at `/staff`. For the front desk, save `/staff` to the home
-screen - the apple touch icon means it gets the BX mark and behaves like an
-app, which skips the marketing site entirely.
+### Accounts
 
-**It is behind a password**, because it holds personal data.
+One account per person, not one password everyone shares - a sign-in is
+attributable, and removing someone does not mean changing a password for
+everybody else.
 
 ```bash
-node scripts/staff-password.mjs "the password you want"
+node scripts/staff-user.mjs list
+node scripts/staff-user.mjs add    <username>
+node scripts/staff-user.mjs reset  <username>
+node scripts/staff-user.mjs remove <username>
 ```
 
-That prints `STAFF_PASSWORD_HASH` and `STAFF_SESSION_SECRET`. Put both in
-`.env.local`. Without them the staff area refuses every login and says so -
-it never falls open.
+The password is asked for, never passed as an argument: an argument ends up in
+shell history and in the process list, where anyone on the machine can read it.
+It is typed twice with no echo, and only a scrypt hash is stored. There is no
+way back from the hash, so a forgotten password is reset, never recovered.
 
-How it is protected:
+Usernames are 3-32 characters of `a-z`, `0-9`, `_` and `-`. No dots: the
+session token is dot-separated and carries the username.
 
-- The password is stored as a **scrypt hash**, so the environment variable is
-  not the password.
-- Signing in sets an **httpOnly, sameSite=lax** cookie (secure in production),
-  holding only an expiry and an HMAC of it. Editing the expiry invalidates the
-  signature.
-- `src/proxy.ts` checks the session **before the route renders**, so names and
-  numbers are never produced for anyone without one - not even into a streamed
-  payload.
-- Sessions last **10 hours**, about a shift.
-- Login is throttled to **8 attempts per IP per 10 minutes**.
-- The pages are `noindex, nofollow`.
+Accounts live in the database, so they follow whichever store is configured.
+On Supabase, run the `staff_users` section of `supabase/schema.sql` first.
 
-Wrong password, tampered cookie, garbage cookie, expired-but-correctly-signed
-cookie, and post-logout all redirect to the login screen with nothing leaked.
+`STAFF_SESSION_SECRET` in `.env.local` is still needed - it signs the session
+cookies. Changing it signs everyone out.
 
-### Cancelling a booking
-
-Each member has a **Cancel** next to them. It takes two clicks - the first
-arms it and names the person, the second does it - so a stray click cannot
-cancel anyone.
-
-**Cancelling never deletes the row.** It stamps `cancelled_at`, which frees
-the place while keeping the record. The booking stays on the list, struck
-through and marked CANCELLED, with an **Undo** beside it.
-
-That design does three things:
-
-- The freed place is immediately bookable by the public.
-- Nobody's record quietly disappears, so staff can see that someone was
-  cancelled rather than wondering whether they were ever booked.
-- Undo is possible - and it re-checks capacity first, so if the place has
-  since gone to someone else it refuses and says so.
-
-Because cancelled rows are kept, "one place per phone per class" is a
-**partial unique index over live rows only**. Without that, anyone who had
-been cancelled could never rebook. The SQLite store migrates an existing
-database to this shape on first open, rebuilding the table because SQLite
-cannot drop a table-level UNIQUE.
-
-The endpoint (`PATCH /api/staff/bookings`) checks the session itself - the
-proxy only covers the `/staff` pages, since the login route has to stay
-reachable - and refuses a request whose `Origin` is not this host, on top of
-the sameSite cookie.
-
-Not built: individual staff accounts, and an audit trail of who cancelled
-what. With one shared password there is no "who" to record.
 
 ## Reviews
 
@@ -407,7 +372,7 @@ Everything below is a marked placeholder. Search for the bracketed token.
 | Lead destination | &mdash; | **Done.** Enquiries are rows in the same store as the bookings, and staff read them at `/staff`. Add email on top if BX wants a nudge as well. |
 | Class capacity | `booking.ts` &rarr; `DEFAULT_CLASS_CAPACITY` | Set to 14 as a stand-in. |
 | Booking storage | `.env` | SQLite by default. Supabase needed only for serverless or multi-instance. |
-| Staff password | `.env.local` | Run `node scripts/staff-password.mjs`. Until set, `/staff` refuses every login. |
+| Staff accounts | database | Run `node scripts/staff-user.mjs add <username>`. Until one exists, `/staff` refuses every login. |
 | `site.url` | `site.ts` | Set the real domain - it feeds canonical URLs and OG tags. |
 
 ## About the photography

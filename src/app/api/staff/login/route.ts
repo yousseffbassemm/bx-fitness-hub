@@ -3,17 +3,19 @@ import { verifyPassword } from "@/lib/staff/password";
 import {
   SESSION_SECONDS,
   STAFF_COOKIE,
+  USERNAME_PATTERN,
   createSessionToken,
   staffAuthConfigured,
 } from "@/lib/staff/session";
+import { getStore } from "@/lib/store";
 
 // scrypt is Node-only, so this cannot run on the Edge runtime.
 export const runtime = "nodejs";
 
 /**
- * Crude per-IP throttle. Enough to make guessing a shared password over the
- * network impractical; it resets when the server does, which is fine because
- * the window is short.
+ * Crude per-IP throttle. Enough to make guessing over the network
+ * impractical; it resets when the server does, which is fine because the
+ * window is short.
  */
 const attempts = new Map<string, { count: number; first: number }>();
 const WINDOW_MS = 10 * 60 * 1000;
@@ -52,31 +54,55 @@ export async function POST(request: Request) {
     );
   }
 
+  let username: unknown;
   let password: unknown;
   try {
-    ({ password } = await request.json());
+    ({ username, password } = await request.json());
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  if (typeof password !== "string" || !password) {
-    return NextResponse.json({ error: "Enter the staff password." }, { status: 400 });
+  if (typeof username !== "string" || typeof password !== "string" || !username || !password) {
+    return NextResponse.json(
+      { error: "Enter your username and password." },
+      { status: 400 },
+    );
   }
 
-  if (!(await verifyPassword(password, process.env.STAFF_PASSWORD_HASH))) {
-    // Deliberately vague: there is only one password, so naming what was
-    // wrong would just confirm guesses.
-    return NextResponse.json({ error: "That password is not right." }, { status: 401 });
+  const name = username.trim().toLowerCase();
+
+  const store = await getStore();
+  const user = USERNAME_PATTERN.test(name) ? await store.findStaffUser(name) : null;
+
+  /*
+    The password is verified even when there is no such user, against a hash
+    that cannot match. Skipping it would return "wrong" measurably faster for
+    an unknown username than for a known one, which is a way to discover who
+    has an account. scrypt is slow on purpose; both paths should be equally
+    slow.
+  */
+  const ok = await verifyPassword(
+    password,
+    user?.passwordHash ?? "scrypt.00.00",
+  );
+
+  if (!user || !ok) {
+    // Deliberately vague: naming which half was wrong confirms guesses.
+    return NextResponse.json(
+      { error: "That username and password do not match." },
+      { status: 401 },
+    );
   }
 
-  const token = await createSessionToken();
+  const token = await createSessionToken(user.username);
   if (!token) {
     return NextResponse.json({ error: "Session signing unavailable." }, { status: 503 });
   }
 
   attempts.delete(ip);
+  await store.touchStaffLogin(user.username);
 
-  const response = NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true, username: user.username });
   response.cookies.set(STAFF_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",

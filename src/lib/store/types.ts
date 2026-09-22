@@ -48,6 +48,14 @@ export type LeadRow = {
   handledAt: string | null;
 };
 
+/** A staff account. The hash is scrypt - see lib/staff/password.ts. */
+export type StaffUser = {
+  username: string;
+  passwordHash: string;
+  createdAt: string;
+  lastLoginAt: string | null;
+};
+
 export interface BookingStore {
   /** Places taken per "sessionId|date". Cancelled bookings do not count. */
   counts(from: string, to: string): Promise<Record<string, number>>;
@@ -67,6 +75,17 @@ export interface BookingStore {
   listLeads(limit?: number): Promise<LeadRow[]>;
   /** Tick an enquiry off, or put it back on the list. */
   setLeadHandled(id: string, handled: boolean): Promise<{ ok: boolean }>;
+
+  /** One staff account by username, or null. */
+  findStaffUser(username: string): Promise<StaffUser | null>;
+  /** Create an account, or reset an existing one's password. */
+  upsertStaffUser(username: string, passwordHash: string): Promise<void>;
+  /** Every account, without password hashes being useful to anyone. */
+  listStaffUsers(): Promise<StaffUser[]>;
+  /** Stamp a successful sign-in. */
+  touchStaffLogin(username: string): Promise<void>;
+  /** Remove an account. Returns false if there was nothing to remove. */
+  deleteStaffUser(username: string): Promise<boolean>;
 
   readonly name: string;
 }

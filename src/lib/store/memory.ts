@@ -8,6 +8,7 @@ import type {
   LeadInput,
   LeadRow,
   RestoreResult,
+  StaffUser,
 } from "./types";
 
 /**
@@ -19,6 +20,7 @@ import type {
  */
 const rows: BookingRow[] = [];
 const leads: LeadRow[] = [];
+const staff = new Map<string, StaffUser>();
 let nextId = 1;
 let nextLeadId = 1;
 
@@ -29,6 +31,33 @@ const live = (sessionId: string, date: string) =>
 
 export const memoryStore: BookingStore = {
   name: "memory",
+
+  async findStaffUser(username) {
+    return staff.get(username) ?? null;
+  },
+
+  async upsertStaffUser(username, passwordHash) {
+    const existing = staff.get(username);
+    staff.set(username, {
+      username,
+      passwordHash,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+      lastLoginAt: existing?.lastLoginAt ?? null,
+    });
+  },
+
+  async listStaffUsers() {
+    return [...staff.values()].sort((a, b) => a.username.localeCompare(b.username));
+  },
+
+  async touchStaffLogin(username) {
+    const user = staff.get(username);
+    if (user) user.lastLoginAt = new Date().toISOString();
+  },
+
+  async deleteStaffUser(username) {
+    return staff.delete(username);
+  },
 
   async saveLead(input: LeadInput) {
     const id = String(nextLeadId++);

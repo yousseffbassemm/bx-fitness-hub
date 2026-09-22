@@ -141,3 +141,21 @@ create index if not exists leads_created_idx on leads (created_at desc);
 
 -- Read and written only by the server, which holds the service role key.
 alter table leads enable row level security;
+
+
+-- ---------------------------------------------------------------------------
+-- Staff accounts.
+--
+-- One row per person rather than one password everyone shares, so a sign-in
+-- is attributable and removing someone does not mean changing a password for
+-- everybody else. password_hash is scrypt - see src/lib/staff/password.ts.
+-- ---------------------------------------------------------------------------
+create table if not exists staff_users (
+  username      text primary key,
+  password_hash text        not null,
+  created_at    timestamptz not null default now(),
+  last_login_at timestamptz
+);
+
+-- Read and written only by the server, which holds the service role key.
+alter table staff_users enable row level security;
