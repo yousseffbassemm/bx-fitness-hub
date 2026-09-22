@@ -41,7 +41,7 @@ export default function About() {
               copy="Every rep gets heavier, every session gets stronger, and every corner is built to push you forward. Dark stone and warm light on the training floors. Oak, mirrors and daylight in the studios. Show up, lock in, go beyond."
             />
 
-            <ul className="mt-12 grid gap-4 sm:grid-cols-2">
+            <ul data-focus-group className="mt-12 grid gap-4 sm:grid-cols-2">
               {[
                 ["01", "Performance floor", "Racks, platforms, plate-loaded and cable"],
                 ["02", "Movement studios", "Pilates, yoga, dance, boxing, cycling"],
@@ -53,7 +53,7 @@ export default function About() {
                     {/* lime rule that runs along the top edge on hover */}
                     <span
                       aria-hidden="true"
-                      className="absolute left-0 top-0 h-px w-0 bg-lime transition-all duration-500 group-hover:w-full"
+                      className="absolute left-0 top-0 h-px w-0 bg-lime transition-all duration-500 group-hover:w-full group-data-[near=true]:w-full"
                     />
                     <span className="font-display text-xs tracking-[0.18em] text-lime">{n}</span>
                     <h3 className="font-display mt-3 text-lg leading-tight text-white">{title}</h3>

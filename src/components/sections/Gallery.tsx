@@ -53,7 +53,10 @@ export default function Gallery() {
           row count divides exactly by three, so the mosaic packs flush
           instead of leaving a short column the way CSS columns did.
         */}
-        <div className="mt-14 grid auto-rows-[150px] grid-flow-row-dense grid-cols-2 gap-4 sm:auto-rows-[190px] lg:auto-rows-[220px] lg:grid-cols-3">
+        <div
+          data-focus-group
+          className="mt-14 grid auto-rows-[150px] grid-flow-row-dense grid-cols-2 gap-4 sm:auto-rows-[190px] lg:auto-rows-[220px] lg:grid-cols-3"
+        >
           {gallery.map((g, i) => (
             <Reveal
               key={g.alt}
@@ -72,12 +75,12 @@ export default function Gallery() {
                   fill
                   loading="lazy"
                   sizes="(max-width: 1024px) 50vw, 33vw"
-                  className="plate object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+                  className="plate object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05] group-data-[near=true]:scale-[1.05]"
                 />
-                <span className="absolute inset-0 bg-ink/0 transition-colors duration-300 group-hover:bg-ink/25" />
+                <span className="absolute inset-0 bg-ink/0 transition-colors duration-300 group-hover:bg-ink/25 group-data-[near=true]:bg-ink/25" />
                 <span
                   aria-hidden="true"
-                  className="absolute bottom-3 left-3 h-px w-0 bg-lime transition-all duration-500 group-hover:w-10"
+                  className="absolute bottom-3 left-3 h-px w-0 bg-lime transition-all duration-500 group-hover:w-10 group-data-[near=true]:w-10"
                 />
               </button>
             </Reveal>

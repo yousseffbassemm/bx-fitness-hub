@@ -3,7 +3,7 @@ import Footer from "@/components/Footer";
 import HashScroll from "@/components/HashScroll";
 import MobileBar from "@/components/MobileBar";
 import Navbar from "@/components/Navbar";
-import Spotlight from "@/components/Spotlight";
+import TouchFocus from "@/components/TouchFocus";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -106,7 +106,7 @@ export default function SiteLayout({ children }: LayoutProps<"/">) {
       </a>
 
       <HashScroll />
-      <Spotlight />
+      <TouchFocus />
       <Navbar />
       <main id="main" className="flex-1">
         {children}

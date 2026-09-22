@@ -12,6 +12,10 @@ import type { ReactNode } from "react";
  * distance is written straight onto each row as a variable - no React state,
  * because re-rendering the whole list on every pointer move would be far more
  * work than setting six custom properties.
+ *
+ * On a touchscreen there is no pointer to measure from, so the same --dist is
+ * written by TouchFocus off the scroll position instead and the handlers here
+ * stand down.
  */
 export default function ReasonList({ children }: { children: ReactNode }) {
   const list = useRef<HTMLUListElement>(null);
@@ -19,6 +23,9 @@ export default function ReasonList({ children }: { children: ReactNode }) {
   const spread = useCallback((from: number | null) => {
     const el = list.current;
     if (!el) return;
+    // Some touch browsers fire a pointerover on tap; letting it through would
+    // leave the focus stuck on whatever was last touched.
+    if (!window.matchMedia("(hover: hover)").matches) return;
     const rows = Array.from(el.children) as HTMLElement[];
     rows.forEach((row, i) => {
       row.style.setProperty("--dist", from === null ? "0" : String(Math.abs(i - from)));
@@ -28,6 +35,7 @@ export default function ReasonList({ children }: { children: ReactNode }) {
   return (
     <ul
       ref={list}
+      data-focus-group
       className="reasons"
       onPointerLeave={() => spread(null)}
       onPointerOver={(e) => {

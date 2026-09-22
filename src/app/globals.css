@@ -59,6 +59,12 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: 6rem;
   background: var(--bx-black);
+  /* clip, not hidden. Both stop the sideways scroll that an element waiting
+     off to one side to be revealed would otherwise add, but `hidden` makes
+     this a scroll container, and a scroll container silently kills
+     position: sticky in everything inside it - the sticky class headings and
+     the contact form among them. `clip` does not. */
+  overflow-x: clip;
 }
 
 body {
@@ -66,7 +72,7 @@ body {
   color: var(--bx-white);
   font-family: var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -202,6 +208,14 @@ body {
 .reveal-scale { --ry: 46px; --rs: 0.88; }
 .reveal-fade  { --ry: 0; --rb: 10px; }
 
+/* A card waiting 130px off to the side is a third of a phone screen, so it
+   both overshoots and widens the page while it waits. Narrow screens get a
+   shorter run. (overflow-x: clip on the page catches the rest - see below.) */
+@media (max-width: 640px) {
+  .reveal-left  { --rx: -44px; --rr: -1.5deg; }
+  .reveal-right { --rx: 44px;  --rr: 1.5deg; }
+}
+
 /* --------------------------------------------------------------------- */
 /* Marquee                                                                */
 
@@ -272,11 +286,19 @@ body {
 /* always sitting at the top of the list.                                   */
 
 .reasons > li {
+  /* Short, and out-eased: moving the pointer down the list should feel like
+     the focus is already where you are looking, not catching up to it. */
   transition:
-    filter 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    filter 0.16s ease-out,
+    opacity 0.16s ease-out,
+    transform 0.16s ease-out;
   transform-origin: left center;
+}
+
+/* The row being pointed at sharpens immediately; only the ones falling away
+   take the moment. */
+.reasons > li:hover {
+  transition-duration: 0.06s;
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
@@ -288,6 +310,30 @@ body {
   }
 
   .reasons:hover > li:hover {
+    filter: blur(0);
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+/* Without a pointer the same blur follows the scroll: whichever reason is
+   nearest the middle of the screen is the sharp one. TouchFocus writes --dist
+   and data-near; the falloff is gentler than the hover version because rows
+   here are passed through rather than chosen, and a row on its way out should
+   still be legible. */
+@media (hover: none) and (prefers-reduced-motion: no-preference) {
+  /* [data-focus-group] is carried for the specificity, not to select with:
+     each row is also a .reveal, and .reveal[data-shown="true"] resets filter
+     to none. A bare `.reasons > li` loses to it and the blur never appears.
+     (The hover rules above outscore it only by accident of having two
+     classes.) */
+  .reasons[data-focus-group] > li {
+    filter: blur(calc(var(--dist, 0) * 1.1px));
+    opacity: calc(1 - var(--dist, 0) * 0.12);
+    transform: scale(calc(1 - var(--dist, 0) * 0.01));
+  }
+
+  .reasons[data-focus-group] > li[data-near="true"] {
     filter: blur(0);
     opacity: 1;
     transform: scale(1.02);
@@ -306,12 +352,23 @@ body {
 .review-track {
   /* Room for the first and last card to reach the middle. */
   padding-inline: max(1.5rem, calc(50% - var(--slide, 21rem) / 2));
+  /* overflow-x: auto clips vertically too, so the hover lift and the glow
+     under a card need their own room here or they get sliced off. */
+  padding-block: 1.5rem 2.25rem;
   perspective: 1400px;
   scroll-behavior: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
   overscroll-behavior-x: contain;
   cursor: grab;
+}
+
+/* While the deck is moving, cards slide out from under a pointer that has not
+   itself moved - so each one lifts and drops as it passes, and the middle of
+   the deck appears to twitch. Nothing under the finger is hoverable until the
+   scrolling stops. */
+.review-track[data-scrolling="true"] .review-slide {
+  pointer-events: none;
 }
 
 .review-track::-webkit-scrollbar {
@@ -379,23 +436,6 @@ body {
     border-color 0.5s ease;
 }
 
-/* The glow tracks the pointer; --mx/--my are written by Spotlight. */
-.surface::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.45s ease;
-  background: radial-gradient(
-    260px circle at var(--mx, 50%) var(--my, 0%),
-    rgba(232, 165, 75, 0.13),
-    rgba(232, 165, 75, 0) 68%
-  );
-}
-
 @media (hover: hover) {
   .surface:hover {
     transform: translateY(-5px);
@@ -407,8 +447,25 @@ body {
       0 0 44px -16px rgba(199, 236, 30, 0.3);
   }
 
-  .surface:hover::after {
-    opacity: 1;
+}
+
+/* No pointer: the card nearest the middle of the screen is lit instead, and a
+   tap presses. The lift is deliberately left out of the scroll-driven version
+   - cards rising and settling as they pass the middle reads as jitter, not as
+   depth. */
+@media (hover: none) {
+  .surface[data-near="true"] {
+    border-color: rgba(199, 236, 30, 0.3);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 4px 10px -3px rgba(0, 0, 0, 0.7),
+      0 40px 70px -32px rgba(0, 0, 0, 1),
+      0 0 44px -16px rgba(199, 236, 30, 0.3);
+  }
+
+  .surface:active {
+    transform: scale(0.985);
+    transition-duration: 0.09s;
   }
 }
 

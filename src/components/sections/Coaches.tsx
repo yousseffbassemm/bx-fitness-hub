@@ -18,7 +18,10 @@ export default function Coaches() {
           copy="Certified trainers who build the programme around you. Classes are led by a wider group of instructors, credited on the timetable above."
         />
 
-        <ul className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <ul
+          data-focus-group
+          className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+        >
           {coaches.map((c, i) => (
             <Reveal as="li" key={c.name} variant="scale" delay={(i % 6) * 80}>
               <article className="surface group relative h-full overflow-hidden rounded-md">
@@ -28,7 +31,7 @@ export default function Coaches() {
                     alt={`${c.name}, personal trainer at BX Fitness Hub`}
                     fill
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw"
-                    className="plate object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                    className="plate object-cover object-top transition-transform duration-700 group-hover:scale-105 group-data-[near=true]:scale-105"
                   />
                   {/* keeps the tops of the cards reading as one row */}
                   <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-transparent to-transparent" />
@@ -48,7 +51,7 @@ export default function Coaches() {
 
                 <span
                   aria-hidden="true"
-                  className="absolute bottom-0 left-0 h-px w-0 bg-lime transition-all duration-500 group-hover:w-full"
+                  className="absolute bottom-0 left-0 h-px w-0 bg-lime transition-all duration-500 group-hover:w-full group-data-[near=true]:w-full"
                 />
               </article>
             </Reveal>
