@@ -8,21 +8,47 @@ import {
   type ReactNode,
 } from "react";
 
+export type RevealVariant = "up" | "down" | "left" | "right" | "scale" | "fade";
+
 /**
- * Fades a block in the first time it enters the viewport. Uses one
- * IntersectionObserver per block and disconnects immediately after firing, so
- * nothing is left listening once the page has been read.
+ * One observer for the whole page rather than one per element. With well over
+ * a hundred revealed blocks, a per-element observer is a lot of duplicated
+ * bookkeeping for the browser to do on every scroll.
+ */
+let shared: IntersectionObserver | null = null;
+
+function observer() {
+  if (shared) return shared;
+  shared = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        (entry.target as HTMLElement).dataset.shown = "true";
+        shared?.unobserve(entry.target);
+      }
+    },
+    { rootMargin: "0px 0px -6% 0px", threshold: 0.06 },
+  );
+  return shared;
+}
+
+/**
+ * Fades a block in the first time it enters the viewport, sliding, scaling or
+ * unblurring depending on the variant. Anything already on screen animates on
+ * load, so the hero arrives the same way the rest of the page does.
  */
 export default function Reveal({
   children,
   as: Tag = "div",
   delay = 0,
+  variant = "up",
   className = "",
   style,
 }: {
   children: ReactNode;
   as?: ElementType;
   delay?: number;
+  variant?: RevealVariant;
   className?: string;
   style?: CSSProperties;
 }) {
@@ -40,24 +66,15 @@ export default function Reveal({
       return;
     }
 
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.dataset.shown = "true";
-          io.disconnect();
-        }
-      },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.08 },
-    );
-
+    const io = observer();
     io.observe(el);
-    return () => io.disconnect();
+    return () => io.unobserve(el);
   }, []);
 
   return (
     <Tag
       ref={ref}
-      className={`reveal ${className}`}
+      className={`reveal reveal-${variant} ${className}`}
       style={delay ? { ...style, transitionDelay: `${delay}ms` } : style}
     >
       {children}

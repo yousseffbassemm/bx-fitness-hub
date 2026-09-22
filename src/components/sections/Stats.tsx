@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { stats } from "@/lib/site";
+import Reveal from "../ui/Reveal";
 
 function useCountUp(target: number, decimals: number, run: boolean) {
   const [value, setValue] = useState(0);
@@ -39,6 +40,7 @@ function Stat({
   note,
   decimals = 0,
   run,
+  index,
 }: {
   value: number;
   suffix: string;
@@ -46,18 +48,23 @@ function Stat({
   note: string;
   decimals?: number;
   run: boolean;
+  index: number;
 }) {
   const shown = useCountUp(value, decimals, run);
 
   return (
-    <div className="rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-7 lg:p-9">
+    <Reveal
+      variant="scale"
+      delay={index * 90}
+      className="rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-7 lg:p-9"
+    >
       <p className="font-display text-5xl text-white lg:text-6xl">
         {shown}
         <span className="text-lime">{suffix}</span>
       </p>
       <p className="font-display mt-4 text-[0.82rem] tracking-[0.1em] text-white">{label}</p>
       <p className="mt-1.5 text-xs text-grey-dim">{note}</p>
-    </div>
+    </Reveal>
   );
 }
 
@@ -84,8 +91,8 @@ export default function Stats() {
   return (
     <section className="relative">
       <div ref={ref} className="mx-auto grid max-w-[1600px] grid-cols-2 gap-4 px-6 lg:grid-cols-4 lg:px-12">
-        {stats.map((s) => (
-          <Stat key={s.label} {...s} run={run} />
+        {stats.map((s, i) => (
+          <Stat key={s.label} {...s} run={run} index={i} />
         ))}
       </div>
     </section>

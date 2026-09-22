@@ -10,7 +10,7 @@ export default function About() {
       <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
           {/* Stacked plates */}
-          <Reveal className="relative">
+          <Reveal variant="left" className="relative">
             <div className="relative aspect-[3/4] w-full">
               <Image
                 src={weightsFloor}

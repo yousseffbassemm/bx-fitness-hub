@@ -99,7 +99,7 @@ export default function Classes() {
         {/* Discipline cards */}
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {disciplines.map((d, i) => (
-            <Reveal key={d.name} delay={(i % 4) * 70}>
+            <Reveal key={d.name} variant="scale" delay={(i % 4) * 80}>
               <article className="group h-full rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent p-6 transition-all duration-500 hover:-translate-y-1 hover:border-lime/40">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-display text-lg leading-tight text-white">{d.name}</h3>

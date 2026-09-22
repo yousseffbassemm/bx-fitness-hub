@@ -20,7 +20,7 @@ export default function Facilities() {
 
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {facilities.map((f, i) => (
-            <Reveal key={f.title} delay={(i % 3) * 90}>
+            <Reveal key={f.title} variant="scale" delay={(i % 3) * 90}>
               {/*
                 Every card is the same 4:5 box and the photograph fills it
                 absolutely, so no card can end up shorter than its grid row and

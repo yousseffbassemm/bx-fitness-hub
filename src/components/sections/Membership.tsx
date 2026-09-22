@@ -33,7 +33,7 @@ export default function Membership() {
 
         <div className="mt-14 grid gap-4 lg:grid-cols-3">
           {plans.map((p, i) => (
-            <Reveal key={p.name} delay={i * 90}>
+            <Reveal key={p.name} variant="scale" delay={i * 110}>
               <article
                 className={`relative flex h-full flex-col rounded-sm border p-8 transition-all duration-500 lg:p-10 ${
                   p.featured

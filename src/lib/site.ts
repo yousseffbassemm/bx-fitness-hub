@@ -367,15 +367,51 @@ export const plans = [
 ] as const;
 
 /* -------------------------------------------------------------------------
-   Testimonials - PLACEHOLDER. BX holds 4.6 from 76 Google reviews, but the
-   individual review text has not been cleared for use. Replace the three
-   quotes below with real, attributed reviews before launch.
+   Reviews - real, from the BX Fitness Hub listing on Google Maps, read on
+   22 September 2026. Quotes are verbatim; two are excerpts, cut at a sentence
+   because Google truncates long reviews in its own interface.
+
+   Worth knowing: BX's Google reviews are overwhelmingly about the spa - the
+   listing's own keyword chips read "moroccan bath 16, jacuzzi 5, sauna 4".
+   There are no gym-floor reviews to quote yet.
+
+   These are a snapshot and will go stale. The durable, licensed way to show
+   them is the Google Places API - see README.
    ---------------------------------------------------------------------- */
-export const testimonials = [
-  { quote: "[MEMBER QUOTE 1]", name: "[MEMBER NAME]", detail: "[MEMBER SINCE]" },
-  { quote: "[MEMBER QUOTE 2]", name: "[MEMBER NAME]", detail: "[MEMBER SINCE]" },
-  { quote: "[MEMBER QUOTE 3]", name: "[MEMBER NAME]", detail: "[MEMBER SINCE]" },
-] as const;
+export type Review = {
+  name: string;
+  rating: number;
+  when: string;
+  quote: string;
+  excerpt: boolean;
+};
+
+export const reviews: Review[] = [
+  {
+    name: "Mari",
+    rating: 5,
+    when: "5 months ago",
+    quote:
+      "The best Moroccan hammam I've ever experienced! Everything was so relaxing and well done from start to finish. Suad, Basma, and Lubnah were all so kind, welcoming, and made the whole experience even better.",
+    excerpt: true,
+  },
+  {
+    name: "MonaAbd",
+    rating: 5,
+    when: "4 months ago",
+    quote:
+      "Went for a full package hammam and 90 minutes massage and it was AMAZING. The location is women only section, very clean and luxury vibe. Sauna, steam room and jacuzzi.",
+    excerpt: true,
+  },
+  {
+    name: "Sara Bhaya",
+    rating: 5,
+    when: "4 months ago",
+    quote:
+      "Best spa ever! I came from Spain for vacation and found this place, amazing staff and amazing spa. Lovely jacuzzi when you are done, with tea and biscuits. Recommend highly!",
+    excerpt: false,
+  },
+];
 
 /* Gallery - real frames from the gym and its campaigns. */
 export const gallery = [

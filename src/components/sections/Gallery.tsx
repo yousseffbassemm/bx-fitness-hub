@@ -57,7 +57,7 @@ export default function Gallery() {
           {gallery.map((g, i) => (
             <Reveal
               key={g.alt}
-              delay={(i % 3) * 70}
+              variant="scale" delay={(i % 3) * 80}
               className={g.ratio === "tall" ? "row-span-2" : "row-span-1"}
             >
               <button

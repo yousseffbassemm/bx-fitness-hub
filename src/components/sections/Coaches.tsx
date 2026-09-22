@@ -20,7 +20,7 @@ export default function Coaches() {
 
         <ul className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {coaches.map((c, i) => (
-            <Reveal as="li" key={c.name} delay={(i % 6) * 70}>
+            <Reveal as="li" key={c.name} variant="scale" delay={(i % 6) * 80}>
               <article className="group relative h-full overflow-hidden rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent transition-all duration-500 hover:-translate-y-1 hover:border-lime/40">
                 <div className="relative aspect-[4/5] w-full overflow-hidden">
                   <Image

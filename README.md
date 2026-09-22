@@ -232,6 +232,33 @@ the sameSite cookie.
 Not built: individual staff accounts, and an audit trail of who cancelled
 what. With one shared password there is no "who" to record.
 
+## Reviews
+
+The reviews section shows **real reviews from BX's Google Maps listing**, read
+on 22 September 2026 and stored in `src/lib/site.ts`. Two are excerpts, cut at
+a sentence, because Google truncates long reviews in its own interface. The
+cards say so.
+
+Two things to know before launch:
+
+**They are a snapshot and will go stale.** The durable way is the
+[Google Places API](https://developers.google.com/maps/documentation/places/web-service/details):
+`GET /place/details` with `fields=rating,user_ratings_total,reviews` returns
+the current rating and up to five reviews. That needs a
+`GOOGLE_PLACES_API_KEY` and the place id, which for this listing is in the
+maps URL. Ask and it is a short job to wire - the section already reads from
+one array, so only where that array comes from would change.
+
+**Copying reviews out of Google Maps by hand is against Google's terms.**
+Serving them through the Places API, with Google attribution shown (the cards
+already carry the Google mark), is the licensed route. Worth doing before the
+site is public.
+
+**BX's Google reviews are almost all about the spa.** The listing's own
+keyword chips read "moroccan bath 16, jacuzzi 5, sauna 4" - there are no
+gym-floor reviews to quote yet. If BX wants gym reviews on the gym site, the
+answer is to ask members for them rather than anything I can do in code.
+
 ## Still to fill in
 
 Everything below is a marked placeholder. Search for the bracketed token.
@@ -240,7 +267,6 @@ Everything below is a marked placeholder. Search for the bracketed token.
 | --- | --- | --- |
 | `[MONTHLY PRICE]` `[ANNUAL PRICE]` `[COUPLES PRICE]` | `site.ts` &rarr; `plans` | BX does not publish prices; they are quoted on request. The **benefits listed are real**. |
 | `[EMAIL ADDRESS]` | `site.ts` &rarr; `site.email` | No public email exists yet. |
-| `[MEMBER QUOTE 1-3]` | `site.ts` &rarr; `testimonials` | The 4.6 / 76 reviews figure is real; the quotes are not. Only publish reviews you have permission to use. |
 | Team photo | `PersonalTraining.tsx` | Using a free-weights shot. BX's TEAM highlight is video only, so there is no group photo to pull. |
 | Privacy / Terms | `Footer.tsx` | Marked `[TODO]`. |
 | Lead destination | `api/lead/route.ts` | Currently validates and logs. Point it at an inbox or CRM. |
@@ -287,5 +313,7 @@ the same filenames. Nothing in the code needs to change.
 - Server Components by default. Add `"use client"` only when you need state or
   browser events - `Navbar`, `Classes`, `Gallery`, `Stats` and `LeadForm` do.
 - Keep animation behind `Reveal`, which already respects
-  `prefers-reduced-motion`.
+  `prefers-reduced-motion`. It takes a `variant` (`up`, `down`, `left`,
+  `right`, `scale`, `fade`) and a `delay` in ms for staggering a list. One
+  shared IntersectionObserver serves the whole page.
 - Run `npm run build` before pushing.

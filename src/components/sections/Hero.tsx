@@ -2,6 +2,7 @@ import Image from "next/image";
 import cardioRings from "@/images/cardio-rings.jpg";
 import { site } from "@/lib/site";
 import { Button } from "../ui/Button";
+import Reveal from "../ui/Reveal";
 
 /**
  * Split hero, built to BX's own poster grammar: heavy display type with one
@@ -20,34 +21,41 @@ export default function Hero() {
             className="absolute -left-6 top-1 hidden h-32 w-px bg-lime lg:block"
           />
 
-          <div className="flex items-center gap-3">
-            <span className="h-px w-8 bg-lime" />
-            <span className="kicker">New Cairo &middot; Since day one</span>
-          </div>
+          <Reveal variant="fade" delay={80}>
+            <div className="flex items-center gap-3">
+              <span className="h-px w-8 bg-lime" />
+              <span className="kicker">New Cairo &middot; Since day one</span>
+            </div>
+          </Reveal>
 
+          {/* Line by line, so the headline builds rather than appears. */}
           <h1 className="font-display mt-7 text-[3.35rem] leading-[0.88] sm:text-7xl lg:text-[5.4rem] xl:text-[6.2rem]">
-            Where
-            <br />
-            Movement
-            <br />
-            <span className="text-lime">Meets Style</span>
+            <Reveal as="span" className="block" delay={140}>
+              Where
+            </Reveal>
+            <Reveal as="span" className="block" delay={230}>
+              Movement
+            </Reveal>
+            <Reveal as="span" className="block text-lime" delay={320}>
+              Meets Style
+            </Reveal>
           </h1>
 
-          <p className="mt-7 max-w-md text-[1.02rem] leading-relaxed text-grey">
+          <Reveal as="p" delay={430} className="mt-7 max-w-md text-[1.02rem] leading-relaxed text-grey">
             Built for performance. Made for movement. Designed to push your
             limits &mdash; six in the morning until one at night, every day of
             the week.
-          </p>
+          </Reveal>
 
-          <div className="mt-9 flex flex-wrap gap-3">
+          <Reveal delay={510} className="mt-9 flex flex-wrap gap-3">
             <Button href="#membership">Join Now</Button>
             <Button href="#contact" variant="outline">
               Book a Free Trial
             </Button>
-          </div>
+          </Reveal>
 
           {/* Proof strip */}
-          <dl className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-line pt-6">
+          <Reveal as="dl" delay={600} className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-line pt-6">
             <div>
               <dt className="kicker">Google</dt>
               <dd className="font-display mt-1.5 text-xl text-white">
@@ -68,7 +76,7 @@ export default function Hero() {
                 15 <span className="text-[0.7rem] tracking-normal text-grey-dim">a week</span>
               </dd>
             </div>
-          </dl>
+          </Reveal>
         </div>
 
         {/*
@@ -76,7 +84,11 @@ export default function Hero() {
           a plate in the right-hand column from lg up. Rendering it once keeps
           the LCP image to a single download.
         */}
-        <div className="absolute inset-0 -z-10 lg:relative lg:z-auto lg:h-[76vh]">
+        <Reveal
+          variant="right"
+          delay={120}
+          className="absolute inset-0 -z-10 lg:relative lg:z-auto lg:h-[76vh]"
+        >
           <Image
             src={cardioRings}
             alt="The BX Fitness Hub cardio deck at night, lit by circular pendants above the illuminated BX monogram"
@@ -96,7 +108,7 @@ export default function Hero() {
             aria-hidden="true"
             className="absolute -bottom-px -right-px hidden h-px w-16 bg-lime lg:block"
           />
-        </div>
+        </Reveal>
       </div>
 
       {/* Scroll cue */}

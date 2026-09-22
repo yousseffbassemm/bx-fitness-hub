@@ -68,7 +68,7 @@ export default function PersonalTraining() {
             </Reveal>
           </div>
 
-          <Reveal delay={60} className="relative">
+          <Reveal variant="right" delay={60} className="relative">
             <div className="relative aspect-[4/5] w-full lg:sticky lg:top-28">
               <Image
                 src={freeWeights}

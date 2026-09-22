@@ -92,7 +92,7 @@ export default function Contact() {
           </div>
 
           {/* Form */}
-          <Reveal delay={60}>
+          <Reveal variant="right" delay={60}>
             <div className="rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-7 shadow-[0_30px_70px_-45px_rgba(0,0,0,0.9)] lg:sticky lg:top-28 lg:p-10">
               <div className="flex items-center gap-3">
                 <span className="h-px w-8 bg-lime" />

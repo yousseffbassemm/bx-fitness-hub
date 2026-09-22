@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { nav, site } from "@/lib/site";
+import Reveal from "./ui/Reveal";
 import { Logo } from "./ui/Logo";
 
 export default function Footer() {
@@ -9,7 +10,7 @@ export default function Footer() {
     <footer className="relative bg-ink pb-24 pt-16 md:pb-16">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div>
+          <Reveal>
             <Logo />
             <p className="font-display mt-6 max-w-xs text-xl leading-tight text-white">
               Where movement
@@ -21,9 +22,9 @@ export default function Footer() {
               <br />
               {site.address.region}
             </p>
-          </div>
+          </Reveal>
 
-          <nav aria-label="Footer">
+          <Reveal as="nav" delay={90} aria-label="Footer">
             <h2 className="kicker">Explore</h2>
             <ul className="mt-5 space-y-3">
               {nav.map((item) => (
@@ -37,9 +38,9 @@ export default function Footer() {
                 </li>
               ))}
             </ul>
-          </nav>
+          </Reveal>
 
-          <div>
+          <Reveal delay={180}>
             <h2 className="kicker">Contact</h2>
             <ul className="mt-5 space-y-3 text-sm text-grey">
               <li>
@@ -56,9 +57,9 @@ export default function Footer() {
               </li>
               <li className="text-grey-dim">{site.email.display}</li>
             </ul>
-          </div>
+          </Reveal>
 
-          <div>
+          <Reveal delay={270}>
             <h2 className="kicker">Hours</h2>
             <p className="mt-5 text-sm text-grey">
               Monday &ndash; Sunday
@@ -99,10 +100,14 @@ export default function Footer() {
                 </a>
               </li>
             </ul>
-          </div>
+          </Reveal>
         </div>
 
-        <div className="mt-14 flex flex-col gap-4 border-t border-line pt-7 sm:flex-row sm:items-center sm:justify-between">
+        <Reveal
+          variant="fade"
+          delay={360}
+          className="mt-14 flex flex-col gap-4 border-t border-line pt-7 sm:flex-row sm:items-center sm:justify-between"
+        >
           <p className="text-xs text-grey-dim">
             &copy; {year} {site.name}. All rights reserved.
           </p>
@@ -128,7 +133,7 @@ export default function Footer() {
               </Link>
             </li>
           </ul>
-        </div>
+        </Reveal>
       </div>
     </footer>
   );

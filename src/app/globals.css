@@ -168,17 +168,32 @@ body {
 /* --------------------------------------------------------------------- */
 /* Scroll reveal                                                          */
 
+/*
+   Every block on the page arrives the same way: it fades up, and a little of
+   the movement comes from a direction that suits where it sits. The variants
+   only change the starting offset, so one transition covers all of them.
+*/
 .reveal {
   opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translate3d(var(--rx, 0), var(--ry, 26px), 0) scale(var(--rs, 1));
+  transition:
+    opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
 }
 
 .reveal[data-shown="true"] {
   opacity: 1;
   transform: none;
+  will-change: auto;
 }
+
+.reveal-up    { --ry: 26px; }
+.reveal-down  { --ry: -22px; }
+.reveal-left  { --rx: -34px; --ry: 0; }
+.reveal-right { --rx: 34px; --ry: 0; }
+.reveal-scale { --ry: 14px; --rs: 0.965; }
+.reveal-fade  { --ry: 0; }
 
 /* --------------------------------------------------------------------- */
 /* Marquee                                                                */
@@ -267,5 +282,32 @@ body {
     filter: blur(0);
     opacity: 1;
     transform: scale(1.025);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Review cards drift gently, each on its own phase, so the group never    */
+/* rises and falls in unison.                                             */
+
+@keyframes bx-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+.float-card {
+  animation: bx-float var(--float-time, 8s) ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
+}
+
+/* The drift is decoration; anyone who asked for less motion keeps the card
+   still. The reveal still runs, so nothing is missing - it just arrives. */
+@media (prefers-reduced-motion: reduce) {
+  .float-card {
+    animation: none;
   }
 }
