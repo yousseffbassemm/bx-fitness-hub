@@ -241,6 +241,24 @@ places "inside BX Fitness Hub, in front of Gate 6") - read on 22 September
 no text. Each card names which listing it came from. Some are excerpts, cut at
 a sentence, because Google truncates long reviews in its own interface.
 
+The cards are a **swipeable deck**: the middle one is sharp, its neighbours
+fall away - smaller, dimmer and progressively blurred the further out they
+sit. Swipe on a touchscreen, drag with a mouse, use the arrow buttons, or
+focus the deck and press the arrow keys.
+
+It is built on a **real scroll container with CSS scroll snapping**, not a
+hand-written slider. The momentum, rubber-banding and snap all come from the
+browser's own scrolling, which is what makes a swipe feel right - no
+JavaScript animation loop matches it on a touchscreen. The only thing measured
+in JS is how far each card sits from the centre, written to a CSS variable
+once per animation frame; the blur, scale and rotation are all CSS off that
+one number. Mouse drag is the one part the browser does not give for free, so
+that is handled, and snapping is handed straight back on release rather than
+animating to a target and fighting the user's momentum.
+
+Under `prefers-reduced-motion` the deck becomes a plain readable row that
+still scrolls.
+
 Two things to know before launch:
 
 **They are a snapshot and will go stale.** The durable way is the
