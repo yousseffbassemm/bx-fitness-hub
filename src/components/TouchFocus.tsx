@@ -47,10 +47,11 @@ export default function TouchFocus() {
           continue;
         }
 
-        const centres = items.map((it) => {
+        const boxes = items.map((it) => {
           const b = it.getBoundingClientRect();
-          return b.top + b.height / 2;
+          return { mid: b.top + b.height / 2, h: b.height || 1 };
         });
+        const centres = boxes.map((b) => b.mid);
         let best = 0;
         for (let i = 1; i < centres.length; i++) {
           if (Math.abs(centres[i] - mid) < Math.abs(centres[best] - mid)) best = i;
@@ -67,9 +68,12 @@ export default function TouchFocus() {
             delete it.dataset.near;
             card.removeAttribute("data-near");
           }
-          // How many rows away this one is, for effects that fall off with
-          // distance rather than switching on and off.
-          it.style.setProperty("--dist", String(Math.abs(i - best)));
+          // How far this one is from the middle of the screen, in its own
+          // heights and continuous, for effects that fall off with distance
+          // rather than switching on and off. Row index would step: the whole
+          // list would sit still and then jump as each boundary was crossed.
+          const d = Math.min(4, Math.abs(boxes[i].mid - mid) / boxes[i].h);
+          it.style.setProperty("--dist", d.toFixed(3));
         });
       }
     };

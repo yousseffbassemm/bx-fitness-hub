@@ -284,59 +284,62 @@ body {
 /* "Six reasons" - the row under the pointer stays sharp and the rest fall  */
 /* away with distance from it, so the focus follows the reader instead of   */
 /* always sitting at the top of the list.                                   */
+/*                                                                          */
+/* --dist is how far a row is from the pointer, in row heights, and it is   */
+/* continuous - half a row away is 0.5. ReasonList writes it on every frame */
+/* the pointer moves, so the gradient slides rather than stepping between   */
+/* six fixed arrangements.                                                  */
 
 .reasons > li {
-  /* Short, and out-eased: moving the pointer down the list should feel like
-     the focus is already where you are looking, not catching up to it. */
-  transition:
-    filter 0.16s ease-out,
-    opacity 0.16s ease-out,
-    transform 0.16s ease-out;
   transform-origin: left center;
-}
-
-/* The row being pointed at sharpens immediately; only the ones falling away
-   take the moment. */
-.reasons > li:hover {
-  transition-duration: 0.06s;
+  /* The resting state, and the one the list eases back to when the pointer
+     leaves. */
+  transition:
+    filter 0.24s ease-out,
+    opacity 0.24s ease-out,
+    transform 0.24s ease-out;
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  /* --dist is how many rows away this one is from the hovered row. */
-  .reasons:hover > li {
-    filter: blur(calc(var(--dist, 0) * 1.5px));
-    opacity: calc(1 - var(--dist, 0) * 0.16);
-    transform: scale(calc(1 - var(--dist, 0) * 0.012));
+  .reasons[data-live="true"] > li {
+    filter: blur(calc(var(--dist, 0) * 1.35px));
+    opacity: calc(1 - var(--dist, 0) * 0.15);
+    transform: scale(calc(1.015 - var(--dist, 0) * 0.011));
+    /* Nothing to animate here: the variable is doing the animating. A
+       transition would be easing towards a number that has already changed
+       by the time it arrives, which is what made this feel like it was
+       trailing the pointer instead of sitting under it. */
+    transition: none;
+    /* Only while the list is actually being used - six permanently promoted
+       layers is memory spent on nothing the rest of the time. */
+    will-change: filter, opacity, transform;
   }
 
-  .reasons:hover > li:hover {
-    filter: blur(0);
-    opacity: 1;
-    transform: scale(1.02);
+  /* The exception is the way in, where there is a genuine jump from flat to
+     the gradient and it wants easing. ReasonList drops this 200ms later. */
+  .reasons[data-live="true"][data-entering="true"] > li {
+    transition:
+      filter 0.2s ease-out,
+      opacity 0.2s ease-out,
+      transform 0.2s ease-out;
   }
 }
 
-/* Without a pointer the same blur follows the scroll: whichever reason is
-   nearest the middle of the screen is the sharp one. TouchFocus writes --dist
-   and data-near; the falloff is gentler than the hover version because rows
-   here are passed through rather than chosen, and a row on its way out should
-   still be legible. */
-@media (hover: none) and (prefers-reduced-motion: no-preference) {
-  /* [data-focus-group] is carried for the specificity, not to select with:
-     each row is also a .reveal, and .reveal[data-shown="true"] resets filter
-     to none. A bare `.reasons > li` loses to it and the blur never appears.
-     (The hover rules above outscore it only by accident of having two
-     classes.) */
-  .reasons[data-focus-group] > li {
-    filter: blur(calc(var(--dist, 0) * 1.1px));
-    opacity: calc(1 - var(--dist, 0) * 0.12);
-    transform: scale(calc(1 - var(--dist, 0) * 0.01));
-  }
+/* Without a pointer the same gradient follows the scroll, measured from the
+   middle of the screen. TouchFocus writes --dist continuously as you scroll,
+   so this gets no transition either, for the same reason. The falloff is
+   gentler: rows here are passed through rather than chosen, and one on its
+   way out should still be legible.
 
-  .reasons[data-focus-group] > li[data-near="true"] {
-    filter: blur(0);
-    opacity: 1;
-    transform: scale(1.02);
+   [data-focus-group] is carried for the specificity, not to select with: each
+   row is also a .reveal, and .reveal[data-shown="true"] resets filter to none.
+   A bare `.reasons > li` loses to it and the blur never appears. */
+@media (hover: none) and (prefers-reduced-motion: no-preference) {
+  .reasons[data-focus-group] > li {
+    filter: blur(calc(var(--dist, 0) * 1.05px));
+    opacity: calc(1 - var(--dist, 0) * 0.13);
+    transform: scale(calc(1.01 - var(--dist, 0) * 0.01));
+    transition: none;
   }
 }
 
