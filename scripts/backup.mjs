@@ -17,6 +17,7 @@
  * read back is a guess.
  */
 import { mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
+import { statfsSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { backupDir, configPath, saveBackupDir } from "./backup-dir.mjs";
@@ -157,6 +158,28 @@ const rows = Object.entries(after)
   .join(", ");
 say(`\nBacked up to ${target}`);
 say(`  ${(statSync(target).size / 1024).toFixed(0)}KB - ${rows}`);
+
+/*
+  Say plainly when the backup is on the same disk as the thing it is backing
+  up. It still protects against a bad edit, a bad migration or a corrupted
+  write - but not against the machine being lost, stolen or dying, which is
+  what most people picture when they hear the word. Reporting "backed up" and
+  leaving that unsaid is the kind of false confidence this script exists to
+  avoid.
+*/
+try {
+  const sameDisk =
+    statfsSync(path.dirname(source)).fsid === statfsSync(dir).fsid;
+  if (sameDisk) {
+    say(
+      "  NOTE: this is on the same disk as the database. Safe from a bad\n" +
+        "        write, not from losing the Mac. `npm run backup -- --set-dir`\n" +
+        "        can point it somewhere that leaves the machine.",
+    );
+  }
+} catch {
+  // Not being able to compare filesystems is not worth failing a backup over.
+}
 
 // --- rotate ---------------------------------------------------------------
 const all = existing();

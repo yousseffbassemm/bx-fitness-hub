@@ -64,10 +64,27 @@ It is a file rather than a shell variable because three different things take
 backups - a person, the watchdog and the login agent - and they do not share
 an environment.
 
-On this machine it points at iCloud Drive, so the backups leave the disk they
-are backing up. Any synced folder works: Dropbox, an external drive, a
-network share. Unset, it falls back to `.backups/` beside the code, which is
-better than nothing and worse than off the machine.
+**Right now it points at `.backups/`, beside the code, which is the same disk
+as the database.** That protects against a bad edit, a bad migration or a
+corrupted write. It does not protect against the Mac being lost, stolen or
+dying, and the script says so after every run rather than leaving it implied.
+
+iCloud Drive was the intended home and it does not work while that account is
+out of space: the files get written and simply never upload, which looks
+exactly like a working backup and is not one. A full backup is about 52KB, so
+thirty of them come to roughly 1.5MB - freeing even a few megabytes of iCloud
+is enough for years of them.
+
+Anything that leaves the machine will do: a synced folder, an external drive,
+a network share.
+
+```bash
+npm run backup -- --set-dir /Volumes/SomeDrive/bx-backups
+```
+
+Once the site is deployed somewhere, the database moves with it and that
+host's own backups become the real answer - these scripts are for the
+SQLite-on-a-machine setup.
 
 `BACKUP_DIR` in the environment still overrides everything, for a one-off.
 `BACKUP_KEEP` changes how many are kept (default 30).
