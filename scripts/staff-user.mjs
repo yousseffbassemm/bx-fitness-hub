@@ -41,22 +41,68 @@ function db() {
   return d;
 }
 
-/** Read a line with the terminal echo turned off. */
+/**
+ * Read a line with the terminal echo turned off.
+ *
+ * Raw mode and a character loop, rather than readline with its private
+ * _writeToOutput overridden - that is an internal, it is not guaranteed to
+ * suppress anything, and when it misbehaves it does so by handing back the
+ * wrong string rather than by failing, which is how an account came to be
+ * "created" and then not exist.
+ *
+ * Falls back to a plain line read when stdin is not a terminal, so the script
+ * can be driven by a pipe.
+ */
+/** Lines from a piped stdin, read once and handed out in order. */
+let piped = null;
+
 function secret(prompt) {
+  const { stdin, stdout } = process;
+
+  if (!stdin.isTTY) {
+    // One reader for the whole run. A fresh readline per prompt reads the
+    // first line and then waits forever on a stream that is already finished.
+    piped ??= (async () => {
+      const lines = [];
+      const rl = createInterface({ input: stdin });
+      for await (const line of rl) lines.push(line);
+      return lines;
+    })();
+    return piped.then((lines) => lines.shift() ?? "");
+  }
+
   return new Promise((resolve) => {
-    process.stdout.write(prompt);
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    const onData = (char) => {
-      // Keep the prompt on screen but print nothing for the keystrokes.
-      if (["\n", "\r", "\u0004"].includes(String(char))) process.stdout.write("\n");
+    stdout.write(prompt);
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding("utf8");
+
+    let value = "";
+    const onData = (chunk) => {
+      for (const ch of chunk) {
+        if (ch === "\r" || ch === "\n") {
+          stdin.setRawMode(false);
+          stdin.pause();
+          stdin.off("data", onData);
+          stdout.write("\n");
+          resolve(value);
+          return;
+        }
+        if (ch === "\u0003") {
+          // ctrl-c
+          stdin.setRawMode(false);
+          stdout.write("\n");
+          process.exit(130);
+        }
+        if (ch === "\u007f" || ch === "\b") {
+          value = value.slice(0, -1);
+          continue;
+        }
+        if (ch >= " ") value += ch;
+      }
     };
-    process.stdin.on("data", onData);
-    rl.question("", (value) => {
-      process.stdin.off("data", onData);
-      rl.close();
-      resolve(value);
-    });
-    rl._writeToOutput = () => {};
+
+    stdin.on("data", onData);
   });
 }
 
@@ -132,9 +178,25 @@ if (command === "reset" && !existing) {
 }
 
 const password = await askPassword();
+const stored = await hash(password);
+
 d.prepare(
   `INSERT INTO staff_users (username, password_hash) VALUES (?, ?)
    ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash`,
-).run(name, await hash(password));
+).run(name, stored);
 
-console.log(`\n${command === "add" ? "Created" : "Password reset for"} "${name}". Sign in at /staff.\n`);
+// Read it back. Saying "created" without checking is how the last version
+// reported success for an account that was not there.
+const check = d
+  .prepare("SELECT password_hash FROM staff_users WHERE username = ?")
+  .get(name);
+
+if (!check || check.password_hash !== stored) {
+  console.error(`\nSomething went wrong - "${name}" was not saved. Nothing changed.\n`);
+  process.exit(1);
+}
+
+console.log(
+  `\n${command === "add" ? "Created" : "Password reset for"} "${name}" in ${file}\n` +
+    `Sign in at /staff with that username.\n`,
+);
