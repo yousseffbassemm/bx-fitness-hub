@@ -9,7 +9,7 @@ import SectionHead from "../ui/SectionHead";
  */
 export default function Coaches() {
   return (
-    <section id="coaches" className="relative py-16 lg:py-24">
+    <section id="coaches" className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <SectionHead
           kicker="The team"
@@ -20,7 +20,7 @@ export default function Coaches() {
 
         <ul
           data-focus-group
-          className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+          className="mt-9 grid grid-cols-2 gap-4 sm:mt-14 sm:grid-cols-3 lg:grid-cols-6"
         >
           {coaches.map((c, i) => (
             <Reveal as="li" key={c.name} variant="scale" delay={(i % 6) * 80}>
@@ -37,10 +37,10 @@ export default function Coaches() {
                   <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-transparent to-transparent" />
                 </div>
 
-                <div className="p-5">
+                <div className="p-3.5 sm:p-5">
                   <h3 className="font-display text-base leading-tight text-white">{c.name}</h3>
                   <p className="mt-1.5 text-[0.7rem] leading-snug text-lime">{c.credential}</p>
-                  <ul className="mt-3 space-y-1">
+                  <ul className="mt-2.5 space-y-0.5 sm:mt-3 sm:space-y-1">
                     {c.disciplines.map((d) => (
                       <li key={d} className="text-xs leading-snug text-grey">
                         {d}

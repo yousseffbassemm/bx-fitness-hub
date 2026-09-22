@@ -31,7 +31,7 @@ function GoogleG({ className = "h-4 w-4" }: { className?: string }) {
 
 export default function Testimonials() {
   return (
-    <section className="relative py-16 lg:py-24">
+    <section className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
       {/* Heading is contained; the deck runs the full width so there are always
           cards falling away on both sides of the one in focus. */}
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">

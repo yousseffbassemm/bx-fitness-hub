@@ -80,7 +80,7 @@ export default function Classes() {
   }
 
   return (
-    <section id="classes" className="relative py-16 lg:py-24">
+    <section id="classes" className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <SectionHead
@@ -97,12 +97,14 @@ export default function Classes() {
         </div>
 
         {/* Discipline cards */}
-        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-9 grid grid-cols-2 gap-3 sm:mt-14 sm:gap-4 lg:grid-cols-4">
           {disciplines.map((d, i) => (
             <Reveal key={d.name} variant="scale" delay={(i % 4) * 80}>
-              <article className="surface group h-full rounded-md p-6">
+              <article className="surface group h-full rounded-md p-4 sm:p-6">
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-display text-lg leading-tight text-white">{d.name}</h3>
+                  <h3 className="font-display text-base leading-tight text-white sm:text-lg">
+                    {d.name}
+                  </h3>
                   <span
                     className="flex shrink-0 items-end gap-[3px] pt-1"
                     aria-label={`${d.intensity} intensity`}
@@ -118,8 +120,8 @@ export default function Classes() {
                     ))}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-grey">{d.note}</p>
-                <p className="kicker mt-4 text-grey-dim">{d.intensity} intensity</p>
+                <p className="mt-2 text-[0.8rem] leading-snug text-grey sm:text-sm">{d.note}</p>
+                <p className="kicker mt-3 text-grey-dim sm:mt-4">{d.intensity} intensity</p>
               </article>
             </Reveal>
           ))}

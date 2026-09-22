@@ -9,10 +9,10 @@ export default function Contact() {
   return (
     <section
       id="contact"
-      className="swell relative py-16 lg:py-24"
+      className="swell relative py-11 sm:py-16 lg:py-24"
     >
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
-        <div className="grid gap-14 lg:grid-cols-2 lg:gap-20">
+        <div className="grid gap-9 sm:gap-14 lg:grid-cols-2 lg:gap-20">
           {/* Details */}
           <div>
             <SectionHead

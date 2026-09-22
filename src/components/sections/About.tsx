@@ -6,12 +6,12 @@ import SectionHead from "../ui/SectionHead";
 
 export default function About() {
   return (
-    <section id="about" className="bloom-amber relative overflow-hidden py-16 lg:py-24">
+    <section id="about" className="bloom-amber relative overflow-hidden py-11 sm:py-16 lg:py-24">
       <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
-        <div className="grid gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+        <div className="grid gap-9 sm:gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
           {/* Stacked plates */}
           <Reveal variant="left" className="relative">
-            <div className="relative aspect-[3/4] w-full">
+            <div className="relative aspect-[4/3] w-full sm:aspect-[3/4]">
               <Image
                 src={weightsFloor}
                 alt="The strength floor at BX, benches and cable machines under warm cove lighting"

@@ -20,7 +20,7 @@ export default function Membership() {
   return (
     <section
       id="membership"
-      className="swell relative py-16 lg:py-24"
+      className="swell relative py-11 sm:py-16 lg:py-24"
     >
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <SectionHead
@@ -31,11 +31,11 @@ export default function Membership() {
           align="center"
         />
 
-        <div className="mt-14 grid gap-4 lg:grid-cols-3">
+        <div className="mt-9 grid gap-4 sm:mt-14 lg:grid-cols-3">
           {plans.map((p, i) => (
             <Reveal key={p.name} variant="scale" delay={i * 110}>
               <article
-                className={`surface relative flex h-full flex-col rounded-md p-8 lg:p-10 ${
+                className={`surface relative flex h-full flex-col rounded-md p-6 sm:p-8 lg:p-10 ${
                   p.featured ? "surface-featured" : ""
                 }`}
               >
@@ -48,7 +48,7 @@ export default function Membership() {
                 <h3 className="font-display text-2xl text-white">{p.name}</h3>
                 <p className="mt-1.5 text-sm text-grey">{p.blurb}</p>
 
-                <p className="mt-7 flex items-baseline gap-2">
+                <p className="mt-5 flex items-baseline gap-2 sm:mt-7">
                   <span
                     className={`font-display text-3xl lg:text-4xl ${
                       p.featured ? "text-lime" : "text-white"
@@ -59,7 +59,7 @@ export default function Membership() {
                   <span className="text-xs text-grey-dim">{p.period}</span>
                 </p>
 
-                <ul className="mt-8 flex-1 space-y-3.5 border-t border-line pt-8">
+                <ul className="mt-6 flex-1 space-y-2.5 border-t border-line pt-6 sm:mt-8 sm:space-y-3.5 sm:pt-8">
                   {p.perks.map((perk) => (
                     <li key={perk} className="flex gap-3 text-sm text-grey">
                       <span className={p.featured ? "text-lime" : "text-grey-dim"}>
@@ -72,7 +72,7 @@ export default function Membership() {
 
                 <a
                   href="#contact"
-                  className={`font-display mt-9 block rounded-sm py-3.5 text-center text-[0.8rem] tracking-[0.12em] transition-colors ${
+                  className={`font-display mt-7 block rounded-sm py-3.5 sm:mt-9 text-center text-[0.8rem] tracking-[0.12em] transition-colors ${
                     p.featured
                       ? "bg-lime text-ink hover:bg-white"
                       : "border border-white/15 text-white hover:border-lime hover:text-lime"

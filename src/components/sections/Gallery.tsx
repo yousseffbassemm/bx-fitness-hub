@@ -32,7 +32,7 @@ export default function Gallery() {
   }, [open, close, step]);
 
   return (
-    <section id="gallery" className="relative py-16 lg:py-24">
+    <section id="gallery" className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <SectionHead kicker="Gallery" title="Inside" accent="BX." />
@@ -55,7 +55,7 @@ export default function Gallery() {
         */}
         <div
           data-focus-group
-          className="mt-14 grid auto-rows-[150px] grid-flow-row-dense grid-cols-2 gap-4 sm:auto-rows-[190px] lg:auto-rows-[220px] lg:grid-cols-3"
+          className="mt-9 grid auto-rows-[112px] grid-flow-row-dense grid-cols-2 gap-3 sm:mt-14 sm:auto-rows-[190px] sm:gap-4 lg:auto-rows-[220px] lg:grid-cols-3"
         >
           {gallery.map((g, i) => (
             <Reveal

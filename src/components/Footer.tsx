@@ -7,9 +7,9 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative bg-ink pb-24 pt-16 md:pb-16">
+    <footer className="relative bg-ink pb-24 pt-11 sm:pt-16 md:pb-16">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
-        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="grid gap-8 sm:gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <Reveal>
             <Logo />
             <p className="font-display mt-6 max-w-xs text-xl leading-tight text-white">
@@ -106,7 +106,7 @@ export default function Footer() {
         <Reveal
           variant="fade"
           delay={360}
-          className="mt-14 flex flex-col gap-4 border-t border-line pt-7 sm:flex-row sm:items-center sm:justify-between"
+          className="mt-9 flex flex-col gap-4 border-t border-line pt-7 sm:mt-14 sm:flex-row sm:items-center sm:justify-between"
         >
           <p className="text-xs text-grey-dim">
             &copy; {year} {site.name}. All rights reserved.

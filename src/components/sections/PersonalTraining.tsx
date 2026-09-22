@@ -31,10 +31,10 @@ export default function PersonalTraining() {
   return (
     <section
       id="training"
-      className="bloom-amber swell relative py-16 lg:py-24"
+      className="bloom-amber swell relative py-11 sm:py-16 lg:py-24"
     >
       <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
-        <div className="grid gap-14 lg:grid-cols-2 lg:gap-20">
+        <div className="grid gap-9 sm:gap-14 lg:grid-cols-2 lg:gap-20">
           <div>
             <SectionHead
               kicker="Personal training"
@@ -69,7 +69,7 @@ export default function PersonalTraining() {
           </div>
 
           <Reveal variant="right" delay={60} className="relative">
-            <div className="relative aspect-[4/5] w-full lg:sticky lg:top-28">
+            <div className="relative aspect-[4/3] w-full sm:aspect-[4/5] lg:sticky lg:top-28">
               <Image
                 src={freeWeights}
                 alt="The free-weights floor at BX under angular LED frames"
