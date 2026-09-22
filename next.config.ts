@@ -2,6 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /**
+   * The dev-only route indicator sits bottom-left by default, which on a phone
+   * is directly on top of the CALL button in the fixed bar - the one thing on
+   * the page someone is most likely to be reaching for. It is only ever
+   * visible in development, but development is what is being looked at on the
+   * phone, so it goes.
+   */
+  devIndicators: false,
+
+  /**
    * Origins allowed to request dev-only assets and endpoints.
    *
    * Next blocks cross-origin dev requests by default, and "cross-origin" here

@@ -104,6 +104,11 @@ tunnel_start() {
   tunnel_wanted || return 0
   command -v cloudflared >/dev/null 2>&1 || { say "tunnel: cloudflared not installed"; return 1; }
 
+  # Already up and named? Leave it alone - restarting means a new address.
+  if alive "$(cat "$TUNNEL_PID" 2>/dev/null)" && [ -s "$TUNNEL_URL" ]; then
+    return 0
+  fi
+
   tunnel_kill_strays
   : >"$TUNNEL_LOG"
   cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:$PORT" \
@@ -143,14 +148,25 @@ supervise() {
     exit 0
   fi
 
-  # A kill -9, or launchd kickstarting this job, skips the trap below and
-  # leaves the old tunnel running. Clear it before anything else.
-  tunnel_kill_strays
+  # A kill -9, or launchd kickstarting this job, skips the trap below. If a
+  # tunnel is still up and still has an address, keep it: it is pointed at the
+  # port, so it will pick the new server up and the address people are using
+  # stays valid. Only clear a broken one.
+  if tunnel_wanted && alive "$(cat "$TUNNEL_PID" 2>/dev/null)" && [ -s "$TUNNEL_URL" ]; then
+    say "tunnel: keeping the one already running ($(cat "$TUNNEL_URL"))"
+  else
+    tunnel_kill_strays
+  fi
   # Written here rather than by `start`, so a copy launched by launchd at
   # login is just as findable to status/stop as one started by hand.
   echo $$ >"$PIDFILE"
   say "watchdog up (pid $$), port $PORT"
-  trap 'say "watchdog asked to stop"; tunnel_stop; kill "$(cat "$CHILDFILE" 2>/dev/null)" 2>/dev/null; rm -f "$PIDFILE" "$CHILDFILE"; exit 0' TERM INT
+  # The tunnel is not torn down here. A restart - launchd kickstart, or the
+  # server being replaced - arrives as the same SIGTERM as a genuine stop, and
+  # tearing it down on both meant every restart handed out a new public
+  # address. `stop` and `tunnel off` take it down explicitly; anything else
+  # leaves it up for the next supervisor to adopt.
+  trap 'say "watchdog asked to stop"; kill "$(cat "$CHILDFILE" 2>/dev/null)" 2>/dev/null; rm -f "$PIDFILE" "$CHILDFILE"; exit 0' TERM INT
 
   while true; do
     say "starting next dev on 0.0.0.0:$PORT"
@@ -194,7 +210,10 @@ supervise() {
       sleep "$CHECK_EVERY"
     done
 
-    tunnel_stop
+    # The tunnel is deliberately left running. It points at a port, not at a
+    # process, so it survives the server restarting - and every restart that
+    # took it down handed out a new public address, which meant the link in
+    # someone's hand stopped working because a config file changed.
     wait "$server" 2>/dev/null
     rm -f "$CHILDFILE"
     say "server stopped - back in 2s"
@@ -234,6 +253,8 @@ case "${1:-start}" in
     ;;
 
   stop)
+    # Explicit stop means everything, tunnel included.
+    tunnel_stop
     # launchd would only start it straight back, so say so rather than
     # leaving someone wondering why the link refuses to die.
     if agent_loaded; then
