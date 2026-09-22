@@ -54,11 +54,19 @@ link down with it.
 | `npm run dev:status` | is it up |
 | `npm run dev:log` | follow the server output |
 | `npm run dev:url` | print the addresses again |
-| `npm run dev:stop` | stop it |
+| `npm run dev:stop` | stop it (the login agent will restart it; `uninstall-login` to stop it for good) |
 
-It does not survive a reboot on its own. `scripts/dev-watchdog.sh install-login`
-registers a launch agent so it comes back at login; it is deliberately not
-installed by default, since it starts a server every time you log in.
+It survives a reboot too: `scripts/dev-watchdog.sh install-login` registers a
+launch agent that starts it at login and restarts it if it is ever killed -
+verified by `kill -9`, which came back in two seconds.
+
+That is also why the project lives in `~/Developer` and not on the Desktop.
+macOS will not let a login agent open files inside `~/Desktop`, `~/Documents`
+or `~/Downloads`; the agent loads and then fails with "Operation not
+permitted" on every retry. Moving only the agent's entry point out is not
+enough - it still cannot read the project. There is a symlink at
+`~/Desktop/bx-fitness-hub` pointing here, so the old path still opens.
+If you ever move this folder, run `install-login` again to repoint the agent.
 `uninstall-login` undoes it.
 
 Two things to know. The phone has to be on the same Wi-Fi - this is a link on
