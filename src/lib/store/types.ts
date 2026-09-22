@@ -104,5 +104,16 @@ export interface BookingStore {
   /** Remove an account. Returns false if there was nothing to remove. */
   deleteStaffUser(username: string): Promise<boolean>;
 
+  /**
+   * Editable site content, as JSON under a key.
+   *
+   * One table rather than one per section: prices, coaches and the timetable
+   * are all "a piece of the page someone at the gym needs to change without
+   * a developer", and they differ only in shape. Reading returns null when
+   * nothing has been set, and the caller falls back to what is in the code.
+   */
+  getContent<T>(key: string): Promise<T | null>;
+  setContent(key: string, value: unknown, editedBy: string): Promise<void>;
+
   readonly name: string;
 }

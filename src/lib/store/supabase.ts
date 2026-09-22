@@ -90,6 +90,31 @@ export const supabaseStore: BookingStore = {
     if (!res.ok) throw new Error(`Supabase upsertStaffUser failed: ${res.status}`);
   },
 
+  async getContent<T>(key: string) {
+    const res = await fetch(
+      `${url}/rest/v1/site_content?select=value&key=eq.${encodeURIComponent(key)}`,
+      { headers: headers(), cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`Supabase getContent failed: ${res.status}`);
+    const [row] = (await res.json()) as { value: unknown }[];
+    return row ? (row.value as T) : null;
+  },
+
+  async setContent(key, value, editedBy) {
+    const res = await fetch(`${url}/rest/v1/site_content`, {
+      method: "POST",
+      headers: { ...headers(), Prefer: "resolution=merge-duplicates" },
+      body: JSON.stringify({
+        key,
+        value,
+        edited_by: editedBy,
+        edited_at: new Date().toISOString(),
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase setContent failed: ${res.status}`);
+  },
+
   async setStaffRole(username, role) {
     const res = await fetch(
       `${url}/rest/v1/staff_users?username=eq.${encodeURIComponent(username)}`,

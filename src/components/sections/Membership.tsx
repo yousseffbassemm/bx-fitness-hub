@@ -1,4 +1,4 @@
-import { plans } from "@/lib/site";
+import { getPlans } from "@/lib/content";
 import PlanDeck from "../PlanDeck";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
@@ -17,7 +17,13 @@ function Tick() {
   );
 }
 
-export default function Membership() {
+export default async function Membership() {
+  // Prices come from the store where they have been set, and from the code
+  // where they have not - see lib/content.ts.
+  const plans = await getPlans();
+  // A price nobody has set yet still reads as [SOMETHING].
+  const pending = plans.some((p) => /^\[.*\]$/.test(p.price.trim()));
+
   return (
     <section
       id="membership"
@@ -98,15 +104,19 @@ export default function Membership() {
         </Reveal>
 
         <Reveal>
-          <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-grey-dim">
-            BX does not publish prices online &mdash; they are quoted on request.
-            The three figures above are placeholders; replace
-            <code className="mx-1 text-grey">[MONTHLY PRICE]</code>,
-            <code className="mx-1 text-grey">[ANNUAL PRICE]</code> and
-            <code className="mx-1 text-grey">[COUPLES PRICE]</code> in
-            <code className="mx-1 text-grey">src/lib/site.ts</code>. The listed
-            benefits are the real ones.
-          </p>
+          {/*
+            Only while the prices are still placeholders. Once they are set
+            from the staff screen this note is wrong twice over - the figures
+            are real, and it points at a file nobody needs to touch any more.
+          */}
+          {pending && (
+            <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-grey-dim">
+              BX does not publish prices online &mdash; they are quoted on
+              request. The figures above are placeholders until someone sets
+              them under <span className="text-grey">Staff &rarr; Site content</span>.
+              The listed benefits are the real ones.
+            </p>
+          )}
         </Reveal>
       </div>
     </section>

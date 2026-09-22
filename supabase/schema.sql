@@ -163,3 +163,20 @@ alter table staff_users add column if not exists role text not null default 'sta
 
 -- Read and written only by the server, which holds the service role key.
 alter table staff_users enable row level security;
+
+
+-- ---------------------------------------------------------------------------
+-- Editable pieces of the site, as JSON under a key.
+--
+-- One table rather than one per section: prices, coaches and the timetable
+-- differ only in shape. jsonb so the value is queryable if it ever needs to
+-- be. edited_by and edited_at make a surprising change traceable.
+-- ---------------------------------------------------------------------------
+create table if not exists site_content (
+  key       text primary key,
+  value     jsonb       not null,
+  edited_by text        not null,
+  edited_at timestamptz not null default now()
+);
+
+alter table site_content enable row level security;

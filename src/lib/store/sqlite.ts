@@ -133,6 +133,17 @@ function migrate(next: DatabaseSync) {
     `);
   }
 
+  // Editable pieces of the site, as JSON. edited_by and edited_at are there
+  // so a change that surprises someone can be traced to a person and a time.
+  next.exec(`
+    CREATE TABLE IF NOT EXISTS site_content (
+      key       TEXT PRIMARY KEY,
+      value     TEXT NOT NULL,
+      edited_by TEXT NOT NULL,
+      edited_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
   next.exec("CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings (class_date)");
   next.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_unique
@@ -224,6 +235,32 @@ export const sqliteStore: BookingStore = {
          ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash`,
       )
       .run(username, passwordHash, role);
+  },
+
+  async getContent<T>(key: string) {
+    const row = open()
+      .prepare("SELECT value FROM site_content WHERE key = ?")
+      .get(key) as { value: string } | undefined;
+    if (!row) return null;
+    try {
+      return JSON.parse(row.value) as T;
+    } catch {
+      // Unparseable content should not take the page down with it.
+      return null;
+    }
+  },
+
+  async setContent(key, value, editedBy) {
+    open()
+      .prepare(
+        `INSERT INTO site_content (key, value, edited_by, edited_at)
+         VALUES (?, ?, ?, datetime('now'))
+         ON CONFLICT(key) DO UPDATE SET
+           value = excluded.value,
+           edited_by = excluded.edited_by,
+           edited_at = excluded.edited_at`,
+      )
+      .run(key, JSON.stringify(value), editedBy);
   },
 
   async setStaffRole(username, role) {

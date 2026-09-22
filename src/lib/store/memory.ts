@@ -22,6 +22,7 @@ import type {
 const rows: BookingRow[] = [];
 const leads: LeadRow[] = [];
 const staff = new Map<string, StaffUser>();
+const content = new Map<string, unknown>();
 let nextId = 1;
 let nextLeadId = 1;
 
@@ -46,6 +47,14 @@ export const memoryStore: BookingStore = {
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       lastLoginAt: existing?.lastLoginAt ?? null,
     });
+  },
+
+  async getContent<T>(key: string) {
+    return (content.get(key) as T) ?? null;
+  },
+
+  async setContent(key, value) {
+    content.set(key, value);
   },
 
   async setStaffRole(username, role) {

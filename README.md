@@ -261,6 +261,25 @@ number, or give a discipline its own entry in `CAPACITY_BY_DISCIPLINE`.
 day's bookings, cancellation, a waitlist when a class is full, and a reminder
 the day before. Say the word and I will add them.
 
+## Editing the site
+
+Some of the page is editable by an admin at **Staff &rarr; Site content**, with
+no developer and no deploy. Prices are the first of these.
+
+It works the same way for everything: what is in `src/lib/site.ts` is the
+default, and a row in `site_content` overrides it. A fresh clone renders
+correctly with an empty database, an unreachable database falls back to the
+code rather than taking the page down, and anything not yet editable simply
+keeps using the code.
+
+Only price, period and the one-line blurb are editable. What each plan
+includes is a list of real, checked benefits, and the layout depends on which
+plan is featured - both stay in the code where a change gets reviewed.
+
+The marketing page is prerendered, so saving calls `revalidatePath("/")`.
+Without it a price would change in the database and the page would go on
+showing the old one until the next deploy.
+
 ## Enquiries
 
 The "Start here" form writes a row through the same store as the bookings, and
@@ -404,7 +423,7 @@ Everything below is a marked placeholder. Search for the bracketed token.
 
 | Placeholder | Where | Note |
 | --- | --- | --- |
-| `[MONTHLY PRICE]` `[ANNUAL PRICE]` `[COUPLES PRICE]` | `site.ts` &rarr; `plans` | BX does not publish prices; they are quoted on request. The **benefits listed are real**. |
+| `[MONTHLY PRICE]` `[ANNUAL PRICE]` `[COUPLES PRICE]` | Staff &rarr; Site content | Set on screen now, no developer needed. The values in `site.ts` are only the fallback. The **benefits listed are real**. |
 | `[EMAIL ADDRESS]` | `site.ts` &rarr; `site.email` | No public email exists yet. |
 | Team photo | `PersonalTraining.tsx` | Using a free-weights shot. BX's TEAM highlight is video only, so there is no group photo to pull. |
 | Privacy / Terms | `Footer.tsx` | Marked `[TODO]`. |

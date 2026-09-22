@@ -130,12 +130,20 @@ export default async function StaffPage(props: PageProps<"/staff">) {
           </form>
 
           {isAdmin && (
-            <a
-              href="/staff/team"
-              className="font-display rounded-sm border border-white/15 px-4 py-2 text-[0.72rem] tracking-[0.12em] text-white hover:border-lime hover:text-lime"
-            >
-              Team
-            </a>
+            <>
+              <a
+                href="/staff/site"
+                className="font-display rounded-sm border border-white/15 px-4 py-2 text-[0.72rem] tracking-[0.12em] text-white hover:border-lime hover:text-lime"
+              >
+                Site content
+              </a>
+              <a
+                href="/staff/team"
+                className="font-display rounded-sm border border-white/15 px-4 py-2 text-[0.72rem] tracking-[0.12em] text-white hover:border-lime hover:text-lime"
+              >
+                Team
+              </a>
+            </>
           )}
 
           <form method="POST" action="/api/staff/logout">
