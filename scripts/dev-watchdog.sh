@@ -40,13 +40,28 @@ LAUNCHER="$SUPPORT/watchdog-launcher.sh"
 stamp() { date '+%Y-%m-%d %H:%M:%S'; }
 say()   { echo "[$(stamp)] $*" >>"$LOG"; }
 
-lan_ip() {
-  local ip
-  for i in en0 en1 en2 en3; do
-    ip="$(ipconfig getifaddr "$i" 2>/dev/null)" && [ -n "$ip" ] && { echo "$ip"; return; }
+# Every address this Mac is currently reachable at, the one carrying the
+# default route first.
+#
+# Not a fixed list of en0..en3: tethering to a phone over USB or Bluetooth
+# comes up on whatever interface the system hands out, and hard-coding the
+# low-numbered ones prints the home Wi-Fi address long after it stopped
+# meaning anything. awdl/llw are AirDrop, utun is a VPN - neither is somewhere
+# a phone will reach this server.
+lan_ips() {
+  local def ip out=""
+  def="$(route -n get default 2>/dev/null | awk '/interface:/{print $2}')"
+  for i in $def $(ifconfig -l 2>/dev/null); do
+    case "$i" in lo0|gif*|stf*|awdl*|llw*|utun*|bridge*) continue ;; esac
+    ip="$(ipconfig getifaddr "$i" 2>/dev/null)" || continue
+    [ -n "$ip" ] || continue
+    case " $out " in *" $ip "*) continue ;; esac
+    out="$out $ip"
   done
-  echo ""
+  echo $out
 }
+
+lan_ip() { lan_ips | awk '{print $1}'; }
 
 alive() { [ -n "${1:-}" ] && kill -0 "$1" 2>/dev/null; }
 
@@ -162,14 +177,23 @@ case "${1:-start}" in
     ;;
 
   url)
-    ip="$(lan_ip)"
     host="$(scutil --get LocalHostName 2>/dev/null)"
     echo
-    echo "  On this Mac:  http://localhost:$PORT"
-    [ -n "$ip" ]   && echo "  On your phone: http://$ip:$PORT"
-    [ -n "$host" ] && echo "  or (survives the address changing): http://$host.local:$PORT"
+    echo "  On this Mac:   http://localhost:$PORT"
+    first=1
+    for ip in $(lan_ips); do
+      if [ "$first" = 1 ]; then
+        echo "  On your phone: http://$ip:$PORT"
+        first=0
+      else
+        echo "  or:            http://$ip:$PORT"
+      fi
+    done
+    [ -n "$host" ] && echo "  or:            http://$host.local:$PORT   (name, not address)"
     echo
-    echo "  Same Wi-Fi as the Mac. Edits reload on both."
+    echo "  The phone has to be on the same network as the Mac - the home"
+    echo "  Wi-Fi, or the Mac tethered to the phone's own hotspot."
+    echo "  The address changes with the network; run this again to see it."
     ;;
 
   log) tail -n "${2:-40}" -f "$LOG" ;;

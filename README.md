@@ -69,6 +69,28 @@ enough - it still cannot read the project. There is a symlink at
 If you ever move this folder, run `install-login` again to repoint the agent.
 `uninstall-login` undoes it.
 
+### Away from home
+
+It works on a phone's hotspot, as long as the Mac is the thing tethered to it -
+the phone is then the router and the Mac is a device on its network, which is
+the same situation as the home Wi-Fi.
+
+What changes is the address. An iPhone hands out `172.20.10.x`, so the link is
+a different one each time the network changes:
+
+```bash
+npm run dev:url
+```
+
+`npm run dev:watch` does not need re-running; the server is bound to every
+interface, so it is already answering on the new one. Use the address rather
+than the `.local` name, which often does not resolve over a hotspot.
+
+What does *not* work is leaving the Mac at home and opening the link from
+somewhere else. Nothing is published to the internet - this is a link on
+whatever network the two devices share. Reaching it from outside would need a
+tunnel, which puts the unfinished site on a public URL.
+
 Two things to know. The phone has to be on the same Wi-Fi - this is a link on
 your network, not a public one, and nothing is exposed to the internet. And
 `allowedDevOrigins` in `next.config.ts` is what lets the dev client talk to a
