@@ -5,6 +5,8 @@ import type {
   BookingRow,
   BookingStore,
   CancelResult,
+  LeadInput,
+  LeadRow,
   RestoreResult,
 } from "./types";
 
@@ -27,8 +29,60 @@ function headers() {
   };
 }
 
+type LeadPayload = {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  goal: string;
+  created_at: string;
+  handled_at: string | null;
+};
+
+const toLead = (r: LeadPayload): LeadRow => ({
+  id: String(r.id),
+  name: r.name,
+  phone: r.phone,
+  email: r.email,
+  goal: r.goal,
+  createdAt: r.created_at,
+  handledAt: r.handled_at,
+});
+
 export const supabaseStore: BookingStore = {
   name: "supabase",
+
+  async saveLead(input: LeadInput) {
+    const res = await fetch(`${url}/rest/v1/leads`, {
+      method: "POST",
+      headers: { ...headers(), Prefer: "return=representation" },
+      body: JSON.stringify(input),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase saveLead failed: ${res.status}`);
+    const [row] = (await res.json()) as LeadPayload[];
+    return { ok: true as const, id: String(row.id) };
+  },
+
+  async listLeads(limit = 200) {
+    const res = await fetch(
+      `${url}/rest/v1/leads?select=*&order=created_at.desc&limit=${limit}`,
+      { headers: headers(), cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`Supabase listLeads failed: ${res.status}`);
+    return ((await res.json()) as LeadPayload[]).map(toLead);
+  },
+
+  async setLeadHandled(id, handled) {
+    const res = await fetch(`${url}/rest/v1/leads?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { ...headers(), Prefer: "return=representation" },
+      body: JSON.stringify({ handled_at: handled ? new Date().toISOString() : null }),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase setLeadHandled failed: ${res.status}`);
+    return { ok: ((await res.json()) as LeadPayload[]).length > 0 };
+  },
 
   async counts(from, to) {
     const query =

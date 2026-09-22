@@ -261,6 +261,21 @@ number, or give a discipline its own entry in `CAPACITY_BY_DISCIPLINE`.
 day's bookings, cancellation, a waitlist when a class is full, and a reminder
 the day before. Say the word and I will add them.
 
+## Enquiries
+
+The "Start here" form writes a row through the same store as the bookings, and
+`/staff` lists them newest first, above the bookings, with a count of how many
+are still waiting. Each one can be marked done and reopened; nothing is ever
+deleted, so a row ticked off by mistake comes straight back.
+
+They are deliberately not filtered by the booking date window - someone who
+asked last week is still waiting to hear back.
+
+Before this, the endpoint validated the payload and `console.info`d it. The
+form told the visitor "we'll be in touch" and their details went to the
+server's stdout, which the watchdog truncates on every start. Nothing was
+stored and nobody was told.
+
 ## Staff view
 
 `/staff` shows the bookings for the next two weeks, grouped by day and then by
@@ -389,7 +404,7 @@ Everything below is a marked placeholder. Search for the bracketed token.
 | `[EMAIL ADDRESS]` | `site.ts` &rarr; `site.email` | No public email exists yet. |
 | Team photo | `PersonalTraining.tsx` | Using a free-weights shot. BX's TEAM highlight is video only, so there is no group photo to pull. |
 | Privacy / Terms | `Footer.tsx` | Marked `[TODO]`. |
-| Lead destination | `api/lead/route.ts` | Currently validates and logs. Point it at an inbox or CRM. |
+| Lead destination | &mdash; | **Done.** Enquiries are rows in the same store as the bookings, and staff read them at `/staff`. Add email on top if BX wants a nudge as well. |
 | Class capacity | `booking.ts` &rarr; `DEFAULT_CLASS_CAPACITY` | Set to 14 as a stand-in. |
 | Booking storage | `.env` | SQLite by default. Supabase needed only for serverless or multi-instance. |
 | Staff password | `.env.local` | Run `node scripts/staff-password.mjs`. Until set, `/staff` refuses every login. |

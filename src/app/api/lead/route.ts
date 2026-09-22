@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
+import { getStore } from "@/lib/store";
 
 /**
- * Lead capture endpoint.
+ * Lead capture for the "Start here" form.
  *
- * TODO: wire this to wherever BX wants enquiries to land - an inbox, a sheet,
- * or the CRM. Right now it validates the payload and logs it server-side so
- * the form is functional end to end without inventing an integration.
+ * This used to validate the payload and console.info it, which meant the form
+ * told a visitor "we'll be in touch" and then dropped their details on the
+ * floor: nothing was stored, nobody was notified, and the log it printed to
+ * was truncated on every restart. Enquiries are rows now, and staff read them
+ * at /staff alongside the bookings.
  */
+export const dynamic = "force-dynamic";
+
+/** Long enough for a real answer, short enough that the column stays sane. */
+const LIMITS = { name: 80, phone: 24, email: 160, goal: 120 } as const;
+
 export async function POST(request: Request) {
   let body: unknown;
 
@@ -29,7 +37,22 @@ export async function POST(request: Request) {
     );
   }
 
-  console.info("[bx] new lead", { name, phone, email, goal });
+  const lead = {
+    name: (name as string).trim().slice(0, LIMITS.name),
+    phone: (phone as string).trim().slice(0, LIMITS.phone),
+    email: (email as string).trim().slice(0, LIMITS.email),
+    goal: (goal as string).trim().slice(0, LIMITS.goal),
+  };
 
-  return NextResponse.json({ ok: true });
+  try {
+    const { id } = await (await getStore()).saveLead(lead);
+    return NextResponse.json({ ok: true, id });
+  } catch (error) {
+    // Never answer "you're on the list" for something that was not saved.
+    console.error("[bx] could not save lead", error);
+    return NextResponse.json(
+      { error: "Could not save that just now. Please call us instead." },
+      { status: 500 },
+    );
+  }
 }

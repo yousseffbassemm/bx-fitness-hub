@@ -5,6 +5,8 @@ import type {
   BookingRow,
   BookingStore,
   CancelResult,
+  LeadInput,
+  LeadRow,
   RestoreResult,
 } from "./types";
 
@@ -16,7 +18,9 @@ import type {
  * load, and that path logs a warning when it happens.
  */
 const rows: BookingRow[] = [];
+const leads: LeadRow[] = [];
 let nextId = 1;
+let nextLeadId = 1;
 
 const live = (sessionId: string, date: string) =>
   rows.filter(
@@ -25,6 +29,28 @@ const live = (sessionId: string, date: string) =>
 
 export const memoryStore: BookingStore = {
   name: "memory",
+
+  async saveLead(input: LeadInput) {
+    const id = String(nextLeadId++);
+    leads.unshift({
+      id,
+      ...input,
+      createdAt: new Date().toISOString(),
+      handledAt: null,
+    });
+    return { ok: true as const, id };
+  },
+
+  async listLeads(limit = 200) {
+    return leads.slice(0, limit);
+  },
+
+  async setLeadHandled(id, handled) {
+    const lead = leads.find((l) => l.id === id);
+    if (!lead) return { ok: false };
+    lead.handledAt = handled ? new Date().toISOString() : null;
+    return { ok: true };
+  },
 
   async counts(from, to) {
     const out: Record<string, number> = {};

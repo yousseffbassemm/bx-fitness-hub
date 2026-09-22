@@ -28,6 +28,26 @@ export type RestoreResult =
   | { ok: true }
   | { ok: false; reason: "not-found" | "full" };
 
+/** The "Start here" form on the contact section. */
+export type LeadInput = {
+  name: string;
+  phone: string;
+  email: string;
+  goal: string;
+};
+
+/** An enquiry as staff see it. Personal data - never expose it publicly. */
+export type LeadRow = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  goal: string;
+  createdAt: string;
+  /** Set once staff have dealt with it. The row is kept either way. */
+  handledAt: string | null;
+};
+
 export interface BookingStore {
   /** Places taken per "sessionId|date". Cancelled bookings do not count. */
   counts(from: string, to: string): Promise<Record<string, number>>;
@@ -40,5 +60,13 @@ export interface BookingStore {
   cancel(id: string): Promise<CancelResult>;
   /** Undo a cancellation, if the class has not filled up since. */
   restore(id: string, capacity: number): Promise<RestoreResult>;
+
+  /** Record an enquiry from the "Start here" form. */
+  saveLead(input: LeadInput): Promise<{ ok: true; id: string }>;
+  /** Every enquiry, newest first. Staff view only. */
+  listLeads(limit?: number): Promise<LeadRow[]>;
+  /** Tick an enquiry off, or put it back on the list. */
+  setLeadHandled(id: string, handled: boolean): Promise<{ ok: boolean }>;
+
   readonly name: string;
 }

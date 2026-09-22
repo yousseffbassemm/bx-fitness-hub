@@ -8,6 +8,8 @@ import type {
   BookingRow,
   BookingStore,
   CancelResult,
+  LeadInput,
+  LeadRow,
   RestoreResult,
 } from "./types";
 
@@ -78,6 +80,22 @@ function migrate(next: DatabaseSync) {
     }
   }
 
+  // Enquiries from the "Start here" form. No unique constraint: the same
+  // person asking twice is two enquiries, and losing the second one because
+  // it looks like the first is exactly the failure this table exists to end.
+  next.exec(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      name       TEXT NOT NULL,
+      phone      TEXT NOT NULL,
+      email      TEXT NOT NULL,
+      goal       TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      handled_at TEXT
+    )
+  `);
+  next.exec("CREATE INDEX IF NOT EXISTS leads_created_idx ON leads (created_at DESC)");
+
   next.exec("CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings (class_date)");
   next.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_unique
@@ -116,8 +134,58 @@ function liveCount(d: DatabaseSync, sessionId: string, date: string) {
   return Number(n);
 }
 
+function toLead(r: {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  goal: string;
+  created_at: string;
+  handled_at: string | null;
+}): LeadRow {
+  return {
+    id: String(r.id),
+    name: r.name,
+    phone: r.phone,
+    email: r.email,
+    goal: r.goal,
+    createdAt: r.created_at,
+    handledAt: r.handled_at,
+  };
+}
+
 export const sqliteStore: BookingStore = {
   name: "sqlite",
+
+  async saveLead(input: LeadInput) {
+    const info = open()
+      .prepare("INSERT INTO leads (name, phone, email, goal) VALUES (?, ?, ?, ?)")
+      .run(input.name, input.phone, input.email, input.goal);
+    return { ok: true as const, id: String(info.lastInsertRowid) };
+  },
+
+  async listLeads(limit = 200) {
+    const rows = open()
+      .prepare(
+        `SELECT id, name, phone, email, goal, created_at, handled_at
+           FROM leads
+          ORDER BY datetime(created_at) DESC, id DESC
+          LIMIT ?`,
+      )
+      .all(limit) as Parameters<typeof toLead>[0][];
+    return rows.map(toLead);
+  },
+
+  async setLeadHandled(id, handled) {
+    const info = open()
+      .prepare(
+        handled
+          ? "UPDATE leads SET handled_at = datetime('now') WHERE id = ?"
+          : "UPDATE leads SET handled_at = NULL WHERE id = ?",
+      )
+      .run(id);
+    return { ok: Number(info.changes) > 0 };
+  },
 
   async counts(from, to) {
     const rows = open()
