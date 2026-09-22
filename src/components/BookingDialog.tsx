@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatDate } from "@/lib/booking";
+import { formatDate, slotKey } from "@/lib/booking";
+import { remember } from "@/lib/my-bookings";
 import type { Session } from "@/lib/site";
 
 export type BookingTarget = {
@@ -29,7 +30,7 @@ export default function BookingDialog({
 }: {
   target: BookingTarget;
   onClose: () => void;
-  onBooked: (id: string, date: string, spotsLeft: number) => void;
+  onBooked: (id: string, date: string, spotsLeft: number, token?: string) => void;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -38,6 +39,13 @@ export default function BookingDialog({
   const [position, setPosition] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /*
+    Already having a place is not a failure, and it was being shown in the
+    same red as one. It reaches this dialog at all only when the device that
+    booked is not this one - otherwise the row says "You're in" and never
+    opens it.
+  */
+  const [already, setAlready] = useState(false);
 
   const panel = useRef<HTMLDivElement>(null);
   const firstField = useRef<HTMLInputElement>(null);
@@ -88,6 +96,7 @@ export default function BookingDialog({
     setState("sending");
     const waiting = target.mode === "waitlist";
 
+    setAlready(false);
     try {
       const res = await fetch(waiting ? "/api/classes/waitlist" : "/api/classes/book", {
         method: "POST",
@@ -103,8 +112,12 @@ export default function BookingDialog({
 
       if (!res.ok) {
         setState("idle");
+        setAlready(data.reason === "duplicate");
         return setError(
-          data.error ?? (waiting ? "Could not add you to the list." : "Could not take that booking."),
+          data.reason === "duplicate"
+            ? "You already have a place in this class - there is nothing else to do."
+            : (data.error ??
+              (waiting ? "Could not add you to the list." : "Could not take that booking.")),
         );
       }
 
@@ -114,24 +127,11 @@ export default function BookingDialog({
         return;
       }
 
-      onBooked(target.id, target.date, data.spotsLeft);
+      onBooked(target.id, target.date, data.spotsLeft, data.token);
       if (data.token) {
-        const url = `${window.location.origin}/b/${data.token}`;
-        setManageUrl(url);
-        /*
-          Remembered on this device so the timetable can show "you are
-          booked" and offer the cancel link again later. Wrapped because
-          private browsing throws on write, and a booking that succeeded
-          must not look like a failure over a convenience.
-        */
-        try {
-          const key = "bx:bookings";
-          const saved = JSON.parse(localStorage.getItem(key) ?? "{}");
-          saved[`${target.id}|${target.date}`] = data.token;
-          localStorage.setItem(key, JSON.stringify(saved));
-        } catch {
-          // No local storage: the link on screen is still the way back.
-        }
+        setManageUrl(`${window.location.origin}/b/${data.token}`);
+        // Kept against this slot so the timetable can offer the way back.
+        remember(slotKey(target.id, target.date), data.token);
       }
       setState("done");
     } catch {
@@ -339,7 +339,10 @@ export default function BookingDialog({
             </div>
 
             {error && (
-              <p role="alert" className="mt-4 text-xs text-pink">
+              <p
+                role="alert"
+                className={`mt-4 text-xs ${already ? "text-lime" : "text-pink"}`}
+              >
                 {error}
               </p>
             )}

@@ -81,10 +81,21 @@ export default async function BookingPage({
         </>
       )}
 
-      <p className="mt-10 text-xs leading-relaxed text-grey-dim">
-        Keep this link &mdash; it is the only way back to this booking. Anyone
-        with it can cancel the place, so it is not worth sharing.
-      </p>
+      {/*
+        This used to say the link was the only way back, which was true when
+        it was written and is why the timetable now remembers a place on the
+        device that took it. What is still true is the warning: the token is
+        the authorisation, so anyone holding the link can cancel the place.
+        Not shown on a cancelled booking - there is nothing left to guard.
+      */}
+      {!cancelled && (
+        <p className="mt-10 text-xs leading-relaxed text-grey-dim">
+          Keep this link if you are on a different phone to the one you booked
+          on &mdash; otherwise the class in the timetable will take you back
+          here. Anyone with the link can cancel the place, so it is not worth
+          sharing.
+        </p>
+      )}
     </section>
   );
 }

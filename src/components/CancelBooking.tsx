@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { forgetToken } from "@/lib/my-bookings";
 
 /**
  * Giving up a place.
@@ -31,6 +32,9 @@ export default function CancelBooking({ token }: { token: string }) {
         setArming(false);
         return setError(data.error ?? "That did not work. Try again, or call us.");
       }
+      // Otherwise the timetable would go on saying "You're in" for a place
+      // that has just been handed to somebody else.
+      forgetToken(token);
       router.refresh();
     } catch {
       setBusy(false);

@@ -9,6 +9,7 @@ import {
   type Availability,
 } from "@/lib/booking";
 import type { ScheduleDay } from "@/lib/content";
+import { readMine, type MyBookings } from "@/lib/my-bookings";
 import { disciplines, site } from "@/lib/site";
 import BookingDialog, { type BookingTarget } from "../BookingDialog";
 import Reveal from "../ui/Reveal";
@@ -28,9 +29,17 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
   // Dates and availability arrive together, once, after the fetch settles.
   // The dates are resolved in the visitor's own timezone so nobody is booked
   // onto the wrong day from another country.
-  const [data, setData] = useState<{ dates: string[]; spots: Availability } | null>(
-    null,
-  );
+  const [data, setData] = useState<{
+    dates: string[];
+    spots: Availability;
+    /*
+      Places this browser already holds. Read here rather than in its own
+      effect so it lands in the same update as the availability - the server
+      has no localStorage, and reading it during render would make the
+      markup differ between the two and tear the page on hydration.
+    */
+    mine: MyBookings;
+  } | null>(null);
   const [target, setTarget] = useState<BookingTarget | null>(null);
 
   useEffect(() => {
@@ -66,7 +75,7 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
         // and booking will re-check capacity server-side anyway.
       }
 
-      if (!cancelled) setData({ dates, spots });
+      if (!cancelled) setData({ dates, spots, mine: readMine() });
     }
 
     void load();
@@ -80,11 +89,21 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
 
   const dates = data?.dates ?? [];
   const spots = data?.spots ?? null;
+  const mine = data?.mine ?? {};
 
-  function onBooked(id: string, date: string, spotsLeft: number) {
+  function onBooked(id: string, date: string, spotsLeft: number, token?: string) {
+    // The row changes under them as the dialog closes, rather than on some
+    // later visit.
     setData((prev) =>
-      prev ? { ...prev, spots: { ...prev.spots, [slotKey(id, date)]: spotsLeft } } : prev,
+      prev
+        ? {
+            ...prev,
+            spots: { ...prev.spots, [slotKey(id, date)]: spotsLeft },
+            mine: token ? { ...prev.mine, [slotKey(id, date)]: token } : prev.mine,
+          }
+        : prev,
     );
+
   }
 
   return (
@@ -192,6 +211,7 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
                     const date = dates[day];
                     const left = date ? (spots?.[slotKey(id, date)] ?? null) : null;
                     const full = left === 0;
+                    const booked = date ? (mine[slotKey(id, date)] ?? null) : null;
 
                     return (
                       <li
@@ -243,26 +263,43 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
                             invitation now: the demand is worth capturing, and
                             a place given up later has somewhere to go.
                           */}
-                          <button
-                            type="button"
-                            disabled={!date}
-                            onClick={() =>
-                              setTarget({
-                                id,
-                                date,
-                                session: s,
-                                spotsLeft: left,
-                                mode: full ? "waitlist" : "book",
-                              })
-                            }
-                            className={`font-display w-full rounded-sm px-5 py-2.5 text-[0.74rem] tracking-[0.12em] transition-all duration-300 active:scale-[0.96] disabled:cursor-not-allowed disabled:border-white/10 disabled:text-grey-dim sm:w-auto ${
-                              full
-                                ? "border border-white/25 text-grey hover:border-white hover:bg-white hover:text-ink active:bg-white active:text-ink"
-                                : "border border-lime/50 text-lime hover:bg-lime hover:text-ink active:bg-lime active:text-ink"
-                            }`}
-                          >
-                            {full ? "Join waitlist" : "Book"}
-                          </button>
+                          {booked ? (
+                            /*
+                              This browser holds a place here. Offering to
+                              book it again led to a red "That number is
+                              already booked onto this class", which is good
+                              news dressed as a failure - and left no route
+                              at all back to the booking.
+                            */
+                            <a
+                              href={`/b/${booked}`}
+                              aria-label={`Your place in ${s.discipline} - view or cancel it`}
+                              className="font-display block w-full rounded-sm border border-lime bg-lime/10 px-5 py-2.5 text-center text-[0.74rem] tracking-[0.12em] text-lime transition-colors hover:bg-lime hover:text-ink sm:w-auto"
+                            >
+                              You&rsquo;re in &rarr;
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={!date}
+                              onClick={() =>
+                                setTarget({
+                                  id,
+                                  date,
+                                  session: s,
+                                  spotsLeft: left,
+                                  mode: full ? "waitlist" : "book",
+                                })
+                              }
+                              className={`font-display w-full rounded-sm px-5 py-2.5 text-[0.74rem] tracking-[0.12em] transition-all duration-300 active:scale-[0.96] disabled:cursor-not-allowed disabled:border-white/10 disabled:text-grey-dim sm:w-auto ${
+                                full
+                                  ? "border border-white/25 text-grey hover:border-white hover:bg-white hover:text-ink active:bg-white active:text-ink"
+                                  : "border border-lime/50 text-lime hover:bg-lime hover:text-ink active:bg-lime active:text-ink"
+                              }`}
+                            >
+                              {full ? "Join waitlist" : "Book"}
+                            </button>
+                          )}
                         </span>
                       </li>
                     );
