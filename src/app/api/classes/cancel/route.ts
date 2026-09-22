@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { capacityFor, findSessionIn } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
+import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -28,31 +29,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "That link is not valid." }, { status: 400 });
   }
 
-  const store = await getStore();
-  const booking = await store.getByToken(token);
+  try {
+    const store = await getStore();
+    const booking = await store.getByToken(token);
 
-  if (!booking) {
-    return NextResponse.json({ error: "We cannot find that booking." }, { status: 404 });
-  }
-  if (booking.cancelledAt !== null) {
-    return NextResponse.json({ ok: true, alreadyCancelled: true });
-  }
+    if (!booking) {
+      return NextResponse.json({ error: "We cannot find that booking." }, { status: 404 });
+    }
+    if (booking.cancelledAt !== null) {
+      return NextResponse.json({ ok: true, alreadyCancelled: true });
+    }
 
-  const result = await store.cancel(booking.id);
-  if (!result.ok) {
-    return NextResponse.json({ error: "That booking is already gone." }, { status: 409 });
-  }
+    const result = await store.cancel(booking.id);
+    if (!result.ok) {
+      return NextResponse.json({ error: "That booking is already gone." }, { status: 409 });
+    }
 
-  // Hand the place straight to whoever has been waiting longest.
-  let promoted = null;
-  const found = findSessionIn(await getSchedule(), booking.sessionId);
-  if (found) {
-    promoted = await store.promoteFromWaitlist(
-      booking.sessionId,
-      booking.date,
-      capacityFor(found.session.discipline),
+    // Hand the place straight to whoever has been waiting longest.
+    let promoted = null;
+    const found = findSessionIn(await getSchedule(), booking.sessionId);
+    if (found) {
+      promoted = await store.promoteFromWaitlist(
+        booking.sessionId,
+        booking.date,
+        capacityFor(found.session.discipline),
+      );
+    }
+
+    return NextResponse.json({ ok: true, promoted: Boolean(promoted) });
+  } catch (error) {
+    await report("POST /api/classes/cancel", error);
+    return NextResponse.json(
+      { error: "Could not cancel that just now. Please call us." },
+      { status: 503 },
     );
   }
-
-  return NextResponse.json({ ok: true, promoted: Boolean(promoted) });
 }

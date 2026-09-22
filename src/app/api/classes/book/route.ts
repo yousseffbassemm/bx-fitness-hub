@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { capacityFor, findSessionIn, isDateValidForRow } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
+import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
 const PHONE = /^[+\d][\d\s-]{8,17}$/;
@@ -61,10 +62,13 @@ export async function POST(request: Request) {
       );
     }
 
-    console.info("[bx] booking", { sessionId, date, name, phone });
-    return NextResponse.json({ ok: true, spotsLeft: result.spotsLeft });
+    return NextResponse.json({
+      ok: true,
+      spotsLeft: result.spotsLeft,
+      token: result.token,
+    });
   } catch (error) {
-    console.error("[bx] booking failed", error);
+    await report("POST /api/classes/book", error, `${sessionId} on ${date}`);
     return NextResponse.json({ error: "Could not take that booking" }, { status: 503 });
   }
 }

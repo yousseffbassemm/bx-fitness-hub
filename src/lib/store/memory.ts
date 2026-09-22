@@ -11,6 +11,7 @@ import type {
   StaffRole,
   StaffUser,
   WaitlistRow,
+  ErrorRow,
 } from "./types";
 
 /**
@@ -25,6 +26,7 @@ const leads: LeadRow[] = [];
 const staff = new Map<string, StaffUser>();
 const content = new Map<string, unknown>();
 const uploads = new Map<string, { mime: string; bytes: Uint8Array }>();
+const errors = new Map<string, ErrorRow>();
 const waiting: WaitlistRow[] = [];
 let nextWaitId = 1;
 
@@ -56,6 +58,29 @@ export const memoryStore: BookingStore = {
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       lastLoginAt: existing?.lastLoginAt ?? null,
     });
+  },
+
+  async recordError(where, message, detail) {
+    const id = `${where}::${message}`;
+    const seen = errors.get(id);
+    errors.set(id, {
+      id,
+      at: new Date().toISOString(),
+      where,
+      message,
+      detail: detail ?? seen?.detail ?? null,
+      count: (seen?.count ?? 0) + 1,
+    });
+  },
+
+  async listErrors(limit = 50) {
+    return [...errors.values()]
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .slice(0, limit);
+  },
+
+  async clearErrors() {
+    errors.clear();
   },
 
   async getContent<T>(key: string) {

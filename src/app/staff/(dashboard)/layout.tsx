@@ -28,6 +28,10 @@ export default async function DashboardLayout({
   // answered is the one thing on these screens that gets worse with time.
   const waiting = (await store.listLeads()).filter((l) => l.handledAt === null).length;
 
+  // Problems only appear in the nav when there are some. A tab that is
+  // always there and always empty stops being looked at.
+  const problems = admin ? (await store.listErrors(50)).length : 0;
+
   const items: NavItem[] = [
     { href: "/staff", label: "Bookings" },
     { href: "/staff/enquiries", label: "Enquiries", badge: waiting },
@@ -37,6 +41,9 @@ export default async function DashboardLayout({
           { href: "/staff/coaches", label: "Coaches" },
           { href: "/staff/pricing", label: "Pricing" },
           { href: "/staff/team", label: "Team" },
+          ...(problems > 0
+            ? [{ href: "/staff/errors", label: "Problems", badge: problems }]
+            : []),
         ]
       : []),
   ];

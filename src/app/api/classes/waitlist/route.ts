@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { findSessionIn, isDateValidForRow } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
+import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -38,19 +39,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please give a valid phone number" }, { status: 400 });
   }
 
-  const result = await (await getStore()).joinWaitlist({
-    sessionId,
-    date,
-    name: name.trim(),
-    phone: phone.trim(),
-  });
+  try {
+    const result = await (await getStore()).joinWaitlist({
+      sessionId,
+      date,
+      name: name.trim(),
+      phone: phone.trim(),
+    });
 
-  if (!result.ok) {
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: "You are already on the list for this class." },
+        { status: 409 },
+      );
+    }
+
+    return NextResponse.json({ ok: true, position: result.position });
+  } catch (error) {
+    await report("POST /api/classes/waitlist", error, `${sessionId} on ${date}`);
     return NextResponse.json(
-      { error: "You are already on the list for this class." },
-      { status: 409 },
+      { error: "Could not add you to the list just now. Please call us." },
+      { status: 503 },
     );
   }
-
-  return NextResponse.json({ ok: true, position: result.position });
 }

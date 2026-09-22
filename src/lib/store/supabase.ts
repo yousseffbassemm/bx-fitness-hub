@@ -11,6 +11,7 @@ import type {
   StaffRole,
   StaffUser,
   WaitlistRow,
+  ErrorRow,
 } from "./types";
 
 /**
@@ -217,6 +218,46 @@ export const supabaseStore: BookingStore = {
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`Supabase upsertStaffUser failed: ${res.status}`);
+  },
+
+  async recordError(where, message, detail) {
+    await fetch(`${url}/rest/v1/rpc/record_error`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        p_fingerprint: `${where}::${message}`.slice(0, 300),
+        p_where: where.slice(0, 120),
+        p_message: message.slice(0, 400),
+        p_detail: detail?.slice(0, 2000) ?? null,
+      }),
+      cache: "no-store",
+    }).catch(() => {
+      // Reporting a failure must never become one.
+    });
+  },
+
+  async listErrors(limit = 50) {
+    const res = await fetch(
+      `${url}/rest/v1/errors?select=*&order=last_at.desc&limit=${limit}`,
+      { headers: headers(), cache: "no-store" },
+    );
+    if (!res.ok) throw new Error(`Supabase listErrors failed: ${res.status}`);
+    return ((await res.json()) as Record<string, string | number | null>[]).map((r) => ({
+      id: r.fingerprint as string,
+      at: r.last_at as string,
+      where: r.where_at as string,
+      message: r.message as string,
+      detail: (r.detail as string) ?? null,
+      count: Number(r.count),
+    })) as ErrorRow[];
+  },
+
+  async clearErrors() {
+    await fetch(`${url}/rest/v1/errors?fingerprint=neq.__none__`, {
+      method: "DELETE",
+      headers: headers(),
+      cache: "no-store",
+    });
   },
 
   async getContent<T>(key: string) {

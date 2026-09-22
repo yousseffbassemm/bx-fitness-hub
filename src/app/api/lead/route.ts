@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
 /**
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     // Never answer "you're on the list" for something that was not saved.
-    console.error("[bx] could not save lead", error);
+    await report("POST /api/lead", error);
     return NextResponse.json(
       { error: "Could not save that just now. Please call us instead." },
       { status: 500 },

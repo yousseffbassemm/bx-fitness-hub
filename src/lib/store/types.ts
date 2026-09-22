@@ -89,6 +89,17 @@ export type WaitlistRow = {
   promotedAt: string | null;
 };
 
+/** Something that went wrong on the server, kept so somebody finds out. */
+export type ErrorRow = {
+  id: string;
+  at: string;
+  where: string;
+  message: string;
+  detail: string | null;
+  /** How many times this same failure has happened. */
+  count: number;
+};
+
 export interface BookingStore {
   /** Places taken per "sessionId|date". Cancelled bookings do not count. */
   counts(from: string, to: string): Promise<Record<string, number>>;
@@ -156,6 +167,19 @@ export interface BookingStore {
    * a developer", and they differ only in shape. Reading returns null when
    * nothing has been set, and the caller falls back to what is in the code.
    */
+  /**
+   * Record a server-side failure.
+   *
+   * Grouped by where and what, with a count, because a broken endpoint
+   * produces the same error a thousand times and a thousand identical rows
+   * is not more information than one row and a number.
+   */
+  recordError(where: string, message: string, detail?: string): Promise<void>;
+  /** The most recent distinct failures, newest first. */
+  listErrors(limit?: number): Promise<ErrorRow[]>;
+  /** Clear them once they have been dealt with. */
+  clearErrors(): Promise<void>;
+
   getContent<T>(key: string): Promise<T | null>;
   setContent(key: string, value: unknown, editedBy: string): Promise<void>;
 

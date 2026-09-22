@@ -191,6 +191,20 @@ function migrate(next: DatabaseSync) {
   `);
   next.exec("CREATE INDEX IF NOT EXISTS waitlist_date_idx ON waitlist (class_date)");
 
+  // Server-side failures, grouped. fingerprint is where + message, so a
+  // loop of the same error is one row with a rising count rather than a
+  // table nobody can read.
+  next.exec(`
+    CREATE TABLE IF NOT EXISTS errors (
+      fingerprint TEXT PRIMARY KEY,
+      where_at    TEXT NOT NULL,
+      message     TEXT NOT NULL,
+      detail      TEXT,
+      count       INTEGER NOT NULL DEFAULT 1,
+      last_at     TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
   next.exec("CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings (class_date)");
   next.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_unique
@@ -312,6 +326,49 @@ export const sqliteStore: BookingStore = {
          ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash`,
       )
       .run(username, passwordHash, role);
+  },
+
+  async recordError(where, message, detail) {
+    const fingerprint = `${where}::${message}`.slice(0, 300);
+    open()
+      .prepare(
+        `INSERT INTO errors (fingerprint, where_at, message, detail)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(fingerprint) DO UPDATE SET
+           count = count + 1,
+           last_at = datetime('now'),
+           detail = COALESCE(excluded.detail, errors.detail)`,
+      )
+      .run(fingerprint, where.slice(0, 120), message.slice(0, 400), detail?.slice(0, 2000) ?? null);
+  },
+
+  async listErrors(limit = 50) {
+    const rows = open()
+      .prepare(
+        `SELECT fingerprint, where_at, message, detail, count, last_at
+           FROM errors ORDER BY datetime(last_at) DESC LIMIT ?`,
+      )
+      .all(limit) as {
+      fingerprint: string;
+      where_at: string;
+      message: string;
+      detail: string | null;
+      count: number;
+      last_at: string;
+    }[];
+
+    return rows.map((r) => ({
+      id: r.fingerprint,
+      at: r.last_at,
+      where: r.where_at,
+      message: r.message,
+      detail: r.detail,
+      count: Number(r.count),
+    }));
+  },
+
+  async clearErrors() {
+    open().prepare("DELETE FROM errors").run();
   },
 
   async getContent<T>(key: string) {
