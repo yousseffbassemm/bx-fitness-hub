@@ -54,7 +54,7 @@ export const site = {
     country: "EG",
     // No street name is published anywhere; this is the landmark BX Spa
     // gives out, and it is how people actually find the place.
-    street: "Right in front of Mivida",
+    street: "In front of Gate 6, Mivida",
   },
   coords: { lat: 30.0139089, lng: 31.5308549 },
   maps: "https://maps.app.goo.gl/FNZzPn2zp4Ntb3pEA",
@@ -367,15 +367,17 @@ export const plans = [
 ] as const;
 
 /* -------------------------------------------------------------------------
-   Reviews - real, from the BX Fitness Hub listing on Google Maps, read on
-   22 September 2026. Quotes are verbatim; two are excerpts, cut at a sentence
-   because Google truncates long reviews in its own interface.
+   Reviews - real, read from Google Maps on 22 September 2026.
 
-   Worth knowing: BX's Google reviews are overwhelmingly about the spa - the
-   listing's own keyword chips read "moroccan bath 16, jacuzzi 5, sauna 4".
-   There are no gym-floor reviews to quote yet.
+   BX has two listings and both are quoted here: BX Fitness Hub (4.6 from 76)
+   and BX Spa (4.9 from 35), which Google places "inside BX Fitness Hub, in
+   front of Gate 6". Between them these are every written review Google shows
+   - the rest of those 111 ratings carry no text.
 
-   These are a snapshot and will go stale. The durable, licensed way to show
+   Quotes are verbatim; some are excerpts, cut at a sentence, because Google
+   truncates long reviews in its own interface.
+
+   This is a snapshot and will go stale. The durable, licensed way to show
    them is the Google Places API - see README.
    ---------------------------------------------------------------------- */
 export type Review = {
@@ -384,9 +386,28 @@ export type Review = {
   when: string;
   quote: string;
   excerpt: boolean;
+  source: "BX Fitness Hub" | "BX Spa";
 };
 
 export const reviews: Review[] = [
+  {
+    name: "Sara Bhaya",
+    rating: 5,
+    when: "4 months ago",
+    quote:
+      "Best spa ever! I came from Spain for vacation and found this place, amazing staff and amazing spa. Lovely jacuzzi when you are done, with tea and biscuits. Recommend highly!",
+    excerpt: false,
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "Yasmin Dawoud",
+    rating: 5,
+    when: "3 weeks ago",
+    quote:
+      "I had an amazing experience! The environment is clean, friendly and the staff were very professional. I highly recommend to anyone who's looking to have a luxurious experience.",
+    excerpt: false,
+    source: "BX Spa",
+  },
   {
     name: "Mari",
     rating: 5,
@@ -394,6 +415,16 @@ export const reviews: Review[] = [
     quote:
       "The best Moroccan hammam I've ever experienced! Everything was so relaxing and well done from start to finish. Suad, Basma, and Lubnah were all so kind, welcoming, and made the whole experience even better.",
     excerpt: true,
+    source: "BX Fitness Hub",
+  },
+  {
+    name: "Sado Mado",
+    rating: 5,
+    when: "3 weeks ago",
+    quote:
+      "Greatest experience of my life. I did the Moroccan hammam with Rahma. The spa was so clean and the staff was so welcoming. I can't wait to come back again!",
+    excerpt: false,
+    source: "BX Spa",
   },
   {
     name: "MonaAbd",
@@ -402,14 +433,16 @@ export const reviews: Review[] = [
     quote:
       "Went for a full package hammam and 90 minutes massage and it was AMAZING. The location is women only section, very clean and luxury vibe. Sauna, steam room and jacuzzi.",
     excerpt: true,
+    source: "BX Fitness Hub",
   },
   {
-    name: "Sara Bhaya",
+    name: "Yousra Harifadja",
     rating: 5,
-    when: "4 months ago",
+    when: "2 months ago",
     quote:
-      "Best spa ever! I came from Spain for vacation and found this place, amazing staff and amazing spa. Lovely jacuzzi when you are done, with tea and biscuits. Recommend highly!",
-    excerpt: false,
+      "My experience was incredible. I went here with my sister and it was amazing. Siham and Ibtissem did our hammam and they were so nice and professional. I loved it!",
+    excerpt: true,
+    source: "BX Spa",
   },
 ];
 

@@ -169,31 +169,38 @@ body {
 /* Scroll reveal                                                          */
 
 /*
-   Every block on the page arrives the same way: it fades up, and a little of
-   the movement comes from a direction that suits where it sits. The variants
-   only change the starting offset, so one transition covers all of them.
+   Every block on the page arrives, and arrives visibly: it travels a real
+   distance, unblurs and settles. The variants only change where it starts
+   from, so a single transition covers all of them.
+
+   The distances are deliberately large. A 20px drift reads as a glitch on a
+   big screen; a card that clearly slides in from the left reads as intent.
 */
 .reveal {
   opacity: 0;
-  transform: translate3d(var(--rx, 0), var(--ry, 26px), 0) scale(var(--rs, 1));
+  transform: translate3d(var(--rx, 0), var(--ry, 64px), 0) scale(var(--rs, 1))
+    rotate(var(--rr, 0deg));
+  filter: blur(var(--rb, 6px));
   transition:
-    opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
+    opacity 1.05s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 1.15s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform, filter;
 }
 
 .reveal[data-shown="true"] {
   opacity: 1;
   transform: none;
+  filter: blur(0);
   will-change: auto;
 }
 
-.reveal-up    { --ry: 26px; }
-.reveal-down  { --ry: -22px; }
-.reveal-left  { --rx: -34px; --ry: 0; }
-.reveal-right { --rx: 34px; --ry: 0; }
-.reveal-scale { --ry: 14px; --rs: 0.965; }
-.reveal-fade  { --ry: 0; }
+.reveal-up    { --ry: 64px; }
+.reveal-down  { --ry: -54px; }
+.reveal-left  { --rx: -130px; --ry: 10px; --rr: -2.5deg; }
+.reveal-right { --rx: 130px;  --ry: 10px; --rr: 2.5deg; }
+.reveal-scale { --ry: 46px; --rs: 0.88; }
+.reveal-fade  { --ry: 0; --rb: 10px; }
 
 /* --------------------------------------------------------------------- */
 /* Marquee                                                                */

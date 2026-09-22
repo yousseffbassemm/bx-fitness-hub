@@ -27,7 +27,7 @@ function observer() {
         shared?.unobserve(entry.target);
       }
     },
-    { rootMargin: "0px 0px -6% 0px", threshold: 0.06 },
+    { rootMargin: "0px 0px -14% 0px", threshold: 0.08 },
   );
   return shared;
 }

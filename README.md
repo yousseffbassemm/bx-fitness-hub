@@ -234,10 +234,12 @@ what. With one shared password there is no "who" to record.
 
 ## Reviews
 
-The reviews section shows **real reviews from BX's Google Maps listing**, read
-on 22 September 2026 and stored in `src/lib/site.ts`. Two are excerpts, cut at
-a sentence, because Google truncates long reviews in its own interface. The
-cards say so.
+The reviews section shows **every written review Google has** across BX's two
+listings - BX Fitness Hub (4.6 from 76) and BX Spa (4.9 from 35, which Google
+places "inside BX Fitness Hub, in front of Gate 6") - read on 22 September
+2026 and stored in `src/lib/site.ts`. Six in all: the other 105 ratings carry
+no text. Each card names which listing it came from. Some are excerpts, cut at
+a sentence, because Google truncates long reviews in its own interface.
 
 Two things to know before launch:
 
@@ -254,10 +256,11 @@ Serving them through the Places API, with Google attribution shown (the cards
 already carry the Google mark), is the licensed route. Worth doing before the
 site is public.
 
-**BX's Google reviews are almost all about the spa.** The listing's own
-keyword chips read "moroccan bath 16, jacuzzi 5, sauna 4" - there are no
-gym-floor reviews to quote yet. If BX wants gym reviews on the gym site, the
-answer is to ask members for them rather than anything I can do in code.
+**BX's Google reviews are almost all about the spa.** The gym listing's own
+keyword chips read "moroccan bath 16, jacuzzi 5, sauna 4", and all six written
+reviews are about the hammam, the jacuzzi or the massage. There are no
+gym-floor reviews to quote. If BX wants those on the gym site, the answer is
+to ask members for them - no amount of code will conjure them.
 
 ## Still to fill in
 
@@ -315,5 +318,7 @@ the same filenames. Nothing in the code needs to change.
 - Keep animation behind `Reveal`, which already respects
   `prefers-reduced-motion`. It takes a `variant` (`up`, `down`, `left`,
   `right`, `scale`, `fade`) and a `delay` in ms for staggering a list. One
-  shared IntersectionObserver serves the whole page.
+  shared IntersectionObserver serves the whole page. The travel distances are
+  deliberately large - a 20px drift reads as a glitch on a wide screen, while
+  a card that clearly slides in from the left reads as intent.
 - Run `npm run build` before pushing.
