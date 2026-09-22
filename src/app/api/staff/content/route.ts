@@ -3,9 +3,13 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/staff/guard";
 import {
   saveCoaches,
+  saveFacilities,
+  saveGallery,
   savePlans,
   saveSchedule,
   type EditableCoach,
+  type EditableFacility,
+  type EditableGalleryItem,
   type EditablePlan,
   type ScheduleDay,
 } from "@/lib/content";
@@ -91,6 +95,27 @@ export async function PUT(request: Request) {
     }
 
     await saveSchedule(days, auth.username);
+  } else if (key === "facilities") {
+    const items = value as EditableFacility[];
+    if (items.length === 0) {
+      return NextResponse.json(
+        { error: "Keep at least one - an empty section looks broken." },
+        { status: 400 },
+      );
+    }
+    if (items.some((f) => !String(f?.title ?? "").trim())) {
+      return NextResponse.json({ error: "Every facility needs a name." }, { status: 400 });
+    }
+    await saveFacilities(items, auth.username);
+  } else if (key === "gallery") {
+    const items = value as EditableGalleryItem[];
+    if (items.length === 0) {
+      return NextResponse.json(
+        { error: "Keep at least one photo." },
+        { status: 400 },
+      );
+    }
+    await saveGallery(items, auth.username);
   } else {
     return NextResponse.json({ error: "Unknown section." }, { status: 400 });
   }

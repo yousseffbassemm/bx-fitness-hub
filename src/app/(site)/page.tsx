@@ -1,7 +1,7 @@
 import About from "@/components/sections/About";
 import CTA from "@/components/sections/CTA";
 import Classes from "@/components/sections/Classes";
-import { getSchedule } from "@/lib/content";
+import { getGallery, getSchedule } from "@/lib/content";
 import Coaches from "@/components/sections/Coaches";
 import Contact from "@/components/sections/Contact";
 import Facilities from "@/components/sections/Facilities";
@@ -28,7 +28,7 @@ export default async function HomePage() {
       <Coaches />
       <Membership />
       <Testimonials />
-      <Gallery />
+      <Gallery gallery={await getGallery()} />
       <CTA />
       <Contact />
     </>

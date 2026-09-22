@@ -2,18 +2,27 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import { gallery, site } from "@/lib/site";
+import type { GalleryItem } from "@/lib/content";
+import { site } from "@/lib/site";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
 
-export default function Gallery() {
+/**
+ * The photographs are editable and live in the store, so they arrive as a
+ * prop - this is a client component (it owns the lightbox) and has no
+ * database to read.
+ */
+export default function Gallery({ gallery }: { gallery: GalleryItem[] }) {
   const [open, setOpen] = useState<number | null>(null);
 
   const close = useCallback(() => setOpen(null), []);
+  // The count is read inside, so it is a dependency. It only changes if the
+  // gallery itself is edited, which is not something that happens while
+  // someone has the lightbox open.
+  const count = gallery.length;
   const step = useCallback(
-    (dir: number) =>
-      setOpen((i) => (i === null ? i : (i + dir + gallery.length) % gallery.length)),
-    [],
+    (dir: number) => setOpen((i) => (i === null ? i : (i + dir + count) % count)),
+    [count],
   );
 
   useEffect(() => {

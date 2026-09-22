@@ -417,8 +417,11 @@ The staff area is six screens behind one bar:
 | **Enquiries** | the "Start here" form, with a count of how many are waiting |
 | **Timetable** | admin - the weekly classes |
 | **Coaches** | admin - names, specialities, portraits and crops |
+| **Facilities** | admin - the cards under "Every corner is made to move" |
+| **Gallery** | admin - the mosaic, tall and square tiles |
 | **Pricing** | admin - the three membership prices |
 | **Team** | admin - accounts and roles |
+| **Problems** | admin - server failures; only appears when there are some |
 
 A non-admin sees the first two and nothing else, and the admin pages redirect
 them rather than showing controls the server will refuse.

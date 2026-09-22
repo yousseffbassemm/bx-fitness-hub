@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { facilities } from "@/lib/site";
+import { getFacilities } from "@/lib/content";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
 
@@ -7,7 +7,9 @@ import SectionHead from "../ui/SectionHead";
  * Deliberately uneven grid - two tall plates, one wide, repeating - so the
  * section reads like a contact sheet rather than a row of equal cards.
  */
-export default function Facilities() {
+export default async function Facilities() {
+  const facilities = await getFacilities();
+
   return (
     <section id="facilities" className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
@@ -37,11 +39,11 @@ export default function Facilities() {
               <article className="surface photo-inset group relative aspect-[3/2] overflow-hidden rounded-md bg-charcoal sm:aspect-[4/5]">
                 <div className="absolute inset-0">
                   <Image
-                    src={f.image}
+                    src={f.photo}
                     alt={f.alt}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    style={f.focus ? { objectPosition: f.focus } : undefined}
+                    style={{ objectPosition: f.focus }}
                     className="plate object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] group-data-[near=true]:scale-[1.04]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/35 to-transparent" />

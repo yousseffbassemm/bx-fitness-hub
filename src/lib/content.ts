@@ -2,6 +2,8 @@ import type { StaticImageData } from "next/image";
 import { sessionId } from "./booking";
 import {
   coaches as defaultCoaches,
+  facilities as defaultFacilities,
+  gallery as defaultGallery,
   plans as defaultPlans,
   schedule as defaultSchedule,
   type Session,
@@ -312,4 +314,160 @@ export function newSessionId() {
   const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);
   return `s-${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+}
+
+
+/* -------------------------------------------------------------------------
+   Facilities and the gallery
+
+   Both are the same thing in different clothes - a photograph with words
+   attached - so they share the upload machinery the coaches use. Each item
+   keeps a photoId when one has been uploaded and falls back to the image in
+   the code by position when it has not, which is what lets the captions be
+   edited before anyone has re-shot anything.
+   ---------------------------------------------------------------------- */
+
+export type EditableFacility = {
+  title: string;
+  copy: string;
+  alt: string;
+  photoId: string | null;
+  focus: string;
+};
+
+export type FacilityItem = Omit<EditableFacility, "photoId"> & {
+  photo: string | StaticImageData;
+};
+
+const FACILITIES_KEY = "facilities";
+
+export function defaultFacilityValues(): EditableFacility[] {
+  return defaultFacilities.map((f) => ({
+    title: f.title,
+    copy: f.copy,
+    alt: f.alt,
+    photoId: null,
+    focus: f.focus ?? "center",
+  }));
+}
+
+export async function getFacilities(): Promise<FacilityItem[]> {
+  let saved: EditableFacility[] | null = null;
+  try {
+    saved = await (await getStore()).getContent<EditableFacility[]>(FACILITIES_KEY);
+  } catch {
+    saved = null;
+  }
+
+  if (!saved?.length) {
+    return defaultFacilities.map((f) => ({
+      title: f.title,
+      copy: f.copy,
+      alt: f.alt,
+      photo: f.image,
+      focus: f.focus ?? "center",
+    }));
+  }
+
+  return saved.map((f, i) => ({
+    title: f.title,
+    copy: f.copy,
+    alt: f.alt,
+    photo: f.photoId ? uploadUrl(f.photoId) : (defaultFacilities[i]?.image ?? ""),
+    focus: f.focus || "center",
+  }));
+}
+
+export async function getEditableFacilities(): Promise<EditableFacility[]> {
+  let saved: EditableFacility[] | null = null;
+  try {
+    saved = await (await getStore()).getContent<EditableFacility[]>(FACILITIES_KEY);
+  } catch {
+    saved = null;
+  }
+  return saved?.length ? saved : defaultFacilityValues();
+}
+
+export async function saveFacilities(next: EditableFacility[], editedBy: string) {
+  const clean = next
+    .map((f) => ({
+      title: String(f.title ?? "").trim().slice(0, 60),
+      copy: String(f.copy ?? "").trim().slice(0, 200),
+      alt: String(f.alt ?? "").trim().slice(0, 200),
+      photoId: typeof f.photoId === "string" && f.photoId ? f.photoId : null,
+      focus: String(f.focus ?? "center").trim().slice(0, 40),
+    }))
+    .filter((f) => f.title);
+
+  await (await getStore()).setContent(FACILITIES_KEY, clean, editedBy);
+}
+
+export type GalleryRatio = "tall" | "square";
+
+export type EditableGalleryItem = {
+  alt: string;
+  ratio: GalleryRatio;
+  photoId: string | null;
+};
+
+export type GalleryItem = {
+  alt: string;
+  ratio: GalleryRatio;
+  src: string | StaticImageData;
+};
+
+const GALLERY_KEY = "gallery";
+
+export function defaultGalleryValues(): EditableGalleryItem[] {
+  return defaultGallery.map((g) => ({
+    alt: g.alt,
+    ratio: g.ratio === "tall" ? "tall" : "square",
+    photoId: null,
+  }));
+}
+
+export async function getGallery(): Promise<GalleryItem[]> {
+  let saved: EditableGalleryItem[] | null = null;
+  try {
+    saved = await (await getStore()).getContent<EditableGalleryItem[]>(GALLERY_KEY);
+  } catch {
+    saved = null;
+  }
+
+  if (!saved?.length) {
+    return defaultGallery.map((g) => ({
+      alt: g.alt,
+      ratio: g.ratio === "tall" ? ("tall" as const) : ("square" as const),
+      src: g.src,
+    }));
+  }
+
+  return saved.map((g, i) => ({
+    alt: g.alt,
+    ratio: g.ratio === "tall" ? ("tall" as const) : ("square" as const),
+    src: g.photoId ? uploadUrl(g.photoId) : (defaultGallery[i]?.src ?? ""),
+  }));
+}
+
+export async function getEditableGallery(): Promise<EditableGalleryItem[]> {
+  let saved: EditableGalleryItem[] | null = null;
+  try {
+    saved = await (await getStore()).getContent<EditableGalleryItem[]>(GALLERY_KEY);
+  } catch {
+    saved = null;
+  }
+  return saved?.length ? saved : defaultGalleryValues();
+}
+
+export async function saveGallery(next: EditableGalleryItem[], editedBy: string) {
+  const clean = next
+    .map((g) => ({
+      alt: String(g.alt ?? "").trim().slice(0, 200),
+      ratio: g.ratio === "tall" ? ("tall" as const) : ("square" as const),
+      photoId: typeof g.photoId === "string" && g.photoId ? g.photoId : null,
+    }))
+    // Something with no picture and no description is a row someone abandoned.
+    .filter((g) => g.photoId || g.alt);
+
+  await (await getStore()).setContent(GALLERY_KEY, clean, editedBy);
 }

@@ -39,6 +39,8 @@ export default async function DashboardLayout({
       ? [
           { href: "/staff/timetable", label: "Timetable" },
           { href: "/staff/coaches", label: "Coaches" },
+          { href: "/staff/facilities", label: "Facilities" },
+          { href: "/staff/gallery", label: "Gallery" },
           { href: "/staff/pricing", label: "Pricing" },
           { href: "/staff/team", label: "Team" },
           ...(problems > 0
