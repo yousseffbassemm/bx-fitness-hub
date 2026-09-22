@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDate, slotKey } from "@/lib/booking";
 import { remember } from "@/lib/my-bookings";
 import type { Session } from "@/lib/site";
@@ -50,12 +50,75 @@ export default function BookingDialog({
   const panel = useRef<HTMLDivElement>(null);
   const firstField = useRef<HTMLInputElement>(null);
 
+  /*
+    onClose is an inline arrow in the parent, so a fresh identity arrives on
+    every parent render. As an effect dependency it tore the listeners down
+    and rebuilt them each time, moving focus back to the first field along
+    the way. Held in a ref instead, so the effects below run once for the
+    life of the dialog and still call the current one.
+  */
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  const dismissRef = useRef<() => void>(() => {});
+
+  /*
+    Answer the back gesture.
+
+    On a phone, back is how people dismiss a sheet. This one had no history
+    entry of its own, so Back left the site entirely - losing their place on
+    a long page - instead of closing the dialog.
+
+    The entry is pushed once and popped only by a deliberate close, never by
+    the effect's cleanup. Cleanup looked like the obvious place and was
+    wrong: Strict Mode runs setup, cleanup, setup on mount, so the cleanup
+    popped the entry it had just pushed, and the popstate that followed
+    closed the dialog the instant it opened. The ref survives that remount,
+    so only one entry is ever added.
+  */
+  const pushed = useRef(false);
+  useEffect(() => {
+    if (!pushed.current) {
+      window.history.pushState({ bxDialog: true }, "");
+      pushed.current = true;
+    }
+    const onPop = () => {
+      // The entry is gone already; nothing left to pop.
+      pushed.current = false;
+      closeRef.current();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  /*
+    Every way out of the dialog goes through here. Going back pops our own
+    entry, which fires popstate, which closes it - so Back and the Close
+    button leave the history in the same state and neither needs pressing
+    twice. If the entry is no longer ours, the visitor has navigated on and
+    unwinding that would drag them back from wherever they went.
+  */
+  const dismiss = useCallback((): void => {
+    const state = window.history.state as { bxDialog?: boolean } | null;
+    if (pushed.current && state?.bxDialog) {
+      window.history.back();
+      return;
+    }
+    onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    dismissRef.current = dismiss;
+  }, [dismiss]);
+
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
     firstField.current?.focus();
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") dismissRef.current();
       if (e.key !== "Tab") return;
 
       // Keep tabbing inside the dialog while it is open.
@@ -83,7 +146,7 @@ export default function BookingDialog({
       document.body.style.overflow = "";
       opener?.focus?.();
     };
-  }, [onClose]);
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -149,7 +212,7 @@ export default function BookingDialog({
         viewport as the browser chrome comes and goes.
       */
       className="dialog-backdrop fixed inset-0 z-[70] h-dvh overflow-y-auto overscroll-contain bg-ink/85 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={dismiss}
     >
       <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
         <div
@@ -250,7 +313,7 @@ export default function BookingDialog({
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={dismiss}
                 className="font-display done-step mt-6 w-full rounded-sm bg-lime py-3.5 text-[0.8rem] tracking-[0.14em] text-ink transition-colors hover:bg-white"
                 style={{ animationDelay: "0.6s" }}
               >
@@ -268,7 +331,7 @@ export default function BookingDialog({
               </div>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={dismiss}
                 aria-label="Close"
                 className="text-xs text-grey hover:text-white"
               >
