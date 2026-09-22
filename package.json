@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:watch": "scripts/dev-watchdog.sh start",
+    "dev:stop": "scripts/dev-watchdog.sh stop",
+    "dev:status": "scripts/dev-watchdog.sh status",
+    "dev:log": "scripts/dev-watchdog.sh log",
+    "dev:url": "scripts/dev-watchdog.sh url"
   },
   "dependencies": {
     "next": "16.3.5",

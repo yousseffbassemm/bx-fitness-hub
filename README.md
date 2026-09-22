@@ -23,6 +23,50 @@ npm run build   # production build - run before pushing
 npm run lint    # ESLint
 ```
 
+## Checking it on a phone
+
+`npm run dev` only answers on this Mac. To look at the site on a phone, start
+it through the watchdog instead:
+
+```bash
+npm run dev:watch
+```
+
+It prints the addresses when it starts, and `npm run dev:url` prints them
+again:
+
+- **this Mac** - `http://localhost:3000`
+- **a phone on the same Wi-Fi** - `http://<mac-address>:3000`, or
+  `http://<hostname>.local:3000`, which keeps working when the router hands
+  out a different address
+
+Edits reload on both at once; there is nothing to refresh.
+
+The watchdog runs `next dev` bound to every interface rather than just
+localhost, and keeps it there: if the server exits, or stays up but stops
+answering five checks in a row, it starts it again - about six seconds end to
+end. It detaches from the terminal, so closing that terminal does not take the
+link down with it.
+
+| | |
+| --- | --- |
+| `npm run dev:watch` | start it (takes port 3000 back if something holds it) |
+| `npm run dev:status` | is it up |
+| `npm run dev:log` | follow the server output |
+| `npm run dev:url` | print the addresses again |
+| `npm run dev:stop` | stop it |
+
+It does not survive a reboot on its own. `scripts/dev-watchdog.sh install-login`
+registers a launch agent so it comes back at login; it is deliberately not
+installed by default, since it starts a server every time you log in.
+`uninstall-login` undoes it.
+
+Two things to know. The phone has to be on the same Wi-Fi - this is a link on
+your network, not a public one, and nothing is exposed to the internet. And
+`allowedDevOrigins` in `next.config.ts` is what lets the dev client talk to a
+browser that reached the site by address rather than by localhost; without it
+the page loads but edits never arrive. It has no effect on a production build.
+
 ## Daily Git routine
 
 **Before you start:**
