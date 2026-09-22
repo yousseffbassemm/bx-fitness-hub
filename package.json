@@ -14,7 +14,10 @@
     "dev:url": "scripts/dev-watchdog.sh url",
     "tunnel:on": "scripts/dev-watchdog.sh tunnel on",
     "tunnel:off": "scripts/dev-watchdog.sh tunnel off",
-    "tunnel:status": "scripts/dev-watchdog.sh tunnel status"
+    "tunnel:status": "scripts/dev-watchdog.sh tunnel status",
+    "backup": "node scripts/backup.mjs",
+    "backup:list": "node scripts/backup.mjs --list",
+    "restore": "node scripts/restore.mjs"
   },
   "dependencies": {
     "next": "16.3.5",

@@ -12,7 +12,7 @@
 # as a launch agent so it comes back when you log in; it is not installed
 # unless you ask for it, because it starts a server on this Mac every login.
 #
-#   scripts/dev-watchdog.sh start | stop | restart | status | log | url
+#   scripts/dev-watchdog.sh start | stop | restart | status | log | url | backup
 #   scripts/dev-watchdog.sh install-login | uninstall-login
 #
 set -uo pipefail
@@ -43,6 +43,10 @@ TUNNEL_FLAG="$SUPPORT/tunnel-enabled"      # present = run a public tunnel
 TUNNEL_URL="$SUPPORT/tunnel-url"           # the address it is currently on
 TUNNEL_PID="$STATE/bx-tunnel.pid"
 TUNNEL_LOG="$STATE/bx-tunnel.log"
+LAST_BACKUP="$STATE/bx-last-backup"
+
+# How often the database is backed up while the watchdog is running.
+BACKUP_EVERY_HOURS="${BACKUP_EVERY_HOURS:-24}"
 
 stamp() { date '+%Y-%m-%d %H:%M:%S'; }
 say()   { echo "[$(stamp)] $*" >>"$LOG"; }
@@ -81,6 +85,28 @@ watchdog_pid() { [ -f "$PIDFILE" ] && cat "$PIDFILE" 2>/dev/null; }
 healthy() { curl -fsS -m "$CHECK_TIMEOUT" -o /dev/null "$HEALTH"; }
 
 tunnel_wanted() { [ -f "$TUNNEL_FLAG" ]; }
+
+# Take a backup if enough time has passed since the last one.
+#
+# Here rather than in a separate schedule because this process is already the
+# thing that is always running. A backup is only skipped, never retried into
+# a loop: a database that cannot be read is a problem the log should show
+# once an hour, not once a second.
+maybe_backup() {
+  local now last age
+  now="$(date +%s)"
+  last="$(cat "$LAST_BACKUP" 2>/dev/null || echo 0)"
+  age=$(( now - last ))
+
+  [ "$age" -lt $(( BACKUP_EVERY_HOURS * 3600 )) ] && return 0
+
+  echo "$now" >"$LAST_BACKUP"
+  if out="$(cd "$ROOT" && node scripts/backup.mjs --quiet 2>&1)"; then
+    say "backup taken"
+  else
+    say "BACKUP FAILED: $out"
+  fi
+}
 
 # Start a quick tunnel and wait for Cloudflare to name it.
 #
@@ -183,6 +209,7 @@ supervise() {
     done
 
     tunnel_start
+    maybe_backup
 
     local fails=0
     while alive "$server"; do
@@ -193,6 +220,8 @@ supervise() {
         say "tunnel: died - restarting"
         tunnel_start
       fi
+
+      maybe_backup
 
       if healthy; then
         fails=0
@@ -329,6 +358,12 @@ case "${1:-start}" in
 
   log) tail -n "${2:-40}" -f "$LOG" ;;
 
+  backup)
+    # Take one now, whatever the schedule says.
+    date +%s >"$LAST_BACKUP"
+    (cd "$ROOT" && node scripts/backup.mjs)
+    ;;
+
   tunnel)
     case "${2:-status}" in
       on)
@@ -445,5 +480,5 @@ PLIST
     echo "The watchdog is still running for this session; '$0 stop' ends it."
     ;;
 
-  *) echo "usage: $0 start|stop|restart|status|log|url|tunnel on|off|install-login|uninstall-login"; exit 1 ;;
+  *) echo "usage: $0 start|stop|restart|status|log|url|backup|tunnel on|off|install-login|uninstall-login"; exit 1 ;;
 esac

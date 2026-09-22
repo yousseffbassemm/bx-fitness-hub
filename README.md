@@ -23,6 +23,58 @@ npm run build   # production build - run before pushing
 npm run lint    # ESLint
 ```
 
+## Backups
+
+Everything the gym owns lives in one SQLite file: bookings, enquiries, staff
+accounts, the editable content and the uploaded photographs. The watchdog
+backs it up when it starts and every 24 hours after that, keeping the last 30.
+
+```bash
+npm run backup            # take one now
+npm run backup:list       # what exists
+npm run restore           # list, with row counts
+npm run restore latest    # put one back
+```
+
+**Not `cp`.** The database runs in WAL mode, so recent writes live in
+`bookings.db-wal` rather than in `bookings.db` - on this machine the main file
+was 4KB while the log holding everything was 671KB. Copying the one file
+produces a database with **no tables in it**, and you find that out on the day
+you need it. `VACUUM INTO` asks SQLite for a consistent, compacted copy with
+the log folded in, without stopping the server.
+
+Every backup is opened and counted against the live database before it is
+kept. If it does not match, it is deleted and the run fails loudly - a backup
+nobody has read back is a guess.
+
+Restoring moves the current database aside rather than overwriting it, so
+restoring the wrong file is itself undoable, and it refuses to run while the
+server still has the database open.
+
+### Where they go
+
+`.backups/`, next to the code and git-ignored. **That is one disk.** Point
+`BACKUP_DIR` at a folder that syncs off the machine - iCloud Drive, Dropbox,
+an external disk - and the same schedule covers a dead Mac:
+
+```bash
+BACKUP_DIR="$HOME/Library/Mobile Documents/com~apple~CloudDocs/bx-backups" npm run backup
+```
+
+`BACKUP_KEEP` changes how many are kept (default 30).
+
+On Supabase this is all handled by Supabase's own backups instead; these
+scripts are for the SQLite deployment.
+
+### Restoring, in full
+
+```bash
+npm run dev:stop
+npm run restore              # pick one from the list
+npm run restore bx-2026-09-22_1518.db
+npm run dev:watch
+```
+
 ## Checking it on a phone
 
 `npm run dev` only answers on this Mac. To look at the site on a phone, start
