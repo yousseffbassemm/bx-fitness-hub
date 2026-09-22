@@ -41,12 +41,14 @@ export default function About() {
                 className="plate object-cover"
               />
             </div>
-            {/* Square frame over a tall photograph, so the crop is pulled
-                down onto the figure rather than the window above her. */}
+            {/* Square frame over a tall photograph. The image is narrower
+                than the frame, so its full width shows and the height is
+                cropped - the 62% pulls that window down onto the figure
+                rather than the ceiling truss above her. */}
             <div className="absolute -bottom-10 -right-4 hidden aspect-square w-40 border-4 border-ink sm:block lg:-right-10 lg:w-52">
               <Image
                 src={studioYoga}
-                alt="A member moving through a yoga flow in the daylit studio at BX"
+                alt="A member stretching in silhouette against the studio windows at BX"
                 fill
                 sizes="(max-width: 1024px) 160px, 208px"
                 className="plate object-cover object-[50%_62%]"
