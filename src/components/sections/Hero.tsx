@@ -14,7 +14,7 @@ export default function Hero() {
     <section className="relative min-h-[100svh] overflow-hidden bg-ink pt-[5.25rem]">
       <div className="relative mx-auto grid min-h-[calc(100svh-5.25rem)] max-w-[1600px] grid-cols-1 items-center gap-12 px-6 pb-28 pt-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20 lg:px-12 lg:pb-16">
         {/* Type */}
-        <div className="relative">
+        <div className="relative z-10">
           {/* the thin lime rule BX puts down the edge of every poster */}
           <span
             aria-hidden="true"
@@ -83,11 +83,17 @@ export default function Hero() {
           One image for both layouts: full-bleed behind the type on phones,
           a plate in the right-hand column from lg up. Rendering it once keeps
           the LCP image to a single download.
+
+          z-0, not -z-10: the section paints an opaque background and does not
+          establish a stacking context, so a negative z-index child renders
+          *behind* that background. That is what hid this photo on every phone
+          while desktop, which overrides the layer with lg:relative, looked
+          fine.
         */}
         <Reveal
           variant="right"
           delay={120}
-          className="absolute inset-0 -z-10 lg:relative lg:z-auto lg:h-[76vh]"
+          className="absolute inset-0 z-0 lg:relative lg:h-[76vh]"
         >
           <Image
             src={cardioRings}
@@ -98,7 +104,7 @@ export default function Hero() {
             className="plate object-cover object-[58%_center]"
           />
           {/* Scrim: darkens the whole frame on phones, only the left edge on desktop */}
-          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/85 to-ink/45 lg:bg-gradient-to-r lg:from-ink/70 lg:via-transparent lg:to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/80 to-ink/35 lg:bg-gradient-to-r lg:from-ink/70 lg:via-transparent lg:to-transparent" />
           {/* BX's corner markers */}
           <span
             aria-hidden="true"
