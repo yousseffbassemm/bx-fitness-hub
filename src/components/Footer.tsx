@@ -7,26 +7,31 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative bg-ink pb-24 pt-11 sm:pt-16 md:pb-16">
+    <footer className="relative bg-ink pb-20 pt-10 sm:pt-16 md:pb-16">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
-        <div className="grid gap-8 sm:gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <Reveal>
+        {/*
+            Two columns on a phone. Stacked, these four blocks ran to most of a
+            screen on their own - the lists are short enough to sit beside each
+            other, and the brand block keeps the full width above them.
+          */}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <Reveal className="col-span-2 lg:col-span-1">
             <Logo />
-            <p className="font-display mt-6 max-w-xs text-xl leading-tight text-white">
+            <p className="font-display mt-4 max-w-xs text-lg leading-tight text-white sm:mt-6 sm:text-xl">
               Where movement
               <br />
               meets <span className="text-lime">style.</span>
             </p>
-            <p className="mt-5 text-xs leading-relaxed text-grey-dim">
+            <p className="mt-3 text-xs leading-relaxed text-grey-dim sm:mt-5">
               {site.address.line1}, {site.address.line2}
               <br />
               {site.address.region}
             </p>
           </Reveal>
 
-          <Reveal as="nav" delay={90} aria-label="Footer">
+          <Reveal as="nav" delay={90} aria-label="Footer" className="col-span-2 lg:col-span-1">
             <h2 className="kicker">Explore</h2>
-            <ul className="mt-5 space-y-3">
+            <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:mt-5 lg:block lg:space-y-3">
               {nav.map((item) => (
                 <li key={item.href}>
                   <a
@@ -42,7 +47,7 @@ export default function Footer() {
 
           <Reveal delay={180}>
             <h2 className="kicker">Contact</h2>
-            <ul className="mt-5 space-y-3 text-sm text-grey">
+            <ul className="mt-4 space-y-2 text-sm text-grey sm:mt-5 sm:space-y-3">
               <li>
                 <a href={site.phone.href} className="transition-colors hover:text-lime">
                   {site.phone.display}
@@ -61,14 +66,14 @@ export default function Footer() {
 
           <Reveal delay={270}>
             <h2 className="kicker">Hours</h2>
-            <p className="mt-5 text-sm text-grey">
+            <p className="mt-4 text-sm text-grey sm:mt-5">
               Monday &ndash; Sunday
               <br />
               <span className="font-display text-lg text-white">6AM &ndash; 1AM</span>
             </p>
 
-            <h2 className="kicker mt-8">Follow</h2>
-            <ul className="mt-5 space-y-3 text-sm text-grey">
+            <h2 className="kicker mt-6 sm:mt-8">Follow</h2>
+            <ul className="mt-4 space-y-2 text-sm text-grey sm:mt-5 sm:space-y-3">
               <li>
                 <a
                   href={site.social.instagram}
@@ -106,7 +111,7 @@ export default function Footer() {
         <Reveal
           variant="fade"
           delay={360}
-          className="mt-9 flex flex-col gap-4 border-t border-line pt-7 sm:mt-14 sm:flex-row sm:items-center sm:justify-between"
+          className="mt-8 flex flex-col gap-3 border-t border-line pt-6 sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:pt-7"
         >
           <p className="text-xs text-grey-dim">
             &copy; {year} {site.name}. All rights reserved.

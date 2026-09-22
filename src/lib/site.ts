@@ -137,7 +137,12 @@ export const facilities: Facility[] = [
     title: "Movement Studio",
     copy: "Pale oak, floor-to-ceiling mirrors and daylight. Pilates, yoga, stretching and dance.",
     image: studioBright,
-    alt: "Bright mirrored movement studio with pale oak flooring",
+    alt: "A member in a low lunge on blocks in the mirrored movement studio at BX",
+    // A tall frame in a wide card. She sits high in it - her head is at 12% of
+    // the height - and a centred crop starts at 30%, which cut her off at the
+    // shoulders. Pulling the window up keeps her face in the picture, and
+    // still holds at the taller crop used from sm up.
+    focus: "center 15%",
   },
   {
     title: "EightyEight",

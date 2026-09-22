@@ -34,9 +34,17 @@ export default function Membership() {
 
         {/* Opens on whichever plan is marked featured - the year - so the card
             worth seeing is the one in the middle of the screen. */}
-        <PlanDeck focus={Math.max(0, plans.findIndex((p) => p.featured))}>
-          {plans.map((p, i) => (
-            <Reveal key={p.name} variant="scale" delay={i * 110} className="h-full">
+        {/*
+          One Reveal around the whole deck, not one per card.
+          Per card, the two that start off to the left and right are outside
+          the viewport horizontally, so the observer never sees them intersect
+          and they sit at opacity 0 until you happen to swipe to them - which
+          looked like a deck with one card in it and two missing.
+        */}
+        <Reveal variant="scale">
+          <PlanDeck focus={Math.max(0, plans.findIndex((p) => p.featured))}>
+            {plans.map((p) => (
+              <div key={p.name} className="h-full">
               <article
                 className={`surface relative flex h-full flex-col rounded-md p-6 sm:p-8 lg:p-10 ${
                   p.featured ? "surface-featured" : ""
@@ -84,9 +92,10 @@ export default function Membership() {
                   Join Now
                 </a>
               </article>
-            </Reveal>
-          ))}
-        </PlanDeck>
+              </div>
+            ))}
+          </PlanDeck>
+        </Reveal>
 
         <Reveal>
           <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-grey-dim">
