@@ -16,7 +16,9 @@ export async function requireAdminPage() {
   if (!me) redirect("/staff/login");
 
   const user = await (await getStore()).findStaffUser(me);
-  if (!user || user.role !== "admin") redirect("/staff");
+  // Account gone: clear the cookie rather than bouncing into the same loop.
+  if (!user) redirect("/api/staff/session-ended");
+  if (user.role !== "admin") redirect("/staff");
 
   return user;
 }

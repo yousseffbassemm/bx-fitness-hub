@@ -19,8 +19,13 @@ export default async function DashboardLayout({
 
   const store = await getStore();
   const self = await store.findStaffUser(me);
-  // The account was removed while the session was still valid.
-  if (!self) redirect("/staff/login");
+  /*
+    Signed in, but the account is gone - removed while they were working.
+    Sending them to /staff/login here would loop: the gate in proxy.ts only
+    sees a valid signature and would send them straight back. The cookie has
+    to go, and only a route handler can do that.
+  */
+  if (!self) redirect("/api/staff/session-ended");
 
   const admin = self.role === "admin";
 

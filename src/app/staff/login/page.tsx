@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { staffAuthConfigured } from "@/lib/staff/session";
+import SessionEndedNote from "@/components/staff/SessionEndedNote";
 import StaffLoginForm from "@/components/staff/StaffLoginForm";
 import BackToSite from "@/components/staff/BackToSite";
 import { Mark } from "@/components/ui/Logo";
@@ -25,6 +26,12 @@ export default function StaffLoginPage() {
           <span className="kicker">Staff</span>
         </div>
         <h1 className="font-display mt-4 text-3xl text-white">Class bookings.</h1>
+
+        {/* Reads a query parameter, so it needs the same boundary the form
+            below it does on a prerendered page. */}
+        <Suspense fallback={null}>
+          <SessionEndedNote />
+        </Suspense>
 
         {configured ? (
           <>
