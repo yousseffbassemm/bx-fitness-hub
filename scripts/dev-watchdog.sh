@@ -35,6 +35,13 @@ CHECK_TIMEOUT=10
 FAILS_BEFORE_RESTART=5
 BOOT_GRACE=90
 
+# The tunnel is checked far less often than the server. It is a request that
+# leaves the machine, and the failure it catches unfolds over minutes.
+TUNNEL_CHECK_EVERY=60
+TUNNEL_TIMEOUT=20
+TUNNEL_FAILS_BEFORE_RESTART=3
+tunnel_fails=0
+
 LABEL="com.bx.devwatchdog"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 SUPPORT="$HOME/Library/Application Support/bx-fitness-hub"
@@ -44,6 +51,7 @@ TUNNEL_URL="$SUPPORT/tunnel-url"           # the address it is currently on
 TUNNEL_PID="$STATE/bx-tunnel.pid"
 TUNNEL_LOG="$STATE/bx-tunnel.log"
 LAST_BACKUP="$STATE/bx-last-backup"
+TUNNEL_CHECKED="$STATE/bx-tunnel-checked"
 
 # How often the database is backed up while the watchdog is running.
 BACKUP_EVERY_HOURS="${BACKUP_EVERY_HOURS:-24}"
@@ -85,6 +93,83 @@ watchdog_pid() { [ -f "$PIDFILE" ] && cat "$PIDFILE" 2>/dev/null; }
 healthy() { curl -fsS -m "$CHECK_TIMEOUT" -o /dev/null "$HEALTH"; }
 
 tunnel_wanted() { [ -f "$TUNNEL_FLAG" ]; }
+
+# Does the public address actually serve? Asked of Cloudflare, not of the
+# process table.
+#
+# Two different failures look identical from a plain curl, and only one of
+# them is worth a new address:
+#
+#   the far end dropped the tunnel   - the name exists nowhere, it is dead
+#   this Mac cannot resolve the name - the tunnel is fine, the resolver is not
+#
+# The second is routine here: tethered to a phone, the resolver is the
+# hotspot's at 172.20.10.1, and it does not pick a freshly minted
+# trycloudflare name up for a while. Treating that as a dead tunnel would
+# recycle a working one every minute and hand out a new address each time.
+#
+# So a failure is retried against a public resolver, going straight to the
+# address. If it serves by any route it is up; only a name no resolver
+# anywhere knows counts as gone.
+tunnel_reachable() {
+  local url host ip
+  url="$(cat "$TUNNEL_URL" 2>/dev/null)"
+  [ -n "$url" ] || return 1
+
+  curl -fs -m "$TUNNEL_TIMEOUT" -o /dev/null "$url/" 2>/dev/null && return 0
+
+  command -v dig >/dev/null 2>&1 || return 1
+  host="${url#https://}"
+  ip="$(dig +short +time=5 +tries=2 @1.1.1.1 "$host" 2>/dev/null \
+        | grep -Eo '^[0-9.]+$' | head -1)"
+  [ -n "$ip" ] || return 1
+
+  curl -fs -m "$TUNNEL_TIMEOUT" -o /dev/null --resolve "$host:443:$ip" "https://$host/" 2>/dev/null
+}
+
+# Can this Mac reach the internet at all?
+online() { curl -fsS -m 8 -o /dev/null https://www.cloudflare.com/cdn-cgi/trace; }
+
+# Watch the tunnel end to end, and take a new address if the old one is gone.
+#
+# Asking whether cloudflared was *running* was not enough, and this is the
+# failure that got past it: the Mac loses the network for a while - asleep,
+# lid shut, wifi dropped - and the far end drops the quick tunnel's
+# registration. cloudflared stays up and retries forever against a name that
+# no longer exists ("Unauthorized: Tunnel not found"), so the process looks
+# perfectly healthy while the link in someone's hand has stopped resolving.
+#
+# Recycling costs a new hostname, so it takes several failures in a row, and
+# only when the site is up and the Mac is online: a dropped wifi is not a
+# reason to burn the address people are already using.
+tunnel_watch() {
+  local now last
+  now="$(date +%s)"
+  last="$(cat "$TUNNEL_CHECKED" 2>/dev/null || echo 0)"
+  [ $(( now - last )) -lt "$TUNNEL_CHECK_EVERY" ] && return 0
+  echo "$now" >"$TUNNEL_CHECKED"
+
+  if tunnel_reachable; then
+    [ "$tunnel_fails" -gt 0 ] && say "tunnel: answering again"
+    tunnel_fails=0
+    return 0
+  fi
+
+  # A local server that is down explains a failing tunnel by itself, and the
+  # other check is already dealing with it.
+  healthy || return 0
+  online || { say "tunnel: not answering, but this Mac is offline - waiting"; return 0; }
+
+  tunnel_fails=$(( tunnel_fails + 1 ))
+  say "tunnel: public address not answering ($tunnel_fails/$TUNNEL_FAILS_BEFORE_RESTART)"
+
+  if [ "$tunnel_fails" -ge "$TUNNEL_FAILS_BEFORE_RESTART" ]; then
+    say "tunnel: the far end has dropped it - taking a new address"
+    tunnel_fails=0
+    tunnel_kill_strays
+    tunnel_start
+  fi
+}
 
 # Take a backup if enough time has passed since the last one.
 #
@@ -244,9 +329,13 @@ supervise() {
       # The tunnel is watched too. It gets a new hostname when it comes back,
       # which is why the address is written to a file rather than announced
       # once and assumed to hold.
-      if tunnel_wanted && ! alive "$(cat "$TUNNEL_PID" 2>/dev/null)"; then
-        say "tunnel: died - restarting"
-        tunnel_start
+      if tunnel_wanted; then
+        if ! alive "$(cat "$TUNNEL_PID" 2>/dev/null)"; then
+          say "tunnel: died - restarting"
+          tunnel_start
+        else
+          tunnel_watch
+        fi
       fi
 
       maybe_backup
@@ -354,6 +443,18 @@ case "${1:-start}" in
     pid="$(watchdog_pid)"
     if alive "$pid"; then echo "Watchdog: running (pid $pid)"; else echo "Watchdog: not running"; fi
     if curl -fsS -m 5 -o /dev/null "$HEALTH"; then echo "Server:   answering on $PORT"; else echo "Server:   not answering"; fi
+    # The tunnel is asked whether it *answers*, not whether it is running.
+    # A cloudflared retrying against a hostname the far end has forgotten
+    # looks alive from here and serves nobody.
+    if tunnel_wanted; then
+      if [ ! -s "$TUNNEL_URL" ]; then
+        echo "Tunnel:   wanted, but has no address yet"
+      elif tunnel_reachable; then
+        echo "Tunnel:   answering on $(cat "$TUNNEL_URL")"
+      else
+        echo "Tunnel:   NOT ANSWERING - $(cat "$TUNNEL_URL")"
+      fi
+    fi
     ;;
 
   url)
@@ -372,7 +473,12 @@ case "${1:-start}" in
     [ -n "$host" ] && echo "  or:            http://$host.local:$PORT   (name, not address)"
     if [ -s "$TUNNEL_URL" ]; then
       echo
-      echo "  Anywhere:      $(cat "$TUNNEL_URL")"
+      if tunnel_reachable; then
+        echo "  Anywhere:      $(cat "$TUNNEL_URL")"
+      else
+        # Better to say so than to hand someone an address that has died.
+        echo "  Anywhere:      $(cat "$TUNNEL_URL")   <- NOT ANSWERING"
+      fi
       echo "                 public - anyone with this address can open it."
     elif tunnel_wanted; then
       echo

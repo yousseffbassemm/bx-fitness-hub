@@ -308,9 +308,9 @@ export default function TeamManager({
       </ul>
 
       <p className="mt-4 text-xs leading-relaxed text-grey-dim">
-        Removing someone stops them signing in again. A session they already
-        hold stays valid until it expires, which is at most ten hours - reset
-        their password as well if it needs to end sooner.
+        Removing someone takes effect at once, even if they are signed in on
+        another screen: the next thing they touch signs them out. Changing
+        someone between Staff and Admin is immediate in the same way.
       </p>
     </div>
   );

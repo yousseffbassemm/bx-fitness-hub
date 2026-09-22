@@ -31,8 +31,14 @@ export default async function StaffPage(props: PageProps<"/staff">) {
   const today = toISODate(new Date());
   const from = /^\d{4}-\d{2}-\d{2}$/.test(raw ?? "") ? raw! : today;
 
-  const until = new Date(from);
-  until.setDate(until.getDate() + BOOKING_WINDOW_DAYS);
+  /*
+    Built from the parts rather than new Date(from): a bare YYYY-MM-DD is
+    parsed as UTC midnight, and toISODate reads the local parts back, so west
+    of Greenwich the window would close a day early. The rest of this codebase
+    splits the string by hand for the same reason.
+  */
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const until = new Date(fy, fm - 1, fd + BOOKING_WINDOW_DAYS);
   const to = toISODate(until);
 
   const store = await getStore();
@@ -130,7 +136,7 @@ export default async function StaffPage(props: PageProps<"/staff">) {
         <section className="mt-10 rounded-sm border border-lime/40 bg-lime/[0.06] p-5">
           <h2 className="font-display text-base text-lime">
             {promoted.length} {promoted.length === 1 ? "person" : "people"} moved off
-            the waitlist &mdash; call {promoted.length === 1 ? "them" : "them"}
+            the waitlist &mdash; call {promoted.length === 1 ? "them" : "them all"}
           </h2>
           <p className="mt-2 text-xs leading-relaxed text-grey">
             A place came free and they now have it. They do not know yet.

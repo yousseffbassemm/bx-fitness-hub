@@ -42,7 +42,21 @@ export async function requireStaff(request: Request) {
     }
   }
 
-  return { ok: true as const, username };
+  /*
+    The signature proves the token is ours and has not expired. It cannot
+    prove the account still exists, because the Edge gate that issued the
+    request has no database - this is the first place that can ask.
+
+    Without this, removing a colleague only took the pages away from them.
+    Their token stayed good against these endpoints for the rest of its ten
+    hours, which is long enough to cancel members' places on the way out.
+  */
+  const user = await (await getStore()).findStaffUser(username);
+  if (!user) {
+    return { ok: false as const, status: 401, error: "That account is gone." };
+  }
+
+  return { ok: true as const, username, user };
 }
 
 /**
@@ -55,14 +69,10 @@ export async function requireStaff(request: Request) {
  */
 export async function requireAdmin(request: Request) {
   const auth = await requireStaff(request);
+  // requireStaff has already established the account is still there.
   if (!auth.ok) return auth;
 
-  const user = await (await getStore()).findStaffUser(auth.username);
-
-  // The account was removed while its session was still valid.
-  if (!user) {
-    return { ok: false as const, status: 401, error: "That account is gone." };
-  }
+  const user = auth.user;
 
   if (user.role !== "admin") {
     return {
