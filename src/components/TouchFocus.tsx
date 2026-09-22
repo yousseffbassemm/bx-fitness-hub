@@ -2,6 +2,12 @@
 
 import { useEffect } from "react";
 
+/** Furthest an item is pushed, in its own heights - matches ReasonList. */
+const FALLOFF = 4;
+
+type Item = { el: HTMLElement; card: HTMLElement; mid: number; h: number };
+type Group = { items: Item[]; top: number; bottom: number };
+
 /**
  * The reader's scroll standing in for the pointer.
  *
@@ -15,8 +21,11 @@ import { useEffect } from "react";
  * same rules key off, so there is one description of each effect rather than
  * a hover version and a touch version drifting apart.
  *
- * Whole rows light together: in a two-column grid the items in a row share a
- * vertical centre, and picking only one of a pair would look like a mistake.
+ * Geometry is measured once and kept in document coordinates, so a scroll
+ * frame is arithmetic and nothing else. Reading getBoundingClientRect for
+ * every item of every group on every frame - which is what this did at first -
+ * is dozens of forced layouts a second on the device least able to afford
+ * them.
  */
 export default function TouchFocus() {
   useEffect(() => {
@@ -24,81 +33,105 @@ export default function TouchFocus() {
     // pointer and should keep using it. This asks the real question.
     const mq = window.matchMedia("(hover: none)");
     let frame = 0;
-    let groups: HTMLElement[] = [];
+    let remeasure = 0;
+    let groups: Group[] = [];
+    let live = false;
 
-    const clear = (items: HTMLElement[]) => {
-      for (const it of items) {
-        delete it.dataset.near;
-        (it.querySelector<HTMLElement>(".group") ?? it).removeAttribute("data-near");
-        it.style.removeProperty("--dist");
+    const clear = (g: Group) => {
+      for (const it of g.items) {
+        delete it.el.dataset.near;
+        it.card.removeAttribute("data-near");
+        it.el.style.removeProperty("--dist");
       }
+    };
+
+    /** Document-relative geometry, taken once rather than every frame. */
+    const measure = () => {
+      remeasure = 0;
+      const sy = window.scrollY;
+      groups = Array.from(document.querySelectorAll<HTMLElement>("[data-focus-group]")).map(
+        (g) => {
+          const box = g.getBoundingClientRect();
+          const items = (Array.from(g.children) as HTMLElement[]).map((el) => {
+            const b = el.getBoundingClientRect();
+            return {
+              el,
+              card: el.querySelector<HTMLElement>(".group") ?? el,
+              mid: b.top + sy + b.height / 2,
+              h: b.height || 1,
+            };
+          });
+          return { items, top: box.top + sy, bottom: box.bottom + sy };
+        },
+      );
     };
 
     const paint = () => {
       frame = 0;
-      const mid = window.innerHeight / 2;
+      const view = window.innerHeight;
+      const mid = window.scrollY + view / 2;
 
       for (const g of groups) {
-        const items = Array.from(g.children) as HTMLElement[];
-        const box = g.getBoundingClientRect();
         // Off screen: drop the focus entirely, so nothing is left lit behind.
-        if (box.bottom < 0 || box.top > window.innerHeight) {
-          clear(items);
+        if (g.bottom < mid - view || g.top > mid + view) {
+          clear(g);
           continue;
         }
 
-        const boxes = items.map((it) => {
-          const b = it.getBoundingClientRect();
-          return { mid: b.top + b.height / 2, h: b.height || 1 };
-        });
-        const centres = boxes.map((b) => b.mid);
         let best = 0;
-        for (let i = 1; i < centres.length; i++) {
-          if (Math.abs(centres[i] - mid) < Math.abs(centres[best] - mid)) best = i;
+        for (let i = 1; i < g.items.length; i++) {
+          if (Math.abs(g.items[i].mid - mid) < Math.abs(g.items[best].mid - mid)) best = i;
         }
+        const bestMid = g.items[best].mid;
 
-        items.forEach((it, i) => {
-          // Same row, within rounding - grid rows line up exactly.
-          const near = Math.abs(centres[i] - centres[best]) < 8;
-          const card = it.querySelector<HTMLElement>(".group") ?? it;
+        for (const it of g.items) {
+          // Whole rows light together: items in a grid row share a vertical
+          // centre, and lighting one of a pair would look like a fault.
+          const near = Math.abs(it.mid - bestMid) < 8;
           if (near) {
-            it.dataset.near = "true";
-            card.setAttribute("data-near", "true");
+            it.el.dataset.near = "true";
+            it.card.setAttribute("data-near", "true");
           } else {
-            delete it.dataset.near;
-            card.removeAttribute("data-near");
+            delete it.el.dataset.near;
+            it.card.removeAttribute("data-near");
           }
-          // How far this one is from the middle of the screen, in its own
-          // heights and continuous, for effects that fall off with distance
-          // rather than switching on and off. Row index would step: the whole
-          // list would sit still and then jump as each boundary was crossed.
-          const d = Math.min(4, Math.abs(boxes[i].mid - mid) / boxes[i].h);
-          it.style.setProperty("--dist", d.toFixed(3));
-        });
+          // Continuous, in the item's own heights - stepping per row index
+          // makes the list sit still and then jump as each boundary is
+          // crossed, which reads as choppy rather than as a gradient.
+          const d = Math.min(FALLOFF, Math.abs(it.mid - mid) / it.h);
+          it.el.style.setProperty("--dist", d.toFixed(2));
+        }
       }
     };
 
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(paint);
     };
+    const onResize = () => {
+      if (!remeasure) remeasure = requestAnimationFrame(() => (measure(), paint()));
+    };
 
-    let live = false;
+    // Images finishing and reveals running both change heights under us.
+    const ro = new ResizeObserver(onResize);
+
     const enable = () => {
       if (live) return;
       live = true;
-      groups = Array.from(document.querySelectorAll<HTMLElement>("[data-focus-group]"));
+      measure();
       document.documentElement.dataset.touchFocus = "true";
       paint();
+      for (const g of groups) if (g.items[0]) ro.observe(g.items[0].el.parentElement!);
       window.addEventListener("scroll", onScroll, { passive: true });
-      window.addEventListener("resize", onScroll);
+      window.addEventListener("resize", onResize);
     };
     const disable = () => {
       if (!live) return;
       live = false;
       delete document.documentElement.dataset.touchFocus;
-      for (const g of groups) clear(Array.from(g.children) as HTMLElement[]);
+      for (const g of groups) clear(g);
+      ro.disconnect();
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", onResize);
     };
 
     const sync = () => (mq.matches ? enable() : disable());
@@ -109,6 +142,7 @@ export default function TouchFocus() {
       mq.removeEventListener("change", sync);
       disable();
       if (frame) cancelAnimationFrame(frame);
+      if (remeasure) cancelAnimationFrame(remeasure);
     };
   }, []);
 

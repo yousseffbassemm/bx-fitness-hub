@@ -60,6 +60,25 @@ function setWidth(el: HTMLElement, setLen: number) {
   return first && next ? next.offsetLeft - first.offsetLeft : 0;
 }
 
+/** The scrollLeft at which a given card sits in the middle of the track. */
+function centredAt(el: HTMLElement, i: number) {
+  const card = (el.children as HTMLCollectionOf<HTMLElement>)[i];
+  return card ? card.offsetLeft + card.offsetWidth / 2 - el.clientWidth / 2 : 0;
+}
+
+/**
+ * How far out of the middle copy the deck may drift before it is moved back,
+ * as a fraction of one set.
+ *
+ * Three quarters, not a half. The jump is exactly one set wide, so from a
+ * boundary at half a set it lands precisely on the opposite boundary - and
+ * the next stray pixel of momentum sends it straight back, then forward
+ * again. That oscillation is what made one card judder every time it came
+ * round. At three quarters the jump lands a quarter of a set inside, with
+ * nothing near enough to re-trigger it.
+ */
+const DRIFT = 0.75;
+
 export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
   const track = useRef<HTMLUListElement>(null);
   const frame = useRef(0);
@@ -80,12 +99,20 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
     if (!el) return;
     const w = setWidth(el, reviews.length);
     if (w <= 0) return;
-    const base = (el.children[reviews.length] as HTMLElement | undefined)?.offsetLeft;
-    if (base === undefined) return;
 
-    let delta = 0;
-    if (el.scrollLeft < base - w / 2) delta = w;
-    else if (el.scrollLeft > base + w / 2) delta = -w;
+    // Measured from where the middle copy sits *centred*, which is what
+    // scrollLeft actually reads while a card is in the middle. Comparing it
+    // against a bare offsetLeft instead left the seam displaced by half the
+    // track's width, parking it on top of one particular card.
+    const off = el.scrollLeft - centredAt(el, reviews.length);
+    const limit = w * DRIFT;
+    if (Math.abs(off) <= limit) return;
+
+    // Whole sets, rounded, so however far out it has drifted it comes back
+    // inside half a set in one move rather than stepping in one set at a
+    // time. Landing within half a set, against a limit of three quarters,
+    // leaves a quarter of a set of slack before anything could fire again.
+    const delta = -Math.round(off / w) * w;
     if (!delta) return;
 
     el.scrollLeft += delta;
@@ -107,7 +134,15 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
       const clamped = Math.max(-1.2, Math.min(1.2, d));
       card.style.setProperty("--d", clamped.toFixed(3));
       card.style.setProperty("--ad", Math.min(1, Math.abs(clamped)).toFixed(3));
-      card.dataset.active = Math.abs(clamped) < 0.5 ? "true" : "false";
+      // 0.25, not 0.5: the falloff is spread over 2.3 card widths, so the
+      // card one along scores 0.43 and was being marked active too - the lime
+      // "you are here" border sat on three cards at once.
+      card.dataset.active = Math.abs(clamped) < 0.25 ? "true" : "false";
+      // Only the slides close enough to the middle to still be changing are
+      // worth a compositor layer. Written only when it flips, so this is not
+      // touching the DOM for thirty-six slides every frame.
+      const vis = Math.abs(clamped) < 0.85 ? "true" : "false";
+      if (card.dataset.vis !== vis) card.dataset.vis = vis;
     }
   }, [wrap]);
 
@@ -138,9 +173,8 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
     const centre = () => {
       // The first card of the middle copy, so there is a full set to scroll
       // through in either direction before the first wrap.
-      const middle = el.children[reviews.length] as HTMLElement | undefined;
-      if (!middle) return;
-      el.scrollLeft = middle.offsetLeft + middle.offsetWidth / 2 - el.clientWidth / 2;
+      if (!el.children[reviews.length]) return;
+      el.scrollLeft = centredAt(el, reviews.length);
       paint();
     };
     centre();

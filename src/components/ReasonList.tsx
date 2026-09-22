@@ -45,7 +45,15 @@ export default function ReasonList({ children }: { children: ReactNode }) {
     });
     rows.forEach((row, i) => {
       const d = Math.min(FALLOFF, Math.abs(pointerY.current - centres[i].mid) / centres[i].h);
-      row.style.setProperty("--dist", d.toFixed(3));
+      // Quantised, and only written when it actually changes. Every distinct
+      // value is a fresh blur rasterisation of a block of text; at full
+      // precision that is six of them every frame the pointer twitches. A
+      // step of 0.02 moves the radius by 0.027px - nothing anyone can see -
+      // and holds still through the small movements.
+      const q = (Math.round(d * 50) / 50).toFixed(2);
+      if (row.style.getPropertyValue("--dist") !== q) {
+        row.style.setProperty("--dist", q);
+      }
     });
   }, []);
 

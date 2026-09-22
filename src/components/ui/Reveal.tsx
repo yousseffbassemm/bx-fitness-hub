@@ -32,8 +32,24 @@ let shared: IntersectionObserver | null = null;
  */
 const pending = new Set<Element>();
 
+/**
+ * Longest of the reveal transitions, plus a little. Past this the element is
+ * at rest and has no further use for a compositor layer.
+ */
+const SETTLED = 1300;
+
 function show(el: Element) {
-  (el as HTMLElement).dataset.shown = "true";
+  const node = el as HTMLElement;
+  // Promotion belongs to the animation, not to the wait before it. Left in
+  // the stylesheet it applied to every block still queued - seventy-five
+  // layers on this page, each carrying a blur, held from load for the sake
+  // of an animation most of them had not started yet.
+  node.style.willChange = "opacity, transform, filter";
+  window.setTimeout(() => {
+    node.style.willChange = "";
+  }, SETTLED);
+
+  node.dataset.shown = "true";
   pending.delete(el);
   shared?.unobserve(el);
 }

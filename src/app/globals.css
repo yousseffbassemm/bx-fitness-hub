@@ -191,14 +191,15 @@ body {
     opacity 1.05s cubic-bezier(0.16, 1, 0.3, 1),
     transform 1.15s cubic-bezier(0.16, 1, 0.3, 1),
     filter 0.9s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform, filter;
+  /* No will-change here: a block waiting to be revealed is not animating, and
+     there are eighty-odd of them on this page. Reveal sets it for the length
+     of the animation and clears it afterwards. */
 }
 
 .reveal[data-shown="true"] {
   opacity: 1;
   transform: none;
   filter: blur(0);
-  will-change: auto;
 }
 
 .reveal-up    { --ry: 64px; }
@@ -387,6 +388,14 @@ body {
   transform: rotateY(calc(var(--d, 0) * -26deg)) scale(calc(1 - 0.17 * var(--ad, 0)));
   filter: blur(calc(var(--ad, 0) * 9px));
   opacity: calc(1 - 0.6 * var(--ad, 0));
+}
+
+/* Promotion costs a compositor layer each, and the deck lays its set out three
+   times over to loop - so promoting every slide meant thirty-six layers, each
+   carrying a blur, held for as long as the page was open and whether or not
+   anyone ever touched the deck. Only the handful actually near the middle are
+   moving enough to be worth it; ReviewCarousel marks them as it paints. */
+.review-slide[data-vis="true"] {
   will-change: transform, filter, opacity;
 }
 
