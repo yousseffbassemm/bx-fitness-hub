@@ -293,6 +293,23 @@ A coach with no uploaded photo falls back to the image in the code, matched
 by name, so the team can be reordered or renamed without re-uploading
 everything first.
 
+**Timetable.** Add, edit and remove classes on any day, including the
+ladies-only flag. The seven days are fixed; what is in them is not.
+
+This is the one edit that can reach something a member has already done, so
+it is worth understanding. A booking stores a session id. That id used to be
+*derived* from the day, the time and the discipline - so moving Boxing from
+7pm to 8pm would have changed its id, left every booking for it pointing at
+nothing, and dropped those people off the staff list without a word. A saved
+session now carries its own id, fixed when the class is created and untouched
+by later edits, and the ids seeded from the code are exactly the ones the old
+derivation produced, so bookings taken before any of this still resolve.
+
+So: **changing a class moves its bookings with it.** Removing a class leaves
+those bookings attached to nothing, and the bookings page now says so at the
+top - who they are and their phone number - instead of quietly skipping them.
+The editor warns before you change a class that people have already booked.
+
 The marketing page is prerendered, so saving calls `revalidatePath("/")`.
 Without it a price would change in the database and the page would go on
 showing the old one until the next deploy.

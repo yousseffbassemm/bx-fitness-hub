@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { capacityFor, sessionId } from "@/lib/booking";
-import { schedule } from "@/lib/site";
+import { capacityFor } from "@/lib/booking";
+import { getSchedule } from "@/lib/content";
 import { getStore } from "@/lib/store";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -23,9 +23,10 @@ export async function GET(request: Request) {
   }
 
   const capacity: Record<string, number> = {};
+  const schedule = await getSchedule();
   for (let d = 0; d < schedule.length; d++) {
     for (const s of schedule[d].sessions) {
-      capacity[sessionId(d, s)] = capacityFor(s.discipline);
+      capacity[s.id] = capacityFor(s.discipline);
     }
   }
 

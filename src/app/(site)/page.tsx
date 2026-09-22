@@ -1,6 +1,7 @@
 import About from "@/components/sections/About";
 import CTA from "@/components/sections/CTA";
 import Classes from "@/components/sections/Classes";
+import { getSchedule } from "@/lib/content";
 import Coaches from "@/components/sections/Coaches";
 import Contact from "@/components/sections/Contact";
 import Facilities from "@/components/sections/Facilities";
@@ -13,7 +14,7 @@ import Stats from "@/components/sections/Stats";
 import Testimonials from "@/components/sections/Testimonials";
 import Why from "@/components/sections/Why";
 
-export default function HomePage() {
+export default async function HomePage() {
   return (
     <>
       <Hero />
@@ -22,7 +23,7 @@ export default function HomePage() {
       <Stats />
       <Facilities />
       <Why />
-      <Classes />
+      <Classes schedule={await getSchedule()} />
       <PersonalTraining />
       <Coaches />
       <Membership />

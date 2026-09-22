@@ -4,8 +4,15 @@ import { redirect } from "next/navigation";
 import BackToSite from "@/components/staff/BackToSite";
 import CoachEditor from "@/components/staff/CoachEditor";
 import PlanEditor from "@/components/staff/PlanEditor";
+import ScheduleEditor from "@/components/staff/ScheduleEditor";
 import { Mark } from "@/components/ui/Logo";
-import { defaultPlanValues, getEditableCoaches, getEditablePlans } from "@/lib/content";
+import {
+  defaultPlanValues,
+  getEditableCoaches,
+  getEditablePlans,
+  getSchedule,
+} from "@/lib/content";
+import { BOOKING_WINDOW_DAYS, toISODate } from "@/lib/booking";
 import { coaches as codeCoaches } from "@/lib/site";
 import { STAFF_COOKIE, readSessionToken } from "@/lib/staff/session";
 import { getStore } from "@/lib/store";
@@ -30,6 +37,22 @@ export default async function SiteContentPage() {
   const fallbacks = Object.fromEntries(
     codeCoaches.map((c) => [c.name, c.photo.src]),
   );
+
+  const schedule = await getSchedule();
+
+  /*
+    How many live bookings each class already has, so the editor can warn
+    before someone changes a class people are expecting to attend. Counted
+    over the same window people can book in.
+  */
+  const from = toISODate(new Date());
+  const until = new Date();
+  until.setDate(until.getDate() + BOOKING_WINDOW_DAYS);
+  const booked: Record<string, number> = {};
+  for (const row of await store.list(from, toISODate(until))) {
+    if (row.cancelledAt !== null) continue;
+    booked[row.sessionId] = (booked[row.sessionId] ?? 0) + 1;
+  }
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
@@ -75,6 +98,15 @@ export default async function SiteContentPage() {
         </h2>
         <div className="mt-6">
           <PlanEditor plans={plans} defaults={defaultPlanValues()} />
+        </div>
+      </section>
+
+      <section className="mt-16">
+        <h2 className="font-display border-b border-white/10 pb-3 text-lg text-lime">
+          Class timetable
+        </h2>
+        <div className="mt-6">
+          <ScheduleEditor schedule={schedule} bookedIds={booked} />
         </div>
       </section>
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { capacityFor, findSession, isDateValidForRow } from "@/lib/booking";
+import { capacityFor, findSessionIn, isDateValidForRow } from "@/lib/booking";
+import { getSchedule } from "@/lib/content";
 import { getStore } from "@/lib/store";
 
 const PHONE = /^[+\d][\d\s-]{8,17}$/;
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing class or date" }, { status: 400 });
   }
 
-  const found = findSession(sessionId);
+  const found = findSessionIn(await getSchedule(), sessionId);
   if (!found) {
     return NextResponse.json({ error: "Unknown class" }, { status: 404 });
   }

@@ -1,4 +1,7 @@
-import { schedule, type Session } from "./site";
+import type { Session } from "./site";
+
+/** The shape both the code timetable and a saved one satisfy. */
+type ScheduleLike = { sessions: (Session & { id?: string })[] }[];
 
 /**
  * PLACEHOLDER - BX has not told us how many places each class holds.
@@ -24,8 +27,12 @@ export const BOOKING_WINDOW_DAYS = 14;
 const WEEKDAY_OF_ROW = [6, 0, 1, 2, 3, 4, 5];
 
 /**
- * A stable id for a recurring slot. Derived rather than stored, so the
- * timetable in site.ts stays the plain transcription of BX's schedule card.
+ * The id a slot in site.ts gets when the timetable is seeded.
+ *
+ * Only used for seeding now. A saved timetable carries its own ids, fixed
+ * when a class is created and untouched by later edits - because this
+ * derivation changes the moment a class moves, and a booking that stored the
+ * old value would point at nothing.
  */
 export function sessionId(dayIndex: number, s: Session) {
   const slug = s.discipline
@@ -35,10 +42,22 @@ export function sessionId(dayIndex: number, s: Session) {
   return `${dayIndex}-${s.time.replace(/[^0-9]/g, "")}-${slug}`;
 }
 
-export function findSession(id: string): { dayIndex: number; session: Session } | null {
+/**
+ * Find a slot by id in a given timetable.
+ *
+ * Takes the timetable rather than reaching for the one in site.ts, because
+ * the timetable is editable now and lives in the store - and this file is
+ * imported by client code that has no database.
+ */
+export function findSessionIn(
+  schedule: ScheduleLike,
+  id: string,
+): { dayIndex: number; session: Session } | null {
   for (let d = 0; d < schedule.length; d++) {
     for (const s of schedule[d].sessions) {
-      if (sessionId(d, s) === id) return { dayIndex: d, session: s };
+      // A saved session has its own id; one seeded from the code falls back
+      // to the derivation, which produced the ids older bookings stored.
+      if ((s.id ?? sessionId(d, s)) === id) return { dayIndex: d, session: s };
     }
   }
   return null;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { capacityFor, findSession } from "@/lib/booking";
+import { capacityFor, findSessionIn } from "@/lib/booking";
+import { getSchedule } from "@/lib/content";
 import { requireStaff } from "@/lib/staff/guard";
 import { getStore } from "@/lib/store";
 
@@ -49,7 +50,7 @@ export async function PATCH(request: Request) {
 
     // Restore needs the capacity of the class the booking belongs to.
     const row = await store.get(id);
-    const found = row ? findSession(row.sessionId) : null;
+    const found = row ? findSessionIn(await getSchedule(), row.sessionId) : null;
 
     if (!row || !found) {
       return NextResponse.json({ error: "That booking is not there." }, { status: 404 });

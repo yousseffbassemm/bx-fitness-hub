@@ -1,12 +1,13 @@
 import {
   BOOKING_WINDOW_DAYS,
   capacityFor,
-  findSession,
+  findSessionIn,
   formatDate,
   toISODate,
 } from "@/lib/booking";
 import { cookies } from "next/headers";
 import { STAFF_COOKIE, readSessionToken } from "@/lib/staff/session";
+import { getSchedule } from "@/lib/content";
 import { getStore } from "@/lib/store";
 import BookingRowActions from "@/components/staff/BookingRowActions";
 import LeadRowActions from "@/components/staff/LeadRowActions";
@@ -53,11 +54,24 @@ export default async function StaffPage(props: PageProps<"/staff">) {
   const waiting = leads.filter((l) => l.handledAt === null);
   const liveCount = rows.filter((r) => r.cancelledAt === null).length;
 
+  const schedule = await getSchedule();
+
+  /*
+    Bookings whose class is no longer on the timetable used to be skipped
+    here, which meant someone who had booked simply vanished from this page
+    with nothing said. They are collected instead and shown at the end: the
+    class may be gone, but the person still turned up expecting it.
+  */
+  const orphaned: typeof rows = [];
+
   // Group by the actual class, so staff read it the way the day runs.
   const groups = new Map<string, Group>();
   for (const row of rows) {
-    const found = findSession(row.sessionId);
-    if (!found) continue; // a slot that has since left the timetable
+    const found = findSessionIn(schedule, row.sessionId);
+    if (!found) {
+      if (row.cancelledAt === null) orphaned.push(row);
+      continue;
+    }
 
     const key = `${row.date}|${row.sessionId}`;
     if (!groups.has(key)) {
@@ -239,6 +253,41 @@ export default async function StaffPage(props: PageProps<"/staff">) {
           {formatDate(from)} onwards &middot; next {BOOKING_WINDOW_DAYS} days
         </span>
       </h2>
+
+      {orphaned.length > 0 && (
+        <section className="mt-12 rounded-sm border border-amber/40 bg-amber/[0.06] p-5">
+          <h2 className="font-display text-base text-amber">
+            {orphaned.length}{" "}
+            {orphaned.length === 1 ? "booking" : "bookings"} for a class that is
+            no longer on the timetable
+          </h2>
+          <p className="mt-2 text-xs leading-relaxed text-grey">
+            The class was changed or removed after these were taken. They are
+            still real people expecting to come - call them, then cancel the
+            booking.
+          </p>
+          <ul className="mt-4 divide-y divide-white/8">
+            {orphaned.map((row) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-3"
+              >
+                <span className="text-sm text-white">{row.name}</span>
+                <a
+                  href={`tel:${row.phone.replace(/\s/g, "")}`}
+                  className="text-sm tabular-nums text-grey hover:text-lime"
+                >
+                  {row.phone}
+                </a>
+                <span className="text-xs text-grey-dim">
+                  {formatDate(row.date)}
+                </span>
+                <BookingRowActions id={row.id} cancelled={false} name={row.name} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {ordered.length === 0 ? (
         <p className="mt-16 rounded-sm border border-white/10 bg-charcoal px-6 py-16 text-center text-sm text-grey">

@@ -1,5 +1,11 @@
 import type { StaticImageData } from "next/image";
-import { coaches as defaultCoaches, plans as defaultPlans } from "./site";
+import { sessionId } from "./booking";
+import {
+  coaches as defaultCoaches,
+  plans as defaultPlans,
+  schedule as defaultSchedule,
+  type Session,
+} from "./site";
 import { getStore } from "./store";
 
 /**
@@ -209,4 +215,101 @@ export async function saveCoaches(next: EditableCoach[], editedBy: string) {
     .filter((c) => c.name);
 
   await (await getStore()).setContent(COACHES_KEY, clean, editedBy);
+}
+
+
+/* -------------------------------------------------------------------------
+   Timetable
+
+   The one piece here where an edit can reach something a member has already
+   done. A booking stores a session id, and until now that id was *derived*
+   from the day, the time and the discipline - so moving Boxing from 7pm to
+   8pm would have silently changed its id, left every booking for it pointing
+   at nothing, and dropped those people off the staff list without a word.
+
+   So a saved session carries its own id, fixed at the moment it is created
+   and untouched by later edits. The ids seeded from the code are exactly the
+   ones the old derivation produced, so bookings taken before any of this
+   still resolve.
+   ---------------------------------------------------------------------- */
+
+export type EditableSession = Session & { id: string };
+
+export type ScheduleDay = {
+  day: string;
+  short: string;
+  sessions: EditableSession[];
+};
+
+const SCHEDULE_KEY = "schedule";
+
+/** The timetable as it is in the code, with ids matching the old derivation. */
+export function defaultScheduleValues(): ScheduleDay[] {
+  return defaultSchedule.map((d, i) => ({
+    day: d.day,
+    short: d.short,
+    sessions: d.sessions.map((s) => ({ ...s, id: sessionId(i, s) })),
+  }));
+}
+
+export async function getSchedule(): Promise<ScheduleDay[]> {
+  let saved: ScheduleDay[] | null = null;
+
+  try {
+    saved = await (await getStore()).getContent<ScheduleDay[]>(SCHEDULE_KEY);
+  } catch {
+    saved = null;
+  }
+
+  if (!saved?.length) return defaultScheduleValues();
+
+  // The seven rows are the week and are not editable; only what is in them
+  // is. Taking the day names from the code keeps a saved timetable from
+  // inventing an eighth day or losing Tuesday.
+  return defaultSchedule.map((d, i) => ({
+    day: d.day,
+    short: d.short,
+    sessions: (saved[i]?.sessions ?? []).map((s) => ({
+      id: s.id,
+      time: s.time,
+      coach: s.coach,
+      discipline: s.discipline,
+      ...(s.ladiesOnly ? { ladiesOnly: true as const } : {}),
+    })),
+  }));
+}
+
+export async function saveSchedule(next: ScheduleDay[], editedBy: string) {
+  const seen = new Set<string>();
+
+  const clean = defaultSchedule.map((d, i) => ({
+    day: d.day,
+    short: d.short,
+    sessions: (next[i]?.sessions ?? [])
+      .map((s) => {
+        // A session with no id, or one that collides, is a new session. Two
+        // classes sharing an id would have their bookings run together.
+        let id = String(s.id ?? "").trim();
+        if (!/^[a-z0-9-]{3,64}$/.test(id) || seen.has(id)) id = newSessionId();
+        seen.add(id);
+
+        return {
+          id,
+          time: String(s.time ?? "").trim().slice(0, 20),
+          coach: String(s.coach ?? "").trim().slice(0, 60),
+          discipline: String(s.discipline ?? "").trim().slice(0, 60),
+          ...(s.ladiesOnly ? { ladiesOnly: true as const } : {}),
+        };
+      })
+      .filter((s) => s.time && s.discipline),
+  }));
+
+  await (await getStore()).setContent(SCHEDULE_KEY, clean, editedBy);
+}
+
+/** An id for a brand new class. Random, so it never collides with a derived one. */
+export function newSessionId() {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return `s-${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
 }

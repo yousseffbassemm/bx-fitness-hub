@@ -4,8 +4,10 @@ import { requireAdmin } from "@/lib/staff/guard";
 import {
   saveCoaches,
   savePlans,
+  saveSchedule,
   type EditableCoach,
   type EditablePlan,
+  type ScheduleDay,
 } from "@/lib/content";
 
 export const runtime = "nodejs";
@@ -67,6 +69,28 @@ export async function PUT(request: Request) {
     }
 
     await saveCoaches(coaches, auth.username);
+  } else if (key === "schedule") {
+    const days = value as ScheduleDay[];
+
+    if (days.length !== 7) {
+      return NextResponse.json(
+        { error: "The timetable is seven days." },
+        { status: 400 },
+      );
+    }
+
+    for (const day of days) {
+      for (const s of day.sessions ?? []) {
+        if (!String(s?.time ?? "").trim() || !String(s?.discipline ?? "").trim()) {
+          return NextResponse.json(
+            { error: "Every class needs a time and a name." },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
+    await saveSchedule(days, auth.username);
   } else {
     return NextResponse.json({ error: "Unknown section." }, { status: 400 });
   }

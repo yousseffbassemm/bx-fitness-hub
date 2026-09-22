@@ -4,19 +4,24 @@ import { useEffect, useState } from "react";
 import {
   formatDate,
   nextDateForRow,
-  sessionId,
   slotKey,
   toISODate,
   type Availability,
 } from "@/lib/booking";
-import { disciplines, schedule, site } from "@/lib/site";
+import type { ScheduleDay } from "@/lib/content";
+import { disciplines, site } from "@/lib/site";
 import BookingDialog, { type BookingTarget } from "../BookingDialog";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
 
 const intensityBar: Record<string, number> = { High: 3, Moderate: 2, Low: 1 };
 
-export default function Classes() {
+/**
+ * The timetable is editable and lives in the store, so it arrives as a prop
+ * from the server rather than being imported here - this is a client
+ * component and has no database to read.
+ */
+export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
   const [day, setDay] = useState(0);
   const active = schedule[day];
 
@@ -50,7 +55,7 @@ export default function Classes() {
 
           schedule.forEach((d, i) => {
             d.sessions.forEach((sess) => {
-              const id = sessionId(i, sess);
+              const id = sess.id;
               const key = slotKey(id, dates[i]);
               spots[key] = Math.max(0, (capacity[id] ?? 0) - (taken[key] ?? 0));
             });
@@ -68,7 +73,10 @@ export default function Classes() {
     return () => {
       cancelled = true;
     };
-  }, []);
+    // The effect reads the timetable, so it depends on it. The array comes
+    // from a server component and is stable between renders; if it ever does
+    // change, re-fetching availability is the right response anyway.
+  }, [schedule]);
 
   const dates = data?.dates ?? [];
   const spots = data?.spots ?? null;
@@ -180,7 +188,7 @@ export default function Classes() {
               ) : (
                 <ul className="divide-y divide-white/8">
                   {active.sessions.map((s) => {
-                    const id = sessionId(day, s);
+                    const id = s.id;
                     const date = dates[day];
                     const left = date ? (spots?.[slotKey(id, date)] ?? null) : null;
                     const full = left === 0;
