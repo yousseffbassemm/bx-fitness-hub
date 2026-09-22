@@ -11,7 +11,7 @@ export default function Marquee() {
   return (
     <div
       aria-hidden="true"
-      className="swell relative overflow-hidden py-5"
+      className="swell-band relative overflow-hidden py-10"
     >
       <div className="marquee-track flex w-max">
         {[0, 1].map((copy) => (

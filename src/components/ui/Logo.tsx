@@ -14,7 +14,7 @@ const MARK = "/images/logo-mark.png";
  * in, and can change colour on hover, exactly as the old hand-drawn SVG did,
  * while being pixel-accurate to the real logo.
  */
-export function Mark({ className = "h-9 w-9" }: { className?: string }) {
+export function Mark({ className = "h-11 w-11" }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
@@ -60,11 +60,13 @@ export function Logo({ compact = false }: { compact?: boolean }) {
       aria-label="BX Fitness Hub - back to top"
       className="group flex items-center gap-2.5 text-white"
     >
-      <Mark className="h-9 w-9 transition-colors duration-300 group-hover:text-lime" />
+      <Mark className="h-11 w-11 transition-colors duration-300 group-hover:text-lime sm:h-12 sm:w-12" />
       {!compact && (
         <span className="leading-none">
-          <span className="font-display block text-[0.92rem] tracking-tight">BX</span>
-          <span className="font-display block text-[0.92rem] tracking-tight">
+          <span className="font-display block text-[1.05rem] leading-[1.05] tracking-tight">
+            BX
+          </span>
+          <span className="font-display block text-[1.05rem] leading-[1.05] tracking-tight">
             Fitness Hub
           </span>
         </span>

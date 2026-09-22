@@ -33,7 +33,7 @@ export default function Navbar() {
     >
       <nav
         aria-label="Primary"
-        className="mx-auto flex h-[4.5rem] max-w-[1600px] items-center justify-between gap-6 px-6 lg:px-12"
+        className="mx-auto flex h-[5.25rem] max-w-[1600px] items-center justify-between gap-6 px-6 lg:px-12"
       >
         <span onClick={() => setOpen(false)}>
           <Logo />

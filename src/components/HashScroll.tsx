@@ -26,7 +26,7 @@ export default function HashScroll() {
 
     // Matches scroll-padding-top in globals.css, so the header does not
     // cover the heading we just jumped to.
-    const offset = 80;
+    const offset = 96;
 
     // globals.css sets scroll-behavior: smooth, and an explicit
     // behavior: "auto" resolves to that - which meant every tick restarted a
