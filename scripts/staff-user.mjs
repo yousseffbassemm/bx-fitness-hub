@@ -8,8 +8,9 @@
  *
  * The password is asked for, never passed as an argument: an argument ends up
  * in shell history and in the process list, where anyone on the machine can
- * read it. It is typed twice, with no echo, and only its scrypt hash is
- * stored.
+ * read it. In a terminal it is typed twice with no echo. Without a terminal -
+ * an editor's shell, an agent, CI - set STAFF_PASSWORD instead. Only the
+ * scrypt hash is ever stored.
  *
  * This writes to the SQLite store, which is the default. On Supabase, run the
  * staff_users section of supabase/schema.sql and insert the row there.
@@ -68,7 +69,8 @@ function secret(prompt) {
       for await (const line of rl) lines.push(line);
       return lines;
     })();
-    return piped.then((lines) => lines.shift() ?? "");
+    // null, not "", so an empty stdin is distinguishable from an empty line.
+    return piped.then((lines) => (lines.length ? lines.shift() : null));
   }
 
   return new Promise((resolve) => {
@@ -113,8 +115,39 @@ async function hash(password) {
   return `scrypt.${salt.toString("hex")}.${key.toString("hex")}`;
 }
 
+/**
+ * Where the password comes from, in order of preference.
+ *
+ * A terminal is best - nothing is echoed and nothing is recorded. But this is
+ * often run somewhere without one (an editor's shell, an agent, CI), where
+ * the prompt has nothing to read from and would simply hang. So an
+ * environment variable is accepted too, and if neither is available it says
+ * so immediately rather than waiting forever.
+ */
 async function askPassword() {
+  const fromEnv = process.env.STAFF_PASSWORD;
+  if (fromEnv) {
+    if (fromEnv.length < 8) {
+      console.error("STAFF_PASSWORD is too short - at least 8 characters.");
+      process.exit(1);
+    }
+    return fromEnv;
+  }
+
   const first = await secret("New password (min 8 characters, not shown): ");
+
+  if (first === null) {
+    console.error(
+      "\nNo terminal to ask for a password on, and nothing piped in.\n\n" +
+        "Run it in a terminal window, where it prompts with the password\n" +
+        "hidden and records nothing:\n\n" +
+        "    node scripts/staff-user.mjs add <username>\n\n" +
+        "Or, where there is no terminal, pass it through the environment:\n\n" +
+        "    STAFF_PASSWORD='your password' node scripts/staff-user.mjs add <username>\n",
+    );
+    process.exit(1);
+  }
+
   if (first.length < 8) {
     console.error("\nToo short - at least 8 characters.");
     process.exit(1);

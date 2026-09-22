@@ -298,8 +298,22 @@ node scripts/staff-user.mjs remove <username>
 
 The password is asked for, never passed as an argument: an argument ends up in
 shell history and in the process list, where anyone on the machine can read it.
-It is typed twice with no echo, and only a scrypt hash is stored. There is no
-way back from the hash, so a forgotten password is reset, never recovered.
+In a terminal it is typed twice with no echo.
+
+Without a terminal - an editor's integrated shell, an agent, CI - there is
+nothing for the prompt to read from, so pass it through the environment
+instead:
+
+```bash
+STAFF_PASSWORD='the password' node scripts/staff-user.mjs add <username>
+```
+
+Piped input works too (`printf 'pw\npw\n' | ...`). If none of the three is
+available the script says so and stops, rather than waiting on a prompt
+nobody can answer.
+
+Only a scrypt hash is stored, and there is no way back from it: a forgotten
+password is reset, never recovered.
 
 Usernames are 3-32 characters of `a-z`, `0-9`, `_` and `-`. No dots: the
 session token is dot-separated and carries the username.
