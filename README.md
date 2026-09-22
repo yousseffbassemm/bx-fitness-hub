@@ -289,12 +289,37 @@ One account per person, not one password everyone shares - a sign-in is
 attributable, and removing someone does not mean changing a password for
 everybody else.
 
+Day to day this is done on screen: an admin opens **Team** from the staff
+page and can add someone, reset a password, change a role or remove an
+account without anyone touching a terminal.
+
+The command line is the way in when there is no admin left to let you in:
+
 ```bash
 node scripts/staff-user.mjs list
-node scripts/staff-user.mjs add    <username>
+node scripts/staff-user.mjs add    <username> [admin|staff]
 node scripts/staff-user.mjs reset  <username>
+node scripts/staff-user.mjs role   <username> <admin|staff>
 node scripts/staff-user.mjs remove <username>
 ```
+
+The first account created is always an admin - someone has to be able to
+manage the rest.
+
+### Roles
+
+`staff` is the day job: the bookings and the enquiries. `admin` adds the team
+screen. The role is read from the database on every request rather than
+carried in the session token, so revoking someone takes effect immediately
+instead of when their session happens to expire.
+
+Neither the screen nor the command line will leave the team with no admin, and
+nobody can demote or remove themselves - an account screen nobody can open is
+fixable only by someone with a terminal.
+
+Removing an account stops the next sign-in. A session already in hand stays
+valid until it expires, which is at most ten hours; reset the password too if
+it needs to end sooner.
 
 The password is asked for, never passed as an argument: an argument ends up in
 shell history and in the process list, where anyone on the machine can read it.

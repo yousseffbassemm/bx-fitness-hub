@@ -8,6 +8,7 @@ import type {
   LeadInput,
   LeadRow,
   RestoreResult,
+  StaffRole,
   StaffUser,
 } from "./types";
 
@@ -53,12 +54,14 @@ const toLead = (r: LeadPayload): LeadRow => ({
 type StaffPayload = {
   username: string;
   password_hash: string;
+  role: string;
   created_at: string;
   last_login_at: string | null;
 };
 
 const toStaff = (r: StaffPayload): StaffUser => ({
   username: r.username,
+  role: r.role === "admin" ? "admin" : "staff",
   passwordHash: r.password_hash,
   createdAt: r.created_at,
   lastLoginAt: r.last_login_at,
@@ -77,14 +80,28 @@ export const supabaseStore: BookingStore = {
     return row ? toStaff(row) : null;
   },
 
-  async upsertStaffUser(username, passwordHash) {
+  async upsertStaffUser(username, passwordHash, role: StaffRole = "staff") {
     const res = await fetch(`${url}/rest/v1/staff_users`, {
       method: "POST",
       headers: { ...headers(), Prefer: "resolution=merge-duplicates" },
-      body: JSON.stringify({ username, password_hash: passwordHash }),
+      body: JSON.stringify({ username, password_hash: passwordHash, role }),
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`Supabase upsertStaffUser failed: ${res.status}`);
+  },
+
+  async setStaffRole(username, role) {
+    const res = await fetch(
+      `${url}/rest/v1/staff_users?username=eq.${encodeURIComponent(username)}`,
+      {
+        method: "PATCH",
+        headers: { ...headers(), Prefer: "return=representation" },
+        body: JSON.stringify({ role }),
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) throw new Error(`Supabase setStaffRole failed: ${res.status}`);
+    return ((await res.json()) as StaffPayload[]).length > 0;
   },
 
   async listStaffUsers() {

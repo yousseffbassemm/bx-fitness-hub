@@ -11,6 +11,7 @@ import type {
   LeadInput,
   LeadRow,
   RestoreResult,
+  StaffRole,
   StaffUser,
 } from "./types";
 
@@ -103,10 +104,34 @@ function migrate(next: DatabaseSync) {
     CREATE TABLE IF NOT EXISTS staff_users (
       username      TEXT PRIMARY KEY,
       password_hash TEXT NOT NULL,
+      role          TEXT NOT NULL DEFAULT 'staff',
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       last_login_at TEXT
     )
   `);
+
+  // Accounts that predate roles: add the column, then make them admins. They
+  // were created when every account could do everything, and silently
+  // demoting them would lock the team out of its own account management.
+  const staffColumns = next.prepare("PRAGMA table_info(staff_users)").all() as {
+    name: string;
+  }[];
+  if (!staffColumns.some((c) => c.name === "role")) {
+    next.exec("ALTER TABLE staff_users ADD COLUMN role TEXT NOT NULL DEFAULT 'staff'");
+    next.exec("UPDATE staff_users SET role = 'admin'");
+  }
+
+  // Never leave nobody in charge: if every admin has been removed or demoted,
+  // the longest-standing account takes it back.
+  const admins = next
+    .prepare("SELECT COUNT(*) AS n FROM staff_users WHERE role = 'admin'")
+    .get() as { n: number };
+  if (Number(admins.n) === 0) {
+    next.exec(`
+      UPDATE staff_users SET role = 'admin'
+       WHERE username = (SELECT username FROM staff_users ORDER BY created_at, username LIMIT 1)
+    `);
+  }
 
   next.exec("CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings (class_date)");
   next.exec(`
@@ -169,12 +194,14 @@ function toLead(r: {
 type StaffRow = {
   username: string;
   password_hash: string;
+  role: string;
   created_at: string;
   last_login_at: string | null;
 };
 
 const toStaff = (r: StaffRow): StaffUser => ({
   username: r.username,
+  role: r.role === "admin" ? "admin" : "staff",
   passwordHash: r.password_hash,
   createdAt: r.created_at,
   lastLoginAt: r.last_login_at,
@@ -190,13 +217,20 @@ export const sqliteStore: BookingStore = {
     return row ? toStaff(row) : null;
   },
 
-  async upsertStaffUser(username, passwordHash) {
+  async upsertStaffUser(username, passwordHash, role: StaffRole = "staff") {
     open()
       .prepare(
-        `INSERT INTO staff_users (username, password_hash) VALUES (?, ?)
+        `INSERT INTO staff_users (username, password_hash, role) VALUES (?, ?, ?)
          ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash`,
       )
-      .run(username, passwordHash);
+      .run(username, passwordHash, role);
+  },
+
+  async setStaffRole(username, role) {
+    const info = open()
+      .prepare("UPDATE staff_users SET role = ? WHERE username = ?")
+      .run(role, username);
+    return Number(info.changes) > 0;
   },
 
   async listStaffUsers() {

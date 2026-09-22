@@ -48,9 +48,20 @@ export type LeadRow = {
   handledAt: string | null;
 };
 
+/**
+ * What an account is allowed to do.
+ *
+ * `staff` is the day job: the bookings and the enquiries. `admin` adds the
+ * team screen - creating accounts, resetting passwords, removing people - so
+ * that the person who can revoke a colleague's access is a deliberate choice
+ * rather than everyone who has ever been given a login.
+ */
+export type StaffRole = "admin" | "staff";
+
 /** A staff account. The hash is scrypt - see lib/staff/password.ts. */
 export type StaffUser = {
   username: string;
+  role: StaffRole;
   passwordHash: string;
   createdAt: string;
   lastLoginAt: string | null;
@@ -79,7 +90,13 @@ export interface BookingStore {
   /** One staff account by username, or null. */
   findStaffUser(username: string): Promise<StaffUser | null>;
   /** Create an account, or reset an existing one's password. */
-  upsertStaffUser(username: string, passwordHash: string): Promise<void>;
+  upsertStaffUser(
+    username: string,
+    passwordHash: string,
+    role?: StaffRole,
+  ): Promise<void>;
+  /** Change what an account is allowed to do. */
+  setStaffRole(username: string, role: StaffRole): Promise<boolean>;
   /** Every account, without password hashes being useful to anyone. */
   listStaffUsers(): Promise<StaffUser[]>;
   /** Stamp a successful sign-in. */

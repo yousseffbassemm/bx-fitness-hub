@@ -44,6 +44,8 @@ export default async function StaffPage(props: PageProps<"/staff">) {
   );
 
   const store = await getStore();
+  const isAdmin =
+    signedInAs !== null && (await store.findStaffUser(signedInAs))?.role === "admin";
   const rows = await store.list(from, to);
   // Enquiries are not tied to the date window - someone who asked last week is
   // still waiting to hear back.
@@ -126,6 +128,15 @@ export default async function StaffPage(props: PageProps<"/staff">) {
               Go
             </button>
           </form>
+
+          {isAdmin && (
+            <a
+              href="/staff/team"
+              className="font-display rounded-sm border border-white/15 px-4 py-2 text-[0.72rem] tracking-[0.12em] text-white hover:border-lime hover:text-lime"
+            >
+              Team
+            </a>
+          )}
 
           <form method="POST" action="/api/staff/logout">
             <button

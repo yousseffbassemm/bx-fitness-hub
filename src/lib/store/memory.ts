@@ -8,6 +8,7 @@ import type {
   LeadInput,
   LeadRow,
   RestoreResult,
+  StaffRole,
   StaffUser,
 } from "./types";
 
@@ -36,14 +37,22 @@ export const memoryStore: BookingStore = {
     return staff.get(username) ?? null;
   },
 
-  async upsertStaffUser(username, passwordHash) {
+  async upsertStaffUser(username, passwordHash, role: StaffRole = "staff") {
     const existing = staff.get(username);
     staff.set(username, {
       username,
+      role: existing?.role ?? role,
       passwordHash,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       lastLoginAt: existing?.lastLoginAt ?? null,
     });
+  },
+
+  async setStaffRole(username, role) {
+    const user = staff.get(username);
+    if (!user) return false;
+    user.role = role;
+    return true;
   },
 
   async listStaffUsers() {

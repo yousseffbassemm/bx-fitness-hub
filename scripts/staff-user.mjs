@@ -35,10 +35,17 @@ function db() {
     CREATE TABLE IF NOT EXISTS staff_users (
       username      TEXT PRIMARY KEY,
       password_hash TEXT NOT NULL,
+      role          TEXT NOT NULL DEFAULT 'staff',
       created_at    TEXT NOT NULL DEFAULT (datetime('now')),
       last_login_at TEXT
     )
   `);
+  // A database made before roles existed.
+  const cols = d.prepare("PRAGMA table_info(staff_users)").all();
+  if (cols.length && !cols.some((c) => c.name === "role")) {
+    d.exec("ALTER TABLE staff_users ADD COLUMN role TEXT NOT NULL DEFAULT 'staff'");
+    d.exec("UPDATE staff_users SET role = 'admin'");
+  }
   return d;
 }
 
@@ -164,21 +171,30 @@ const [command, username] = process.argv.slice(2);
 const d = db();
 
 if (command === "list") {
-  const rows = d.prepare("SELECT username, created_at, last_login_at FROM staff_users ORDER BY username").all();
+  const rows = d.prepare("SELECT username, role, created_at, last_login_at FROM staff_users ORDER BY username").all();
   if (!rows.length) {
     console.log("\nNo staff accounts yet.  node scripts/staff-user.mjs add <username>\n");
   } else {
     console.log("");
     for (const r of rows) {
-      console.log(`  ${r.username.padEnd(20)} added ${r.created_at}   last in: ${r.last_login_at ?? "never"}`);
+      console.log(
+        `  ${r.username.padEnd(20)} ${(r.role ?? "staff").padEnd(6)} added ${r.created_at}   last in: ${r.last_login_at ?? "never"}`,
+      );
     }
     console.log("");
   }
   process.exit(0);
 }
 
-if (!["add", "reset", "remove"].includes(command) || !username) {
-  console.error("Usage: node scripts/staff-user.mjs list | add <username> | reset <username> | remove <username>");
+if (!["add", "reset", "remove", "role"].includes(command) || !username) {
+  console.error(
+    "Usage:\n" +
+      "  node scripts/staff-user.mjs list\n" +
+      "  node scripts/staff-user.mjs add    <username> [admin|staff]\n" +
+      "  node scripts/staff-user.mjs reset  <username>\n" +
+      "  node scripts/staff-user.mjs role   <username> <admin|staff>\n" +
+      "  node scripts/staff-user.mjs remove <username>",
+  );
   process.exit(1);
 }
 
@@ -190,6 +206,30 @@ if (!USERNAME.test(name)) {
 }
 
 const existing = d.prepare("SELECT username FROM staff_users WHERE username = ?").get(name);
+
+if (command === "role") {
+  const wanted = process.argv[4];
+  if (!["admin", "staff"].includes(wanted)) {
+    console.error("Role must be admin or staff.");
+    process.exit(1);
+  }
+  if (!existing) {
+    console.error(`No account called "${name}".`);
+    process.exit(1);
+  }
+  // Never leave nobody in charge.
+  if (wanted === "staff") {
+    const admins = d.prepare("SELECT COUNT(*) AS n FROM staff_users WHERE role = 'admin'").get();
+    const isAdmin = d.prepare("SELECT role FROM staff_users WHERE username = ?").get(name);
+    if (isAdmin?.role === "admin" && Number(admins.n) <= 1) {
+      console.error(`"${name}" is the only admin. Make someone else an admin first.`);
+      process.exit(1);
+    }
+  }
+  d.prepare("UPDATE staff_users SET role = ? WHERE username = ?").run(wanted, name);
+  console.log(`\n"${name}" is now ${wanted}.\n`);
+  process.exit(0);
+}
 
 if (command === "remove") {
   if (!existing) {
@@ -213,10 +253,26 @@ if (command === "reset" && !existing) {
 const password = await askPassword();
 const stored = await hash(password);
 
-d.prepare(
-  `INSERT INTO staff_users (username, password_hash) VALUES (?, ?)
-   ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash`,
-).run(name, stored);
+// The first account is an admin: someone has to be able to manage the rest.
+const count = d.prepare("SELECT COUNT(*) AS n FROM staff_users").get();
+const asked = process.argv[4];
+const role =
+  command === "add"
+    ? asked === "admin" || Number(count.n) === 0
+      ? "admin"
+      : asked === "staff"
+        ? "staff"
+        : "staff"
+    : null;
+
+if (role) {
+  d.prepare(
+    `INSERT INTO staff_users (username, password_hash, role) VALUES (?, ?, ?)
+     ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash`,
+  ).run(name, stored, role);
+} else {
+  d.prepare("UPDATE staff_users SET password_hash = ? WHERE username = ?").run(stored, name);
+}
 
 // Read it back. Saying "created" without checking is how the last version
 // reported success for an account that was not there.
@@ -229,7 +285,9 @@ if (!check || check.password_hash !== stored) {
   process.exit(1);
 }
 
+const finalRole = d.prepare("SELECT role FROM staff_users WHERE username = ?").get(name)?.role;
+
 console.log(
-  `\n${command === "add" ? "Created" : "Password reset for"} "${name}" in ${file}\n` +
+  `\n${command === "add" ? `Created "${name}" (${finalRole})` : `Password reset for "${name}"`} in ${file}\n` +
     `Sign in at /staff with that username.\n`,
 );
