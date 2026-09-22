@@ -31,8 +31,22 @@ export default function PersonalTraining() {
   return (
     <section
       id="training"
-      className="bloom-amber swell relative py-11 sm:py-16 lg:py-24"
+      className="bloom-amber swell relative overflow-hidden py-11 sm:py-16 lg:py-24"
     >
+      {/* Same as About: on a phone the floor is the backdrop to the words
+          rather than a plate sitting under them. */}
+      <div aria-hidden="true" className="absolute inset-0 lg:hidden">
+        <Image
+          src={freeWeights}
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-ink/[0.88]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink" />
+      </div>
+
       <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-9 sm:gap-14 lg:grid-cols-2 lg:gap-20">
           <div>
@@ -68,7 +82,7 @@ export default function PersonalTraining() {
             </Reveal>
           </div>
 
-          <Reveal variant="right" delay={60} className="relative">
+          <Reveal variant="right" delay={60} className="relative hidden lg:block">
             {/*
               Sticky and relative are separate boxes on purpose. Both on one
               element means lg:sticky wins at desktop width, and a fill image

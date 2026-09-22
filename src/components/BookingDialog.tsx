@@ -11,8 +11,14 @@ export type BookingTarget = {
   spotsLeft: number | null;
 };
 
+/**
+ * text-base, not text-sm. Safari zooms the whole page in when a field under
+ * 16px takes focus, and then leaves it zoomed - which is why tapping Book on
+ * a phone blew the site up and needed pinching back out. 16px is the
+ * threshold; from sm up it can go back to the smaller size.
+ */
 const field =
-  "w-full rounded-sm border border-white/15 bg-ink px-4 py-3.5 text-sm text-white placeholder:text-grey-dim focus:border-lime focus:outline-none";
+  "w-full rounded-sm border border-white/15 bg-ink px-4 py-3.5 text-base text-white placeholder:text-grey-dim focus:border-lime focus:outline-none sm:text-sm";
 
 export default function BookingDialog({
   target,
@@ -103,40 +109,78 @@ export default function BookingDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-ink/85 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      /*
+        Centred at every size, and the overlay scrolls rather than the panel
+        being pinned to an edge - with a keyboard open on a phone, an
+        items-end sheet ends up half off the screen. h-dvh tracks the visible
+        viewport as the browser chrome comes and goes.
+      */
+      className="dialog-backdrop fixed inset-0 z-[70] h-dvh overflow-y-auto overscroll-contain bg-ink/85 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="booking-title"
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-lg border border-white/12 bg-gradient-to-b from-[#16191c] to-ink p-7 shadow-[0_-20px_60px_-20px_rgba(0,0,0,0.9)] sm:rounded-sm"
-      >
-        {state === "done" ? (
-          <div role="status">
-            <div className="flex items-center gap-3">
-              <span className="h-px w-8 bg-lime" />
-              <span className="kicker">Booked</span>
+      <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
+        <div
+          ref={panel}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="booking-title"
+          onClick={(e) => e.stopPropagation()}
+          className="dialog-panel w-full max-w-md rounded-lg border border-white/12 bg-gradient-to-b from-[#16191c] to-ink p-6 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.95)] sm:rounded-sm sm:p-7"
+        >
+          {state === "done" ? (
+            <div role="status" className="text-center">
+              {/* The ring lands, then the tick draws itself into it. */}
+              <svg
+                viewBox="0 0 52 52"
+                className="mx-auto h-16 w-16"
+                aria-hidden="true"
+              >
+                <circle
+                  className="tick-ring"
+                  cx="26"
+                  cy="26"
+                  r="24"
+                  fill="none"
+                  stroke="var(--bx-lime)"
+                  strokeWidth="2"
+                  style={{ transformOrigin: "center" }}
+                />
+                <path
+                  className="tick-path"
+                  d="M15 27l8 8 15-16"
+                  fill="none"
+                  stroke="var(--bx-lime)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+
+              <h2
+                id="booking-title"
+                className="font-display done-step mt-6 text-3xl text-lime"
+                style={{ animationDelay: "0.35s" }}
+              >
+                You&apos;re in.
+              </h2>
+              <p
+                className="done-step mt-4 text-sm leading-relaxed text-grey"
+                style={{ animationDelay: "0.45s" }}
+              >
+                {target.session.discipline} with {target.session.coach},{" "}
+                {formatDate(target.date)} at {target.session.time}. Come 10
+                minutes early if it&apos;s your first time.
+              </p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="font-display done-step mt-7 w-full rounded-sm bg-lime py-3.5 text-[0.8rem] tracking-[0.14em] text-ink transition-colors hover:bg-white"
+                style={{ animationDelay: "0.55s" }}
+              >
+                Done
+              </button>
             </div>
-            <h2 id="booking-title" className="font-display mt-5 text-3xl text-lime">
-              You&apos;re in.
-            </h2>
-            <p className="mt-4 text-sm leading-relaxed text-grey">
-              {target.session.discipline} with {target.session.coach},{" "}
-              {formatDate(target.date)} at {target.session.time}. Come 10 minutes
-              early if it&apos;s your first time.
-            </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="font-display mt-7 w-full rounded-sm bg-lime py-3.5 text-[0.8rem] tracking-[0.14em] text-ink transition-colors hover:bg-white"
-            >
-              Done
-            </button>
-          </div>
-        ) : (
+          ) : (
           <form onSubmit={submit} noValidate>
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -222,8 +266,9 @@ export default function BookingDialog({
             >
               {state === "sending" ? "Booking…" : "Confirm Place"}
             </button>
-          </form>
-        )}
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

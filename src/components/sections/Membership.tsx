@@ -1,4 +1,5 @@
 import { plans } from "@/lib/site";
+import PlanDeck from "../PlanDeck";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
 
@@ -31,9 +32,11 @@ export default function Membership() {
           align="center"
         />
 
-        <div className="mt-9 grid gap-4 sm:mt-14 lg:grid-cols-3">
+        {/* Opens on whichever plan is marked featured - the year - so the card
+            worth seeing is the one in the middle of the screen. */}
+        <PlanDeck focus={Math.max(0, plans.findIndex((p) => p.featured))}>
           {plans.map((p, i) => (
-            <Reveal key={p.name} variant="scale" delay={i * 110}>
+            <Reveal key={p.name} variant="scale" delay={i * 110} className="h-full">
               <article
                 className={`surface relative flex h-full flex-col rounded-md p-6 sm:p-8 lg:p-10 ${
                   p.featured ? "surface-featured" : ""
@@ -83,7 +86,7 @@ export default function Membership() {
               </article>
             </Reveal>
           ))}
-        </div>
+        </PlanDeck>
 
         <Reveal>
           <p className="mx-auto mt-8 max-w-2xl text-center text-xs leading-relaxed text-grey-dim">

@@ -7,10 +7,31 @@ import SectionHead from "../ui/SectionHead";
 export default function About() {
   return (
     <section id="about" className="bloom-amber relative overflow-hidden py-11 sm:py-16 lg:py-24">
+      {/*
+        On a phone the photograph is the section rather than a plate stacked
+        on top of the words. Full width, a whole column of the page tall and
+        cropped to nothing in particular, it read as an offcut; behind the
+        type it reads as the room the type is talking about. The plate comes
+        back at lg, where there is a column to put it in.
+      */}
+      <div aria-hidden="true" className="absolute inset-0 lg:hidden">
+        <Image
+          src={weightsFloor}
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        {/* Heavy enough that body copy over it stays comfortably readable. */}
+        <div className="absolute inset-0 bg-ink/[0.88]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink" />
+      </div>
+
       <div className="relative mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="grid gap-9 sm:gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
-          {/* Stacked plates */}
-          <Reveal variant="left" className="relative">
+          {/* Stacked plates - lg only; below that the photograph is the
+              section background above. */}
+          <Reveal variant="left" className="relative hidden lg:block">
             <div className="relative aspect-[4/3] w-full sm:aspect-[3/4]">
               <Image
                 src={weightsFloor}

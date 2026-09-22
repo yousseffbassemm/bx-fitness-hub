@@ -326,23 +326,16 @@ body {
   }
 }
 
-/* Without a pointer the same gradient follows the scroll, measured from the
-   middle of the screen. TouchFocus writes --dist continuously as you scroll,
-   so this gets no transition either, for the same reason. The falloff is
-   gentler: rows here are passed through rather than chosen, and one on its
-   way out should still be legible.
+/* On a touchscreen this effect is dropped entirely.
 
-   [data-focus-group] is carried for the specificity, not to select with: each
-   row is also a .reveal, and .reveal[data-shown="true"] resets filter to none.
-   A bare `.reasons > li` loses to it and the blur never appears. */
-@media (hover: none) and (prefers-reduced-motion: no-preference) {
-  .reasons[data-focus-group] > li {
-    filter: blur(calc(var(--dist, 0) * 1.05px));
-    opacity: calc(1 - var(--dist, 0) * 0.13);
-    transform: scale(calc(1.01 - var(--dist, 0) * 0.01));
-    transition: none;
-  }
-}
+   Following the scroll sounded right and reads badly: the focus can only sit
+   on whichever row is nearest the middle of the screen, which is rarely the
+   row being read, so the list is permanently half-blurred and the text you
+   are actually looking at is soft more often than not. A pointer is a
+   deliberate act - the scroll position is not.
+
+   Each row is a .reveal, so it still animates in as it comes up the screen,
+   and then it stays sharp and legible. That is the animation on scroll here. */
 
 /* ---------------------------------------------------------------------- */
 /* Review deck                                                             */
@@ -380,7 +373,10 @@ body {
 }
 
 .review-slide {
-  --slide: 21rem;
+  /* Narrow enough that the cards either side are properly on screen. At 21rem
+     a 390px phone had 27px of margin, so the deck looked like one card and
+     nothing suggested there were more to swipe to. */
+  --slide: 15.5rem;
   flex: 0 0 var(--slide);
   transform-style: preserve-3d;
   /* No transition: these follow the finger frame by frame while scrolling,
@@ -401,6 +397,15 @@ body {
 
 .review-slide[data-active="true"] figure {
   border-color: rgba(199, 236, 30, 0.35);
+}
+
+@media (min-width: 480px) {
+  .review-slide {
+    --slide: 19rem;
+  }
+  .review-track {
+    padding-inline: max(1.5rem, calc(50% - 19rem / 2));
+  }
 }
 
 @media (min-width: 640px) {
@@ -509,4 +514,102 @@ body {
     inset 0 1px 0 rgba(199, 236, 30, 0.22),
     0 2px 6px -2px rgba(0, 0, 0, 0.6),
     0 30px 60px -32px rgba(199, 236, 30, 0.22);
+}
+
+
+/* ---------------------------------------------------------------------- */
+/* Booking dialog                                                          */
+/*                                                                         */
+/* It used to appear outright. Opening and closing are the two moments the  */
+/* reader needs to follow - where the panel came from, and that it has      */
+/* gone - so both are animated, and the confirmation draws itself rather    */
+/* than replacing the form in one frame.                                    */
+
+@keyframes bx-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bx-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes bx-tick {
+  from { stroke-dashoffset: 30; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes bx-ring {
+  from { transform: scale(0.6); opacity: 0; }
+  60%  { opacity: 1; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bx-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.dialog-backdrop {
+  animation: bx-backdrop-in 0.22s ease-out both;
+}
+
+.dialog-panel {
+  animation: bx-dialog-in 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.tick-ring  { animation: bx-ring 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.tick-path  {
+  stroke-dasharray: 30;
+  animation: bx-tick 0.45s cubic-bezier(0.65, 0, 0.35, 1) 0.22s both;
+}
+
+/* Each line of the confirmation arrives just behind the one above it. */
+.done-step { animation: bx-rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog-backdrop,
+  .dialog-panel,
+  .tick-ring,
+  .tick-path,
+  .done-step {
+    animation: none;
+  }
+}
+
+
+/* ---------------------------------------------------------------------- */
+/* Membership deck                                                         */
+/*                                                                         */
+/* Below lg the three plans are a row you swipe rather than a column you    */
+/* scroll past. The cards are sized against the viewport, not the           */
+/* container, so the middle one sits in the middle of the screen with the   */
+/* other two showing at the edges.                                          */
+
+.plan-deck {
+  --plan-w: min(78vw, 22rem);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.plan-deck::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .plan-deck {
+    padding-inline: max(1.5rem, calc((100vw - var(--plan-w)) / 2));
+  }
+
+  .plan-deck > * {
+    flex: 0 0 var(--plan-w);
+    scroll-snap-align: center;
+  }
 }

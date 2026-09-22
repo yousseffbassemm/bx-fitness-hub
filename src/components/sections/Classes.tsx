@@ -236,7 +236,7 @@ export default function Classes() {
                             onClick={() =>
                               setTarget({ id, date, session: s, spotsLeft: left })
                             }
-                            className="font-display w-full rounded-sm border border-lime/50 px-5 py-2.5 text-[0.74rem] tracking-[0.12em] text-lime transition-all duration-300 hover:bg-lime hover:text-ink disabled:cursor-not-allowed disabled:border-white/10 disabled:text-grey-dim disabled:hover:bg-transparent sm:w-auto"
+                            className="font-display w-full rounded-sm border border-lime/50 px-5 py-2.5 text-[0.74rem] tracking-[0.12em] text-lime transition-all duration-300 hover:bg-lime hover:text-ink active:scale-[0.96] active:bg-lime active:text-ink disabled:cursor-not-allowed disabled:border-white/10 disabled:text-grey-dim disabled:hover:bg-transparent sm:w-auto"
                           >
                             {full ? "Full" : "Book"}
                           </button>
