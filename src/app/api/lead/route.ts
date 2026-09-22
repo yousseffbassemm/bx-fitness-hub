@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifyNewEnquiry } from "@/lib/notify";
 import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
@@ -47,6 +48,14 @@ export async function POST(request: Request) {
 
   try {
     const { id } = await (await getStore()).saveLead(lead);
+
+    /*
+      Deliberately not awaited. The enquiry is saved; the person filling the
+      form in should not wait on an email provider, and if one is slow or
+      down it must not turn a successful enquiry into an error.
+    */
+    void notifyNewEnquiry(lead);
+
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     // Never answer "you're on the list" for something that was not saved.

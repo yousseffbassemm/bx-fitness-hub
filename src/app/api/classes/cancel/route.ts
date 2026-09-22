@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { capacityFor, findSessionIn } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
+import { notifyPromoted } from "@/lib/notify";
 import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
@@ -53,6 +54,14 @@ export async function POST(request: Request) {
         booking.sessionId,
         booking.date,
         capacityFor(found.session.discipline),
+      );
+    }
+
+    if (promoted && found) {
+      void notifyPromoted(
+        promoted.name,
+        promoted.phone,
+        `${found.session.discipline}, ${booking.date} at ${found.session.time}`,
       );
     }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { capacityFor, findSessionIn } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
 import { requireStaff } from "@/lib/staff/guard";
+import { notifyPromoted } from "@/lib/notify";
 import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -68,6 +69,17 @@ export async function PATCH(request: Request) {
             capacityFor(slot.session.discipline),
           );
         }
+      }
+
+      if (promoted && booking) {
+        const slot = findSessionIn(await getSchedule(), booking.sessionId);
+        void notifyPromoted(
+          promoted.name,
+          promoted.phone,
+          slot
+            ? `${slot.session.discipline}, ${booking.date} at ${slot.session.time}`
+            : booking.date,
+        );
       }
 
       return NextResponse.json({ ok: true, promoted: promoted?.name ?? null });

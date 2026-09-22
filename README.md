@@ -339,6 +339,21 @@ number, or give a discipline its own entry in `CAPACITY_BY_DISCIPLINE`.
 day's bookings, cancellation, a waitlist when a class is full, and a reminder
 the day before. Say the word and I will add them.
 
+## Telling somebody something happened
+
+Optional, and off unless configured. Set `RESEND_API_KEY` and
+`NOTIFY_EMAIL_TO` in `.env.local` and an email goes out when an enquiry
+arrives, and when a waitlist place comes free and somebody needs calling.
+
+Without them the site behaves exactly as it does now: everything is saved and
+read on the staff screens. The notification is a nudge on top, never the
+record - which is deliberate, because the enquiry form previously *was* a
+notification with no record, and dropped people's details in silence.
+
+Sending never blocks the request and never fails it. Verified with a
+deliberately invalid key: the enquiry still saved and still answered 200,
+while the provider's refusal was recorded on the Problems screen.
+
 ## Editing the site
 
 Some of the page is editable by an admin at **Staff &rarr; Site content**, with
