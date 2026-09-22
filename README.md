@@ -409,10 +409,23 @@ stored and nobody was told.
 
 ## Staff view
 
-`/staff` shows the enquiries and the bookings. It is gated twice: `src/proxy.ts`
-refuses the pages before they render, so no member's name or number is ever
-produced for someone without a session, and each state-changing API route
-checks for itself.
+The staff area is six screens behind one bar:
+
+| | |
+| --- | --- |
+| **Bookings** | who is coming to which class, and cancelling |
+| **Enquiries** | the "Start here" form, with a count of how many are waiting |
+| **Timetable** | admin - the weekly classes |
+| **Coaches** | admin - names, specialities, portraits and crops |
+| **Pricing** | admin - the three membership prices |
+| **Team** | admin - accounts and roles |
+
+A non-admin sees the first two and nothing else, and the admin pages redirect
+them rather than showing controls the server will refuse.
+
+It is gated twice over: `src/proxy.ts` refuses the pages before they render,
+so no member's name or number is ever produced for someone without a session,
+and each state-changing API route checks for itself.
 
 ### Accounts
 

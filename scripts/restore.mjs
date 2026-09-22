@@ -10,7 +10,7 @@
  * running this: swapping the file under a live connection leaves the process
  * holding a database that no longer exists.
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { backupDir } from "./backup-dir.mjs";

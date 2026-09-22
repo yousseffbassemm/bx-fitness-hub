@@ -5,14 +5,10 @@ import {
   formatDate,
   toISODate,
 } from "@/lib/booking";
-import { cookies } from "next/headers";
-import { STAFF_COOKIE, readSessionToken } from "@/lib/staff/session";
 import { getSchedule } from "@/lib/content";
 import { getStore } from "@/lib/store";
 import BookingRowActions from "@/components/staff/BookingRowActions";
-import LeadRowActions from "@/components/staff/LeadRowActions";
-import BackToSite from "@/components/staff/BackToSite";
-import { Mark } from "@/components/ui/Logo";
+import PageHeader from "@/components/staff/PageHeader";
 
 // Bookings change constantly; never serve a cached list.
 export const dynamic = "force-dynamic";
@@ -38,20 +34,8 @@ export default async function StaffPage(props: PageProps<"/staff">) {
   until.setDate(until.getDate() + BOOKING_WINDOW_DAYS);
   const to = toISODate(until);
 
-  // proxy.ts has already refused anyone without a valid session, so this is
-  // only for showing whose shift it is.
-  const signedInAs = await readSessionToken(
-    (await cookies()).get(STAFF_COOKIE)?.value,
-  );
-
   const store = await getStore();
-  const isAdmin =
-    signedInAs !== null && (await store.findStaffUser(signedInAs))?.role === "admin";
   const rows = await store.list(from, to);
-  // Enquiries are not tied to the date window - someone who asked last week is
-  // still waiting to hear back.
-  const leads = await store.listLeads();
-  const waiting = leads.filter((l) => l.handledAt === null);
   const liveCount = rows.filter((r) => r.cancelledAt === null).length;
 
   const schedule = await getSchedule();
@@ -104,29 +88,15 @@ export default async function StaffPage(props: PageProps<"/staff">) {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
-      <header className="flex flex-wrap items-start justify-between gap-6">
-        <div>
-          <BackToSite className="mb-5" />
-          <div className="flex items-center gap-2.5 text-white">
-            <Mark className="h-8 w-8" />
-            <span className="kicker">Staff</span>
-            {signedInAs && (
-              <span className="text-xs text-grey-dim">&middot; {signedInAs}</span>
-            )}
-          </div>
-          <h1 className="font-display mt-5 text-3xl text-white sm:text-4xl">
-            {liveCount} {liveCount === 1 ? "booking" : "bookings"}
-          </h1>
-          <p className="mt-2 text-sm text-grey">
-            {formatDate(from)} onwards &middot; next {BOOKING_WINDOW_DAYS} days
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <form method="GET" className="flex items-center gap-2">
-            <label htmlFor="from" className="kicker">
-              From
+    <>
+      <PageHeader
+        kicker="Classes"
+        title={`${liveCount} ${liveCount === 1 ? "booking" : "bookings"}`}
+        copy={`${formatDate(from)} onwards, the next ${BOOKING_WINDOW_DAYS} days.`}
+        actions={
+          <form method="GET" className="flex items-end gap-2">
+            <label htmlFor="from" className="sr-only">
+              Show bookings from
             </label>
             <input
               id="from"
@@ -137,122 +107,13 @@ export default async function StaffPage(props: PageProps<"/staff">) {
             />
             <button
               type="submit"
-              className="font-display rounded-sm border border-white/15 px-4 py-2 text-[0.72rem] tracking-[0.12em] text-white hover:border-lime hover:text-lime"
+              className="font-display rounded-sm border border-white/15 px-4 py-2 text-[0.72rem] tracking-[0.12em] text-white transition-colors hover:border-lime hover:text-lime"
             >
               Go
             </button>
           </form>
-
-          {isAdmin && (
-            <>
-              <a
-                href="/staff/site"
-                className="font-display rounded-sm border border-white/15 px-4 py-2 text-[0.72rem] tracking-[0.12em] text-white hover:border-lime hover:text-lime"
-              >
-                Site content
-              </a>
-              <a
-                href="/staff/team"
-                className="font-display rounded-sm border border-white/15 px-4 py-2 text-[0.72rem] tracking-[0.12em] text-white hover:border-lime hover:text-lime"
-              >
-                Team
-              </a>
-            </>
-          )}
-
-          <form method="POST" action="/api/staff/logout">
-            <button
-              type="submit"
-              className="font-display rounded-sm border border-white/15 px-4 py-2 text-[0.72rem] tracking-[0.12em] text-grey hover:border-pink hover:text-pink"
-            >
-              Sign Out
-            </button>
-          </form>
-        </div>
-      </header>
-
-      {/*
-        Enquiries first. A booking is already settled - the person has a place
-        and knows it. An enquiry is someone waiting for a call back, so it is
-        the thing on this page that decays if nobody looks at it.
-      */}
-      <section className="mt-12">
-        <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-white/10 pb-3">
-          <h2 className="font-display text-lg text-lime">
-            Enquiries
-            {waiting.length > 0 && (
-              <span className="ml-3 rounded-sm bg-lime px-2 py-0.5 text-[0.7rem] tracking-[0.1em] text-ink">
-                {waiting.length} waiting
-              </span>
-            )}
-          </h2>
-          <p className="text-xs text-grey-dim">
-            From the &ldquo;Start here&rdquo; form &middot; newest first
-          </p>
-        </div>
-
-        {leads.length === 0 ? (
-          <p className="mt-6 rounded-sm border border-white/10 bg-charcoal px-6 py-10 text-center text-sm text-grey">
-            No enquiries yet.
-          </p>
-        ) : (
-          <ol className="mt-6 divide-y divide-white/8 rounded-sm border border-white/10 bg-charcoal">
-            {leads.map((lead) => {
-              const done = lead.handledAt !== null;
-              return (
-                <li
-                  key={lead.id}
-                  className={`flex flex-wrap items-start justify-between gap-4 px-5 py-4 ${
-                    done ? "bg-white/[0.02]" : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="flex flex-wrap items-baseline gap-2.5 text-sm">
-                      <span className={done ? "text-grey-dim" : "text-white"}>
-                        {lead.name}
-                      </span>
-                      <span className="text-[0.7rem] tracking-[0.1em] text-grey-dim uppercase">
-                        {lead.goal}
-                      </span>
-                      {done && (
-                        <span className="text-[0.7rem] tracking-[0.1em] text-lime uppercase">
-                          Done
-                        </span>
-                      )}
-                    </p>
-                    <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                      <a
-                        href={`tel:${lead.phone.replace(/\s/g, "")}`}
-                        className={`tabular-nums ${done ? "text-grey-dim" : "text-grey hover:text-lime"}`}
-                      >
-                        {lead.phone}
-                      </a>
-                      <a
-                        href={`mailto:${lead.email}`}
-                        className={`break-all ${done ? "text-grey-dim" : "text-grey hover:text-lime"}`}
-                      >
-                        {lead.email}
-                      </a>
-                    </p>
-                    <p className="mt-1.5 text-xs text-grey-dim">
-                      {formatDate(lead.createdAt.slice(0, 10))}
-                    </p>
-                  </div>
-
-                  <LeadRowActions id={lead.id} handled={done} />
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </section>
-
-      <h2 className="font-display mt-16 border-b border-white/10 pb-3 text-lg text-white">
-        Bookings
-        <span className="ml-3 text-sm text-grey-dim">
-          {formatDate(from)} onwards &middot; next {BOOKING_WINDOW_DAYS} days
-        </span>
-      </h2>
+        }
+      />
 
       {orphaned.length > 0 && (
         <section className="mt-12 rounded-sm border border-amber/40 bg-amber/[0.06] p-5">
@@ -376,6 +237,6 @@ export default async function StaffPage(props: PageProps<"/staff">) {
         This page shows members&apos; names and phone numbers. Do not share the
         link or leave it open on a screen the floor can see.
       </p>
-    </main>
+    </>
   );
 }

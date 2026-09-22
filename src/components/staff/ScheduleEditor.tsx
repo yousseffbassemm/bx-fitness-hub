@@ -187,13 +187,13 @@ export default function ScheduleEditor({
                     </button>
                   </div>
 
+                  {/* One line, not a paragraph: on a busy day this repeats
+                      under every row, and the same warning said three times
+                      stops being read. The detail lives under the form. */}
                   {booked > 0 && (
-                    <p className="text-[0.68rem] text-amber sm:col-span-4">
-                      {booked} {booked === 1 ? "person has" : "people have"} booked
-                      this in the next two weeks. Changing the time or the name
-                      moves their booking with it; removing the class leaves them
-                      booked on nothing, and they will show at the top of the
-                      bookings page so you can call them.
+                    <p className="flex items-center gap-1.5 text-[0.68rem] text-amber sm:col-span-4">
+                      <span aria-hidden="true">&#9679;</span>
+                      {booked} booked
                     </p>
                   )}
                 </div>
@@ -247,10 +247,18 @@ export default function ScheduleEditor({
         )}
       </div>
 
-      <p className="mt-4 text-xs leading-relaxed text-grey-dim">
-        Times show exactly as typed &mdash; keep the format consistent, like
-        &ldquo;7:00 PM&rdquo;. The seven days are fixed; what is in them is not.
-      </p>
+      <div className="mt-5 space-y-2 text-xs leading-relaxed text-grey-dim">
+        <p>
+          <span className="text-amber">&#9679;</span> marks a class people have
+          already booked. Changing its time or name moves those bookings with
+          it. Removing it leaves them booked on nothing, and they appear at the
+          top of Bookings so you can call them.
+        </p>
+        <p>
+          Times show exactly as typed &mdash; keep the format consistent, like
+          &ldquo;7:00 PM&rdquo;. The seven days are fixed; what is in them is not.
+        </p>
+      </div>
     </div>
   );
 }
