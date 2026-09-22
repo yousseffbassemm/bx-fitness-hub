@@ -41,6 +41,7 @@ export default function Facilities() {
                     alt={f.alt}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    style={f.focus ? { objectPosition: f.focus } : undefined}
                     className="plate object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] group-data-[near=true]:scale-[1.04]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/35 to-transparent" />

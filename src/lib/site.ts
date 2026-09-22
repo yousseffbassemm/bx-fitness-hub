@@ -104,7 +104,17 @@ export const stats = [
 /* -------------------------------------------------------------------------
    Facilities
    ---------------------------------------------------------------------- */
-export const facilities = [
+/** `focus` is object-position, for a photograph whose subject is not in the
+ *  middle of the frame. Left off, the crop is centred. */
+export type Facility = {
+  title: string;
+  copy: string;
+  image: StaticImageData;
+  alt: string;
+  focus?: string;
+};
+
+export const facilities: Facility[] = [
   {
     title: "Strength Floor",
     copy: "Racks, platforms and plate-loaded machines under the ring lights, with mirrors on every wall.",
@@ -133,7 +143,10 @@ export const facilities = [
     title: "EightyEight",
     copy: "The coffee shop on site. Salads, protein and proper coffee, straight after a session.",
     image: eightyeightCafe,
-    alt: "The EightyEight counter at BX, under its lit sign and shelves of supplements",
+    alt: "Members at the EightyEight counter under its lit sign, beside the floor-to-ceiling windows",
+    // A tall frame cropped to a wide card: centred, the top of the lit sign
+    // is shaved off. Pulling the window up keeps the whole logo.
+    focus: "center 45%",
   },
   {
     title: "BX Spa",
