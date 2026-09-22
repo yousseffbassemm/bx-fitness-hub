@@ -1,4 +1,5 @@
 import Image from "next/image";
+import freeWeights from "@/images/free-weights.jpg";
 import { Button } from "../ui/Button";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
@@ -70,7 +71,7 @@ export default function PersonalTraining() {
           <Reveal delay={60} className="relative">
             <div className="relative aspect-[4/5] w-full lg:sticky lg:top-28">
               <Image
-                src="/images/free-weights.jpg"
+                src={freeWeights}
                 alt="The free-weights floor at BX under angular LED frames"
                 fill
                 sizes="(max-width: 1024px) 100vw, 45vw"

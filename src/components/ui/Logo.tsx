@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import mark from "@/images/logo-mark.png";
 import { useRouter } from "next/navigation";
 
-const MARK = "/images/logo-mark.png";
+// Fingerprinted by the import, so replacing the artwork changes the URL.
+const MARK = mark.src;
 
 /**
  * The BX monogram, from the artwork BX supplied (public/images/logo-mark.png).

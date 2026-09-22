@@ -1,3 +1,32 @@
+import type { StaticImageData } from "next/image";
+
+/*
+ * Images are imported, not referenced by path.
+ *
+ * A file under public/ is served at a URL that never changes, so a browser
+ * that has cached it keeps showing the old picture after the file is
+ * replaced - which is exactly what happened to the coach portraits. Importing
+ * them makes Next fingerprint each file, so changing a photo changes its URL
+ * and every visitor gets the new one.
+ */
+import bxSpaJacuzzi from "@/images/bx-spa-jacuzzi.jpg";
+import cardioRings from "@/images/cardio-rings.jpg";
+import eightyeightCafe from "@/images/eightyeight-cafe.jpg";
+import feedAfterhours from "@/images/feed-afterhours.jpg";
+import feedStretch from "@/images/feed-stretch.jpg";
+import feedStrong from "@/images/feed-strong.jpg";
+import feedTherapy from "@/images/feed-therapy.jpg";
+import freeWeights from "@/images/free-weights.jpg";
+import strengthZone from "@/images/strength-zone.jpg";
+import studioBright from "@/images/studio-bright.jpg";
+import weightsFloor from "@/images/weights-floor.jpg";
+import abdelrahman from "@/images/coaches/abdelrahman.jpg";
+import ahmedAyman from "@/images/coaches/ahmed-ayman.jpg";
+import ahmedGomaa from "@/images/coaches/ahmed-gomaa.jpg";
+import ahmedMaged from "@/images/coaches/ahmed-maged.jpg";
+import dinaPhoto from "@/images/coaches/dina.jpg";
+import mennaPhoto from "@/images/coaches/menna.jpg";
+
 /**
  * Single source of truth for everything the site says about BX Fitness Hub.
  *
@@ -79,37 +108,37 @@ export const facilities = [
   {
     title: "Strength Floor",
     copy: "Racks, platforms and plate-loaded machines under the ring lights, with mirrors on every wall.",
-    image: "/images/weights-floor.jpg",
+    image: weightsFloor,
     alt: "The BX strength floor at night, lit by ring pendants and warm cove lighting",
   },
   {
     title: "Cardio Deck",
     copy: "A full row of Life Fitness cardio facing the illuminated BX monogram.",
-    image: "/images/cardio-rings.jpg",
+    image: cardioRings,
     alt: "Row of cross-trainers beneath circular LED pendants and the lit BX logo",
   },
   {
     title: "Free Weights",
     copy: "Dumbbells to the far wall, benches, bars and bands - under the PUSH YOUR LIMITS sign.",
-    image: "/images/free-weights.jpg",
+    image: freeWeights,
     alt: "Barbell rack and dumbbell wall lit by angular LED frames",
   },
   {
     title: "Movement Studio",
     copy: "Pale oak, floor-to-ceiling mirrors and daylight. Pilates, yoga, stretching and dance.",
-    image: "/images/studio-bright.jpg",
+    image: studioBright,
     alt: "Bright mirrored movement studio with pale oak flooring",
   },
   {
     title: "EightyEight",
     copy: "The coffee shop on site. Salads, protein and proper coffee, straight after a session.",
-    image: "/images/eightyeight-cafe.jpg",
+    image: eightyeightCafe,
     alt: "The EightyEight counter at BX, under its lit sign and shelves of supplements",
   },
   {
     title: "BX Spa",
     copy: "Recovery next door. Jacuzzi, hammam, sauna and massage - the art of stillness.",
-    image: "/images/bx-spa-jacuzzi.jpg",
+    image: bxSpaJacuzzi,
     alt: "The jacuzzi at BX Spa, beside a living green wall and a stone water feature",
   },
 ] as const;
@@ -242,7 +271,7 @@ export type Coach = {
   name: string;
   credential: string;
   disciplines: string[];
-  photo: string;
+  photo: StaticImageData;
 };
 
 export const coaches: Coach[] = [
@@ -254,37 +283,37 @@ export const coaches: Coach[] = [
       "Physique Transformation",
       "Athletic Performance",
     ],
-    photo: "/images/coaches/ahmed-ayman.jpg",
+    photo: ahmedAyman,
   },
   {
     name: "Ahmed Maged",
     credential: "Certified Personal Trainer (NASM)",
     disciplines: ["Bodybuilding & Fat Loss"],
-    photo: "/images/coaches/ahmed-maged.jpg",
+    photo: ahmedMaged,
   },
   {
     name: "Abdelrahman",
     credential: "Certified Personal Trainer",
     disciplines: ["Hypertrophy Training", "Physique Transformation"],
-    photo: "/images/coaches/abdelrahman.jpg",
+    photo: abdelrahman,
   },
   {
     name: "Ahmed Gomaa",
     credential: "Certified Personal Trainer (ACE)",
     disciplines: ["Movement & Strength Improvement", "Exercise for Stress Management"],
-    photo: "/images/coaches/ahmed-gomaa.jpg",
+    photo: ahmedGomaa,
   },
   {
     name: "Dina",
     credential: "Certified Personal Trainer (EREPS)",
     disciplines: ["Posture Correction", "Senior Fitness"],
-    photo: "/images/coaches/dina.jpg",
+    photo: dinaPhoto,
   },
   {
     name: "Menna",
     credential: "Certified Personal Trainer",
     disciplines: ["Athletic Performance", "Strength & Conditioning"],
-    photo: "/images/coaches/menna.jpg",
+    photo: mennaPhoto,
   },
 ];
 
@@ -350,12 +379,12 @@ export const testimonials = [
 
 /* Gallery - real frames from the gym and its campaigns. */
 export const gallery = [
-  { src: "/images/cardio-rings.jpg", alt: "Cardio deck under ring pendants with the lit BX monogram", ratio: "tall" },
-  { src: "/images/feed-afterhours.jpg", alt: "Barbell rack on the free-weights floor after hours", ratio: "square" },
-  { src: "/images/studio-bright.jpg", alt: "Mirrored movement studio in daylight", ratio: "tall" },
-  { src: "/images/weights-floor.jpg", alt: "Strength floor with benches, cable machine and warm cove lighting", ratio: "tall" },
-  { src: "/images/feed-therapy.jpg", alt: "Therapy session on the mat in the recovery studio", ratio: "square" },
-  { src: "/images/strength-zone.jpg", alt: "Cable machines beside the windows over New Cairo", ratio: "tall" },
-  { src: "/images/feed-strong.jpg", alt: "Mobility work with blocks in the movement studio", ratio: "square" },
-  { src: "/images/feed-stretch.jpg", alt: "Stretch session in the studio under violet light", ratio: "square" },
+  { src: cardioRings, alt: "Cardio deck under ring pendants with the lit BX monogram", ratio: "tall" },
+  { src: feedAfterhours, alt: "Barbell rack on the free-weights floor after hours", ratio: "square" },
+  { src: studioBright, alt: "Mirrored movement studio in daylight", ratio: "tall" },
+  { src: weightsFloor, alt: "Strength floor with benches, cable machine and warm cove lighting", ratio: "tall" },
+  { src: feedTherapy, alt: "Therapy session on the mat in the recovery studio", ratio: "square" },
+  { src: strengthZone, alt: "Cable machines beside the windows over New Cairo", ratio: "tall" },
+  { src: feedStrong, alt: "Mobility work with blocks in the movement studio", ratio: "square" },
+  { src: feedStretch, alt: "Stretch session in the studio under violet light", ratio: "square" },
 ] as const;

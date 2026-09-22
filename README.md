@@ -71,7 +71,8 @@ src/
     booking.ts          capacity, slot ids, date rules
     store/              booking storage (SQLite by default, Supabase optional)
 supabase/schema.sql     run this once in Supabase
-public/images/          photography
+  images/               photography - imported, not served from public/
+public/og.jpg           social preview (stable URL for crawlers)
 ```
 
 **`src/lib/site.ts` is the file you edit most.** Phone numbers, opening hours,
@@ -249,6 +250,19 @@ Everything below is a marked placeholder. Search for the bracketed token.
 | `site.url` | `site.ts` | Set the real domain - it feeds canonical URLs and OG tags. |
 
 ## About the photography
+
+Images live in `src/images/` and are **imported**, never referenced by a
+path under `public/`. A file in `public/` is served at a URL that never
+changes, so a browser that cached it keeps showing the old picture after the
+file is replaced - which is exactly what happened when the coach portraits
+were re-cropped. Importing makes Next fingerprint each file
+(`ahmed-ayman.2ms5clqtjmcww.jpg`), so changing a photo changes its URL and
+every visitor gets the new one. Drop a replacement in with the same filename
+and it just works.
+
+The one exception is `public/og.jpg`, the social preview. Crawlers cache by
+URL, so that one is deliberately stable.
+
 
 `public/images/` holds frames captured from the gym's own Instagram and cropped
 to remove the baked-in campaign text. They top out around **1000-1100px**, which

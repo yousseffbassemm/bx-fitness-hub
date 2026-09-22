@@ -27,7 +27,7 @@ export const metadata: Metadata = {
       "Where movement meets style. A gym in New Cairo open 6AM to 1AM, with 15 classes a week, personal training and recovery under one roof.",
     images: [
       {
-        url: "/images/cardio-rings.jpg",
+        url: "/og.jpg",
         width: 580,
         height: 1226,
         alt: "The cardio deck at BX Fitness Hub beneath circular pendant lighting",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     title: "BX Fitness Hub | Gym in New Cairo",
     description:
       "Where movement meets style. Open 6AM to 1AM, every day, in New Cairo.",
-    images: ["/images/cardio-rings.jpg"],
+    images: ["/og.jpg"],
   },
   robots: { index: true, follow: true },
 };
@@ -55,7 +55,7 @@ const structuredData = {
   slogan: site.tagline,
   url: site.url,
   telephone: site.phone.href.replace("tel:", ""),
-  image: `${site.url}/images/cardio-rings.jpg`,
+  image: `${site.url}/og.jpg`,
   address: {
     "@type": "PostalAddress",
     streetAddress: `${site.address.line1}, ${site.address.line2}`,

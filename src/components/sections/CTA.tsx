@@ -1,4 +1,5 @@
 import Image from "next/image";
+import strengthZone from "@/images/strength-zone.jpg";
 import { Button } from "../ui/Button";
 import Reveal from "../ui/Reveal";
 
@@ -7,7 +8,7 @@ export default function CTA() {
     <section className="relative overflow-hidden">
       <div className="absolute inset-0">
         <Image
-          src="/images/strength-zone.jpg"
+          src={strengthZone}
           alt=""
           aria-hidden="true"
           fill

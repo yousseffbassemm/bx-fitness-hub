@@ -1,4 +1,6 @@
 import Image from "next/image";
+import studioYoga from "@/images/studio-yoga.jpg";
+import weightsFloor from "@/images/weights-floor.jpg";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
 
@@ -11,7 +13,7 @@ export default function About() {
           <Reveal className="relative">
             <div className="relative aspect-[3/4] w-full">
               <Image
-                src="/images/weights-floor.jpg"
+                src={weightsFloor}
                 alt="The strength floor at BX, benches and cable machines under warm cove lighting"
                 fill
                 sizes="(max-width: 1024px) 100vw, 40vw"
@@ -22,7 +24,7 @@ export default function About() {
                 down onto the figure rather than the window above her. */}
             <div className="absolute -bottom-10 -right-4 hidden aspect-square w-40 border-4 border-ink sm:block lg:-right-10 lg:w-52">
               <Image
-                src="/images/studio-yoga.jpg"
+                src={studioYoga}
                 alt="A member moving through a yoga flow in the daylit studio at BX"
                 fill
                 sizes="(max-width: 1024px) 160px, 208px"

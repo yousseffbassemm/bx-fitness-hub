@@ -56,7 +56,7 @@ export default function Gallery() {
         <div className="mt-14 grid auto-rows-[150px] grid-flow-row-dense grid-cols-2 gap-4 sm:auto-rows-[190px] lg:auto-rows-[220px] lg:grid-cols-3">
           {gallery.map((g, i) => (
             <Reveal
-              key={g.src}
+              key={g.alt}
               delay={(i % 3) * 70}
               className={g.ratio === "tall" ? "row-span-2" : "row-span-1"}
             >

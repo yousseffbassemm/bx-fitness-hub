@@ -1,4 +1,5 @@
 import Image from "next/image";
+import cardioRings from "@/images/cardio-rings.jpg";
 import { site } from "@/lib/site";
 import { Button } from "../ui/Button";
 
@@ -77,7 +78,7 @@ export default function Hero() {
         */}
         <div className="absolute inset-0 -z-10 lg:relative lg:z-auto lg:h-[76vh]">
           <Image
-            src="/images/cardio-rings.jpg"
+            src={cardioRings}
             alt="The BX Fitness Hub cardio deck at night, lit by circular pendants above the illuminated BX monogram"
             fill
             priority
