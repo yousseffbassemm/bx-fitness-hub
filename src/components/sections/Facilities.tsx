@@ -26,7 +26,7 @@ export default function Facilities() {
                 absolutely, so no card can end up shorter than its grid row and
                 leave a strip of background showing under the caption.
               */}
-              <article className="group relative aspect-[4/5] overflow-hidden rounded-sm bg-charcoal">
+              <article className="surface photo-inset group relative aspect-[4/5] overflow-hidden rounded-md bg-charcoal">
                 <div className="absolute inset-0">
                   <Image
                     src={f.image}

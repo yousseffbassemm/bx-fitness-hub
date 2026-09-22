@@ -7,6 +7,7 @@ import {
 } from "@/lib/booking";
 import { getStore } from "@/lib/store";
 import BookingRowActions from "@/components/staff/BookingRowActions";
+import BackToSite from "@/components/staff/BackToSite";
 import { Mark } from "@/components/ui/Logo";
 
 // Bookings change constantly; never serve a cached list.
@@ -76,6 +77,7 @@ export default async function StaffPage(props: PageProps<"/staff">) {
     <main className="mx-auto max-w-4xl px-6 py-12">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div>
+          <BackToSite className="mb-5" />
           <div className="flex items-center gap-2.5 text-white">
             <Mark className="h-8 w-8" />
             <span className="kicker">Staff &middot; Bookings</span>

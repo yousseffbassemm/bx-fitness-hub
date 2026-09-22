@@ -56,7 +56,7 @@ function Stat({
     <Reveal
       variant="scale"
       delay={index * 90}
-      className="rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-7 lg:p-9"
+      className="surface rounded-md p-7 lg:p-9"
     >
       <p className="font-display text-5xl text-white lg:text-6xl">
         {shown}

@@ -267,28 +267,30 @@ body {
 }
 
 /* ---------------------------------------------------------------------- */
-/* "Six reasons" - hovering one brings it forward and settles the rest,    */
-/* blurring further down the list.                                         */
+/* "Six reasons" - the row under the pointer stays sharp and the rest fall  */
+/* away with distance from it, so the focus follows the reader instead of   */
+/* always sitting at the top of the list.                                   */
 
 .reasons > li {
   transition:
-    filter 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    filter 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   transform-origin: left center;
-  will-change: filter, transform;
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  /* --dist is how many rows away this one is from the hovered row. */
   .reasons:hover > li {
-    filter: blur(var(--blur, 1px));
-    opacity: 0.45;
+    filter: blur(calc(var(--dist, 0) * 1.5px));
+    opacity: calc(1 - var(--dist, 0) * 0.16);
+    transform: scale(calc(1 - var(--dist, 0) * 0.012));
   }
 
   .reasons:hover > li:hover {
     filter: blur(0);
     opacity: 1;
-    transform: scale(1.025);
+    transform: scale(1.02);
   }
 }
 
@@ -349,4 +351,93 @@ body {
     filter: none;
     opacity: 1;
   }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Surfaces                                                                */
+/*                                                                         */
+/* A flat panel with one hairline border reads like paper lying on a table. */
+/* Real objects catch light on the edge facing it and drop two shadows: a   */
+/* tight contact shadow and a wide ambient one. That is what is layered     */
+/* here, with the light coming from above to match the cove lighting in the */
+/* rooms - and a warm amber glow that follows the pointer, which is the     */
+/* same light the gym is lit with.                                         */
+
+.surface {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 2px 6px -2px rgba(0, 0, 0, 0.6),
+    0 24px 48px -30px rgba(0, 0, 0, 0.95);
+  transition:
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.5s ease;
+}
+
+/* The glow tracks the pointer; --mx/--my are written by Spotlight. */
+.surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 0%),
+    rgba(232, 165, 75, 0.13),
+    rgba(232, 165, 75, 0) 68%
+  );
+}
+
+@media (hover: hover) {
+  .surface:hover {
+    transform: translateY(-5px);
+    border-color: rgba(199, 236, 30, 0.3);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 4px 10px -3px rgba(0, 0, 0, 0.7),
+      0 40px 70px -32px rgba(0, 0, 0, 1),
+      0 0 44px -16px rgba(199, 236, 30, 0.3);
+  }
+
+  .surface:hover::after {
+    opacity: 1;
+  }
+}
+
+/* A photograph filling a card needs an edge of its own, or it looks pasted
+   on rather than set into the surface. */
+.photo-inset::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 -70px 90px -50px rgba(8, 9, 10, 0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .surface,
+  .surface:hover {
+    transform: none;
+  }
+}
+
+/* The most popular plan is lit slightly warmer than its neighbours. */
+.surface-featured {
+  border-color: rgba(199, 236, 30, 0.3);
+  background:
+    linear-gradient(180deg, rgba(199, 236, 30, 0.07), rgba(255, 255, 255, 0.012));
+  box-shadow:
+    inset 0 1px 0 rgba(199, 236, 30, 0.22),
+    0 2px 6px -2px rgba(0, 0, 0, 0.6),
+    0 30px 60px -32px rgba(199, 236, 30, 0.22);
 }

@@ -127,9 +127,13 @@ export default function Footer() {
               */}
               <Link
                 href="/staff"
-                className="transition-colors hover:text-grey"
+                className="inline-flex items-center gap-1.5 text-grey transition-colors hover:text-lime"
               >
-                Staff
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4">
+                  <rect x="3" y="7" width="10" height="7" rx="1.5" />
+                  <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
+                </svg>
+                Staff login
               </Link>
             </li>
           </ul>

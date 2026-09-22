@@ -1,4 +1,5 @@
 import { reasons } from "@/lib/site";
+import ReasonList from "../ReasonList";
 import Reveal from "../ui/Reveal";
 import SectionHead from "../ui/SectionHead";
 
@@ -21,16 +22,14 @@ export default function Why() {
           </div>
 
           {/*
-            Blur deepens with index, so on hover the list settles away from the
-            reader from the top down while the one under the cursor lifts.
+            Blur radiates from the row under the pointer - see ReasonList.
           */}
-          <ul className="reasons">
+          <ReasonList>
             {reasons.map((r, i) => (
               <Reveal
                 as="li"
                 key={r.kicker}
                 delay={i * 60}
-                style={{ "--blur": `${0.9 + i * 0.7}px` } as React.CSSProperties}
               >
                 <div className="grid grid-cols-[3rem_1fr] gap-5 py-7 sm:grid-cols-[4rem_1fr]">
                   <span className="font-display text-lg text-lime">{r.kicker}</span>
@@ -42,7 +41,7 @@ export default function Why() {
                 {i < reasons.length - 1 && <div className="rule-fade" aria-hidden="true" />}
               </Reveal>
             ))}
-          </ul>
+          </ReasonList>
         </div>
       </div>
     </section>

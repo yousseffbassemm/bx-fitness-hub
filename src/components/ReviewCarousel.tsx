@@ -197,7 +197,7 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
       >
         {reviews.map((r) => (
           <li key={r.name} className="review-slide snap-center">
-            <figure className="flex h-full flex-col rounded-lg border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-7 shadow-[0_30px_70px_-40px_rgba(0,0,0,0.95)]">
+            <figure className="surface flex h-full flex-col rounded-lg p-7">
               <div className="flex items-center justify-between gap-3">
                 <Stars value={r.rating} />
                 <GoogleG className="h-4 w-4 opacity-70" />
@@ -227,7 +227,7 @@ export default function ReviewCarousel({ reviews }: { reviews: Review[] }) {
         ))}
       </ul>
 
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-2 flex items-center justify-center gap-3">
         <button
           type="button"
           onClick={() => step(-1)}

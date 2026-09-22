@@ -64,7 +64,7 @@ export default function Gallery() {
                 type="button"
                 onClick={() => setOpen(i)}
                 aria-label={`View photo: ${g.alt}`}
-                className="group relative block h-full w-full overflow-hidden rounded-sm bg-charcoal"
+                className="surface photo-inset group relative block h-full w-full overflow-hidden rounded-md bg-charcoal"
               >
                 <Image
                   src={g.src}

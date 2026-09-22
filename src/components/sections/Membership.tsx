@@ -35,10 +35,8 @@ export default function Membership() {
           {plans.map((p, i) => (
             <Reveal key={p.name} variant="scale" delay={i * 110}>
               <article
-                className={`relative flex h-full flex-col rounded-sm border p-8 transition-all duration-500 lg:p-10 ${
-                  p.featured
-                    ? "border-lime/35 bg-gradient-to-b from-lime/[0.07] to-transparent shadow-[0_30px_70px_-40px_rgba(199,236,30,0.35)]"
-                    : "border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent hover:border-white/20"
+                className={`surface relative flex h-full flex-col rounded-md p-8 lg:p-10 ${
+                  p.featured ? "surface-featured" : ""
                 }`}
               >
                 {p.featured && (

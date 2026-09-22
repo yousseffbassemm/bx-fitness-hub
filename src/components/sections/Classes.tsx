@@ -100,7 +100,7 @@ export default function Classes() {
         <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {disciplines.map((d, i) => (
             <Reveal key={d.name} variant="scale" delay={(i % 4) * 80}>
-              <article className="group h-full rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent p-6 transition-all duration-500 hover:-translate-y-1 hover:border-lime/40">
+              <article className="surface group h-full rounded-md p-6">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-display text-lg leading-tight text-white">{d.name}</h3>
                   <span
@@ -127,7 +127,7 @@ export default function Classes() {
 
         {/* Timetable */}
         <Reveal className="mt-16">
-          <div className="rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent">
+          <div className="surface rounded-md">
             <div
               role="tablist"
               aria-label="Class timetable by day"

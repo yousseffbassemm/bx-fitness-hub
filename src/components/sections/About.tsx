@@ -49,7 +49,7 @@ export default function About() {
                 ["04", "EightyEight kitchen", "Real food, on site, after your session"],
               ].map(([n, title, copy], i) => (
                 <Reveal as="li" key={title} delay={90 + i * 70}>
-                  <article className="group relative h-full overflow-hidden rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-6 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.9)] transition-all duration-500 hover:-translate-y-1 hover:border-lime/45 hover:shadow-[0_26px_60px_-30px_rgba(199,236,30,0.3)]">
+                  <article className="surface group relative h-full overflow-hidden rounded-md p-6">
                     {/* lime rule that runs along the top edge on hover */}
                     <span
                       aria-hidden="true"

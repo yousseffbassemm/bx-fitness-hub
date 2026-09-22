@@ -65,7 +65,7 @@ export default function Testimonials() {
 
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <Reveal variant="fade">
-          <p className="mt-8 max-w-3xl text-xs leading-relaxed text-grey-dim">
+          <p className="mx-auto mt-8 max-w-3xl text-center text-xs leading-relaxed text-grey-dim">
             Every written review Google shows across BX&apos;s two listings
             &mdash; BX Fitness Hub (4.6 from 76) and BX Spa (4.9 from 35)
             &mdash; read on 22 September 2026. The remaining ratings carry no

@@ -79,7 +79,7 @@ export default function Contact() {
             </Reveal>
 
             <Reveal delay={150} className="mt-10">
-              <div className="aspect-[16/10] w-full overflow-hidden rounded-sm border border-white/10">
+              <div className="surface aspect-[16/10] w-full overflow-hidden rounded-md">
                 <iframe
                   src={mapSrc}
                   title={`Map showing ${site.name} in New Cairo`}
@@ -93,7 +93,7 @@ export default function Contact() {
 
           {/* Form */}
           <Reveal variant="right" delay={60}>
-            <div className="rounded-sm border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent p-7 shadow-[0_30px_70px_-45px_rgba(0,0,0,0.9)] lg:sticky lg:top-28 lg:p-10">
+            <div className="surface rounded-md p-7 lg:sticky lg:top-28 lg:p-10">
               <div className="flex items-center gap-3">
                 <span className="h-px w-8 bg-lime" />
                 <span className="kicker">Start here</span>

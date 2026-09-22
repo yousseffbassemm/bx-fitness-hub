@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { staffAuthConfigured } from "@/lib/staff/session";
 import StaffLoginForm from "@/components/staff/StaffLoginForm";
+import BackToSite from "@/components/staff/BackToSite";
 import { Mark } from "@/components/ui/Logo";
 
 export default function StaffLoginPage() {
@@ -9,6 +10,7 @@ export default function StaffLoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm">
+        <BackToSite className="mb-8" />
         <div className="flex items-center gap-2.5 text-white">
           <Mark className="h-9 w-9" />
           <span className="font-display text-[0.92rem] leading-none tracking-tight">
