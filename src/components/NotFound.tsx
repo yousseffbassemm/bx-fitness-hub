@@ -19,19 +19,30 @@ import { Button } from "./ui/Button";
  * only thing that distinguishes them.
  */
 export default function NotFound() {
-  const booking = usePathname().startsWith("/b/");
+  const path = usePathname();
+  const booking = path.startsWith("/b/");
+  // A mistyped staff address - /staff/bookings, say, when the bookings are
+  // at /staff - used to land on the members' page, which answers a question
+  // they were not asking and points at the timetable.
+  const staff = path.startsWith("/staff");
 
   return (
     <section className="mx-auto flex min-h-[70vh] max-w-lg flex-col justify-center px-6 py-24">
       <div className="flex items-center gap-3">
         <span className="h-px w-8 bg-lime" />
-        <span className="kicker">{booking ? "Booking not found" : "Page not found"}</span>
+        <span className="kicker">
+          {booking ? "Booking not found" : staff ? "No such screen" : "Page not found"}
+        </span>
       </div>
 
       <h1 className="font-display mt-6 text-4xl leading-tight text-white">
         {booking ? (
           <>
             We can&rsquo;t find that <span className="text-lime">place.</span>
+          </>
+        ) : staff ? (
+          <>
+            No staff screen <span className="text-lime">there.</span>
           </>
         ) : (
           <>
@@ -47,6 +58,11 @@ export default function NotFound() {
             place may already have been given up. If you think it is still
             yours, call us &mdash; we can find any booking by phone number.
           </>
+        ) : staff ? (
+          <>
+            Everything is reachable from the dashboard: bookings, enquiries,
+            the timetable and the rest of the site&rsquo;s content.
+          </>
         ) : (
           <>
             The address may be out of date, or mistyped. Everything the gym
@@ -56,15 +72,26 @@ export default function NotFound() {
       </p>
 
       <div className="mt-8 flex flex-wrap gap-3">
-        <Button href="/#classes">See the timetable</Button>
-        {booking ? (
-          <Button href={site.phone.href} variant="outline">
-            Call {site.phone.display}
-          </Button>
+        {staff ? (
+          <>
+            <Button href="/staff">Back to the dashboard</Button>
+            <Button href="/" variant="outline">
+              The site
+            </Button>
+          </>
         ) : (
-          <Button href="/" variant="outline">
-            Back to the start
-          </Button>
+          <>
+            <Button href="/#classes">See the timetable</Button>
+            {booking ? (
+              <Button href={site.phone.href} variant="outline">
+                Call {site.phone.display}
+              </Button>
+            ) : (
+              <Button href="/" variant="outline">
+                Back to the start
+              </Button>
+            )}
+          </>
         )}
       </div>
     </section>
