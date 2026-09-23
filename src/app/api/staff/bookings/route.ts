@@ -36,6 +36,18 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  // Whether the money actually changed hands, which is not the same as what
+  // they said at booking. Refused on a member: they have nothing to pay.
+  if (action === "paid" || action === "unpaid") {
+    const done = await (await getStore()).setPaid(id, action === "paid");
+    return done
+      ? NextResponse.json({ ok: true })
+      : NextResponse.json(
+          { error: "That booking is not there, or is a member's." },
+          { status: 404 },
+        );
+  }
+
   if (action !== "cancel" && action !== "restore") {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }

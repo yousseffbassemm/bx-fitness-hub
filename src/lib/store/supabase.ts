@@ -119,6 +119,7 @@ const toBooking = (r: BookingPayload): BookingRow => ({
   memberId: (r.member_id as string | null) ?? null,
   memberNo: r.members?.member_no ?? null,
   payment: (r.payment as BookingRow["payment"]) ?? null,
+  paidAt: (r.paid_at as string | null) ?? null,
 });
 
 /** Every booking read asks for the membership number alongside it. */
@@ -216,6 +217,21 @@ export const supabaseStore: BookingStore = {
     );
     if (!res.ok) throw new Error(`Supabase listPromoted failed: ${res.status}`);
     return ((await res.json()) as BookingPayload[]).map(toBooking);
+  },
+
+  async setPaid(id, paid) {
+    // A member has nothing to pay, so there is nothing to tick off - the
+    // filter, not just the column, is what keeps that true.
+    const res = await fetch(
+      `${url}/rest/v1/bookings?id=eq.${encodeURIComponent(id)}&member_id=is.null`,
+      {
+        method: "PATCH",
+        headers: { ...headers(), Prefer: "return=representation" },
+        body: JSON.stringify({ paid_at: paid ? new Date().toISOString() : null }),
+      },
+    );
+    if (!res.ok) throw new Error(`Supabase setPaid failed: ${res.status}`);
+    return ((await res.json()) as unknown[]).length > 0;
   },
 
   async markTold(id) {

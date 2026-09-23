@@ -76,7 +76,7 @@ describe("POST /api/classes/book", () => {
     const { status, body } = await read(await book(post("/api/classes/book", twice)));
     assert.equal(status, 409);
     assert.equal(body.reason, "duplicate");
-    assert.match(String(body.error), /already booked/i);
+    assert.match(String(body.error), /already have a place/i);
   });
 
   it("will not take a name or a number that is not one", async () => {

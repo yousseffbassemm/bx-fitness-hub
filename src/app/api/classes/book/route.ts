@@ -71,7 +71,10 @@ export async function POST(request: Request) {
         {
           error:
             result.reason === "duplicate"
-              ? "That number is already booked onto this class."
+              // "That number" used to mean the phone and only the phone.
+              // It could now mean a membership number too, so it says who
+              // rather than which number.
+              ? "You already have a place in this class."
               : "This class just filled up.",
           reason: result.reason,
         },

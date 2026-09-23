@@ -29,11 +29,26 @@ alter table public.bookings drop constraint if exists bookings_session_id_class_
 
 create index if not exists bookings_date_idx on public.bookings (class_date);
 
--- One place per phone per class, counting live rows only - otherwise someone
--- who was cancelled could never rebook.
-create unique index if not exists bookings_live_unique
+-- ---------------------------------------------------------------------------
+-- One place per person, where "person" means the membership if there is one.
+--
+-- The old rule was one live booking per phone per class. That is right for
+-- guests and wrong for members, because BX sells a Couples & Friends plan and
+-- two memberships on one number is what that plan is - so the second of a
+-- couple was refused as a duplicate of the first.
+--
+-- Two rules now. A membership books a class once. A guest phone books a class
+-- once. Neither can stand in for the other.
+-- ---------------------------------------------------------------------------
+drop index if exists public.bookings_live_unique;
+
+create unique index if not exists bookings_live_member_unique
+  on public.bookings (session_id, class_date, member_id)
+  where cancelled_at is null and member_id is not null;
+
+create unique index if not exists bookings_live_guest_unique
   on public.bookings (session_id, class_date, phone)
-  where cancelled_at is null;
+  where cancelled_at is null and member_id is null;
 
 -- The table is only ever reached through the service role from the server,
 -- so no anon policy is granted.
@@ -93,6 +108,18 @@ alter table public.bookings
 
 alter table public.bookings
   add column if not exists payment text;
+
+-- ---------------------------------------------------------------------------
+-- Whether a guest has actually handed the money over.
+--
+-- payment is what they said they would do; this is what happened. At seven
+-- o'clock the desk's question is not "cash or card", it is "has this one
+-- paid" - and without this the list looked identical for somebody who paid an
+-- hour ago and somebody who walked straight past.
+--
+-- Null on a member, always: there is nothing for them to pay.
+-- ---------------------------------------------------------------------------
+alter table public.bookings add column if not exists paid_at timestamptz;
 
 do $$
 begin
@@ -319,9 +346,16 @@ end;
 $$;
 
 -- One live entry per phone per slot, the same rule bookings follow.
-create unique index if not exists waitlist_live_unique
-  on waitlist (session_id, class_date, phone)
-  where promoted_at is null;
+-- The same split for the queue, for the same reason.
+drop index if exists public.waitlist_live_unique;
+
+create unique index if not exists waitlist_live_member_unique
+  on public.waitlist (session_id, class_date, member_id)
+  where promoted_at is null and member_id is not null;
+
+create unique index if not exists waitlist_live_guest_unique
+  on public.waitlist (session_id, class_date, phone)
+  where promoted_at is null and member_id is null;
 
 create index if not exists waitlist_date_idx on waitlist (class_date);
 

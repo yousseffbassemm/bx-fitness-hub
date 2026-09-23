@@ -23,6 +23,7 @@ assert.equal(supabaseConfigured, false, "must never run against the real databas
 
 const { PUT: saveContent } = await import("../src/app/api/staff/content/route.ts");
 const { POST: addUser, PATCH: setRole, DELETE: removeUser } = await import("../src/app/api/staff/users/route.ts");
+const { PATCH: patchBookings } = await import("../src/app/api/staff/bookings/route.ts");
 const { revalidated } = await import("./support/stubs/next-cache.ts");
 const { createSessionToken, STAFF_COOKIE } = await import("../src/lib/staff/session.ts");
 const { getStore } = await import("../src/lib/store/index.ts");
@@ -206,6 +207,63 @@ describe("PUT /api/staff/content", () => {
   it("refuses a section it does not know, and a value that is not a list", async () => {
     assert.equal((await read(await saveContent(send("PUT", "/api/staff/content", { key: "nope", value: [] }, asAdmin())))).status, 400);
     assert.equal((await read(await saveContent(send("PUT", "/api/staff/content", { key: "plans", value: { a: 1 } }, asAdmin())))).status, 400);
+  });
+});
+
+describe("marking a guest paid", () => {
+  const { PATCH: bookings } = { PATCH: patchBookings };
+
+  it("ticks them off and back again", async () => {
+    const store = await getStore();
+    await store.book({
+      sessionId: "0-200-mobility-flexibility",
+      date: "2027-01-02",
+      name: "Owes Money",
+      phone: "01000000810",
+      capacity: 14,
+      payment: "cash",
+    });
+    const [row] = await store.list("2027-01-02", "2027-01-02");
+
+    const paid = await read(
+      await bookings(send("PATCH", "/api/staff/bookings", { id: row.id, action: "paid" }, asAdmin())),
+    );
+    assert.equal(paid.status, 200);
+    assert.notEqual((await store.get(row.id))?.paidAt, null);
+
+    const undone = await read(
+      await bookings(send("PATCH", "/api/staff/bookings", { id: row.id, action: "unpaid" }, asAdmin())),
+    );
+    assert.equal(undone.status, 200);
+    assert.equal((await store.get(row.id))?.paidAt, null);
+  });
+
+  it("refuses to mark a member, because there is nothing to pay", async () => {
+    const store = await getStore();
+    const member = await store.addMember({ memberNo: "PD-1", name: "A Member", phone: "01000000811" });
+    assert.ok(member.ok);
+    await store.book({
+      sessionId: "0-200-mobility-flexibility",
+      date: "2027-01-09",
+      name: "A Member",
+      phone: "01000000811",
+      capacity: 14,
+      memberId: member.member.id,
+    });
+    const [row] = await store.list("2027-01-09", "2027-01-09");
+
+    const { status } = await read(
+      await bookings(send("PATCH", "/api/staff/bookings", { id: row.id, action: "paid" }, asAdmin())),
+    );
+    assert.equal(status, 404);
+    assert.equal((await store.get(row.id))?.paidAt, null);
+  });
+
+  it("is not something the public can do", async () => {
+    const { status } = await read(
+      await bookings(send("PATCH", "/api/staff/bookings", { id: "anything", action: "paid" })),
+    );
+    assert.equal(status, 401);
   });
 });
 

@@ -207,6 +207,10 @@ function migrate(next: DatabaseSync) {
   if (!bookingCols.some((c) => c.name === "payment")) {
     next.exec("ALTER TABLE bookings ADD COLUMN payment TEXT");
   }
+  // What they said they would do is not the same as what happened.
+  if (!bookingCols.some((c) => c.name === "paid_at")) {
+    next.exec("ALTER TABLE bookings ADD COLUMN paid_at TEXT");
+  }
 
   // People waiting for a class that was full. One live entry per phone per
   // slot, same rule as bookings, for the same reason.
@@ -230,10 +234,17 @@ function migrate(next: DatabaseSync) {
   if (!waitCols.some((c) => c.name === "payment")) {
     next.exec("ALTER TABLE waitlist ADD COLUMN payment TEXT");
   }
+  // The same split for the queue, for the same reason.
+  next.exec("DROP INDEX IF EXISTS waitlist_live_unique");
   next.exec(`
-    CREATE UNIQUE INDEX IF NOT EXISTS waitlist_live_unique
+    CREATE UNIQUE INDEX IF NOT EXISTS waitlist_live_member_unique
+      ON waitlist (session_id, class_date, member_id)
+      WHERE promoted_at IS NULL AND member_id IS NOT NULL
+  `);
+  next.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS waitlist_live_guest_unique
       ON waitlist (session_id, class_date, phone)
-      WHERE promoted_at IS NULL
+      WHERE promoted_at IS NULL AND member_id IS NULL
   `);
   next.exec("CREATE INDEX IF NOT EXISTS waitlist_date_idx ON waitlist (class_date)");
 
@@ -252,10 +263,23 @@ function migrate(next: DatabaseSync) {
   `);
 
   next.exec("CREATE INDEX IF NOT EXISTS bookings_date_idx ON bookings (class_date)");
+  /*
+    One place per person, where "person" is the membership if there is one.
+    The old rule matched on the phone alone, which is right for guests and
+    wrong for members: BX sells a Couples & Friends plan, so two memberships
+    on one number is what that plan is, and the second of a couple was
+    refused as a duplicate of the first.
+  */
+  next.exec("DROP INDEX IF EXISTS bookings_live_unique");
   next.exec(`
-    CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_unique
+    CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_member_unique
+      ON bookings (session_id, class_date, member_id)
+      WHERE cancelled_at IS NULL AND member_id IS NOT NULL
+  `);
+  next.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_guest_unique
       ON bookings (session_id, class_date, phone)
-      WHERE cancelled_at IS NULL
+      WHERE cancelled_at IS NULL AND member_id IS NULL
   `);
 }
 
@@ -292,6 +316,7 @@ type BookingDbRow = {
   member_id: string | null;
   member_no: string | null;
   payment: string | null;
+  paid_at: string | null;
 };
 
 /*
@@ -301,7 +326,7 @@ type BookingDbRow = {
 */
 const BOOKING_COLUMNS =
   "b.id, b.session_id, b.class_date, b.name, b.phone, b.created_at, b.cancelled_at, " +
-  "b.token, b.promoted_at, b.member_id, b.payment, m.member_no";
+  "b.token, b.promoted_at, b.member_id, b.payment, b.paid_at, m.member_no";
 
 const BOOKING_FROM = "bookings b LEFT JOIN members m ON m.id = b.member_id";
 
@@ -341,6 +366,7 @@ const toBooking = (r: BookingDbRow): BookingRow => ({
   memberId: r.member_id,
   memberNo: r.member_no,
   payment: (r.payment as BookingRow["payment"]) ?? null,
+  paidAt: r.paid_at,
 });
 
 /** The member's handle on their booking. Long enough not to be guessed. */
@@ -764,6 +790,18 @@ export const sqliteStore: BookingStore = {
       )
       .all(from, to) as BookingDbRow[];
     return rows.map(toBooking);
+  },
+
+  async setPaid(id, paid) {
+    // A member has nothing to pay, so there is nothing to tick off.
+    const info = open()
+      .prepare(
+        paid
+          ? "UPDATE bookings SET paid_at = datetime('now') WHERE id = ? AND member_id IS NULL"
+          : "UPDATE bookings SET paid_at = NULL WHERE id = ? AND member_id IS NULL",
+      )
+      .run(id);
+    return Number(info.changes) > 0;
   },
 
   async markTold(id) {

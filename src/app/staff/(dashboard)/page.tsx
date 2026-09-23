@@ -10,6 +10,7 @@ import { getStore } from "@/lib/store";
 import type { BookingRow } from "@/lib/store/types";
 import BookingRowActions from "@/components/staff/BookingRowActions";
 import PageHeader from "@/components/staff/PageHeader";
+import PaidToggle from "@/components/staff/PaidToggle";
 import PromotedActions from "@/components/staff/PromotedActions";
 
 // Bookings change constantly; never serve a cached list.
@@ -24,7 +25,14 @@ type Group = {
   capacity: number;
   people: Pick<
     BookingRow,
-    "id" | "name" | "phone" | "cancelledAt" | "memberId" | "memberNo" | "payment"
+    | "id"
+    | "name"
+    | "phone"
+    | "cancelledAt"
+    | "memberId"
+    | "memberNo"
+    | "payment"
+    | "paidAt"
   >[];
 };
 
@@ -98,6 +106,7 @@ export default async function StaffPage(props: PageProps<"/staff">) {
       memberId: row.memberId,
       memberNo: row.memberNo,
       payment: row.payment,
+      paidAt: row.paidAt,
     });
   }
 
@@ -312,9 +321,15 @@ export default async function StaffPage(props: PageProps<"/staff">) {
                                   Member{p.memberNo ? ` ${p.memberNo}` : ""}
                                 </span>
                               ) : (
-                                <span className="rounded-sm border border-amber/40 px-1.5 py-0.5 text-[0.62rem] tracking-[0.1em] text-amber uppercase">
-                                  Guest{p.payment ? ` \u00b7 ${p.payment}` : ""}
-                                </span>
+                                <>
+                                  <span className="rounded-sm border border-white/15 px-1.5 py-0.5 text-[0.62rem] tracking-[0.1em] text-grey uppercase">
+                                    Guest{p.payment ? ` \u00b7 ${p.payment}` : ""}
+                                  </span>
+                                  {/* Said they would pay is not the same as
+                                      paid, so this is its own thing and it
+                                      is a tap, not a screen. */}
+                                  {!off && <PaidToggle id={p.id} paid={p.paidAt !== null} />}
+                                </>
                               )}
                               {off && (
                                 <span className="text-[0.7rem] tracking-[0.1em] text-pink uppercase">

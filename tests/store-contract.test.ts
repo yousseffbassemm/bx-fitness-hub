@@ -373,6 +373,104 @@ function contract(label: string, open: () => Promise<BookingStore>) {
         assert.equal(promoted.memberNo, "BX-0142");
       });
 
+      it("lets two memberships on one phone both book the same class", async () => {
+        /*
+          The bug this was written for. One place per phone per class is
+          right for guests and wrong for members: a Couples & Friends plan
+          is two memberships on one number, and the second of the couple was
+          refused as a duplicate of the first.
+        */
+        const date = "2026-11-28";
+        const one = await store.addMember({ memberNo: "CF-1", name: "Partner One", phone: "01000000800" });
+        const two = await store.addMember({ memberNo: "CF-2", name: "Partner Two", phone: "01000000800" });
+        assert.ok(one.ok && two.ok);
+
+        const first = await store.book({
+          sessionId: SESSION, date, name: "Partner One", phone: "01000000800",
+          capacity: CAPACITY, memberId: one.ok ? one.member.id : null,
+        });
+        const second = await store.book({
+          sessionId: SESSION, date, name: "Partner Two", phone: "01000000800",
+          capacity: CAPACITY, memberId: two.ok ? two.member.id : null,
+        });
+        assert.equal(first.ok, true, "the first of the couple");
+        assert.equal(second.ok, true, "and the second, on the same phone");
+        assert.equal(await taken(store, date), 2);
+      });
+
+      it("still refuses the same membership twice on one class", async () => {
+        const date = "2026-11-28";
+        const found = await store.findMember("CF-1");
+        assert.ok(found.found);
+        const again = await store.book({
+          sessionId: SESSION, date, name: "Partner One", phone: "01000000800",
+          capacity: CAPACITY, memberId: found.member.id,
+        });
+        assert.equal(again.ok, false);
+        assert.equal(again.ok === false && again.reason, "duplicate");
+      });
+
+      it("still refuses the same guest phone twice on one class", async () => {
+        const date = "2026-12-05";
+        assert.equal(
+          (await store.book({ sessionId: SESSION, date, name: "Walk In", phone: "01000000801", capacity: CAPACITY, payment: "cash" })).ok,
+          true,
+        );
+        const again = await store.book({
+          sessionId: SESSION, date, name: "Walk In", phone: "01000000801", capacity: CAPACITY, payment: "cash",
+        });
+        assert.equal(again.ok, false);
+      });
+
+      it("lets the couple queue separately too", async () => {
+        const date = "2026-12-12";
+        await store.book({ sessionId: SESSION, date, name: "Filler", phone: "01000000802", capacity: 1, payment: "cash" });
+        const one = await store.findMember("CF-1");
+        const two = await store.findMember("CF-2");
+        assert.ok(one.found && two.found);
+
+        assert.equal(
+          (await store.joinWaitlist({ sessionId: SESSION, date, name: "Partner One", phone: "01000000800", memberId: one.member.id })).ok,
+          true,
+        );
+        assert.equal(
+          (await store.joinWaitlist({ sessionId: SESSION, date, name: "Partner Two", phone: "01000000800", memberId: two.member.id })).ok,
+          true,
+          "the queue splits the same way booking does",
+        );
+      });
+
+      it("ticks a guest off as paid, and back again", async () => {
+        // What they said they would pay is not what happened. The desk needs
+        // the second one.
+        const date = "2026-12-19";
+        await store.book({
+          sessionId: SESSION, date, name: "Owes Money", phone: "01000000803",
+          capacity: CAPACITY, payment: "cash",
+        });
+        const [row] = await store.list(date, date);
+        assert.equal(row.paidAt, null, "nobody has paid just by booking");
+
+        assert.equal(await store.setPaid(row.id, true), true);
+        assert.notEqual((await store.get(row.id))?.paidAt, null);
+
+        assert.equal(await store.setPaid(row.id, false), true);
+        assert.equal((await store.get(row.id))?.paidAt, null);
+      });
+
+      it("will not mark a member as paid, because there is nothing to pay", async () => {
+        const date = "2026-12-26";
+        const found = await store.findMember("CF-1");
+        assert.ok(found.found);
+        await store.book({
+          sessionId: SESSION, date, name: "Partner One", phone: "01000000800",
+          capacity: CAPACITY, memberId: found.member.id,
+        });
+        const [row] = await store.list(date, date);
+        assert.equal(await store.setPaid(row.id, true), false);
+        assert.equal((await store.get(row.id))?.paidAt, null);
+      });
+
       it("removing a membership leaves the bookings naming the person", async () => {
         const before = await store.list("2026-11-07", "2026-11-07");
         assert.equal(before[0].name, "Karma W");

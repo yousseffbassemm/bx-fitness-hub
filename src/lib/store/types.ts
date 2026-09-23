@@ -55,6 +55,15 @@ export type BookingRow = {
   memberNo: string | null;
   /** How a guest said they would pay. Null for members. */
   payment: PaymentMethod | null;
+  /**
+   * When a guest actually handed the money over.
+   *
+   * payment is what they said they would do; this is what happened. At seven
+   * o'clock the desk's question is not "cash or card", it is "has this one
+   * paid" - and the two are not the same thing. Always null on a member:
+   * there is nothing for them to pay.
+   */
+  paidAt: string | null;
 };
 
 /** Somebody who pays BX monthly or yearly, rather than per class. */
@@ -180,6 +189,8 @@ export interface BookingStore {
   listPromoted(from: string, to: string): Promise<BookingRow[]>;
   /** Mark a promoted booking as told. */
   markTold(id: string): Promise<void>;
+  /** Tick a guest off as paid, or undo it. Members are never marked. */
+  setPaid(id: string, paid: boolean): Promise<boolean>;
 
   /** Record an enquiry from the "Start here" form. */
   saveLead(input: LeadInput): Promise<{ ok: true; id: string }>;

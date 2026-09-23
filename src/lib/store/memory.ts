@@ -113,12 +113,14 @@ export const memoryStore: BookingStore = {
   },
 
   async joinWaitlist({ sessionId, date, name, phone, memberId = null, payment = null }) {
+    // The same split as booking: a membership queues once, a guest phone
+    // queues once, and neither stands in for the other.
     const already = waiting.some(
       (w) =>
         w.sessionId === sessionId &&
         w.date === date &&
-        w.phone === phone &&
-        w.promotedAt === null,
+        w.promotedAt === null &&
+        (memberId ? w.memberId === memberId : w.memberId === null && w.phone === phone),
     );
     if (already) return { ok: false as const, reason: "duplicate" as const };
 
@@ -168,6 +170,7 @@ export const memoryStore: BookingStore = {
       memberId: next.memberId,
       memberNo: members.find((m) => m.id === next.memberId)?.memberNo ?? null,
       payment: next.payment,
+      paidAt: null,
     };
     rows.push(row);
     return row;
@@ -178,6 +181,14 @@ export const memoryStore: BookingStore = {
       (r) =>
         r.date >= from && r.date <= to && r.promotedAt !== null && r.cancelledAt === null,
     );
+  },
+
+  async setPaid(id, paid) {
+    const row = rows.find((r) => r.id === id);
+    // A member has nothing to pay, so there is nothing to tick off.
+    if (!row || row.memberId) return false;
+    row.paidAt = paid ? new Date().toISOString() : null;
+    return true;
   },
 
   async markTold(id) {
@@ -280,7 +291,16 @@ export const memoryStore: BookingStore = {
   }: BookingInput): Promise<BookingResult> {
     const mine = live(sessionId, date);
 
-    if (mine.some((r) => r.phone === phone)) return { ok: false, reason: "duplicate" };
+    /*
+      One place per person, where "person" is the membership if there is one.
+      Two memberships on one phone is a Couples & Friends plan, so matching
+      on the phone alone refused the second of a couple as a duplicate of
+      the first.
+    */
+    const already = memberId
+      ? mine.some((r) => r.memberId === memberId)
+      : mine.some((r) => r.memberId === null && r.phone === phone);
+    if (already) return { ok: false, reason: "duplicate" };
     if (mine.length >= capacity) return { ok: false, reason: "full" };
 
     const mineToken = token();
@@ -297,6 +317,7 @@ export const memoryStore: BookingStore = {
       memberId,
       memberNo: members.find((m) => m.id === memberId)?.memberNo ?? null,
       payment,
+      paidAt: null,
     });
     return { ok: true, spotsLeft: capacity - mine.length - 1, token: mineToken };
   },
