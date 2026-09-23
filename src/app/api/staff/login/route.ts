@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { report } from "@/lib/report";
 import { verifyPassword } from "@/lib/staff/password";
 import {
   SESSION_SECONDS,
@@ -82,7 +83,24 @@ export async function POST(request: Request) {
   const name = username.trim().toLowerCase();
 
   const store = await getStore();
-  const user = USERNAME_PATTERN.test(name) ? await store.findStaffUser(name) : null;
+
+  /*
+    Reaching the accounts is a separate failure from getting the password
+    wrong, and it was being reported as the same thing: the store threw, the
+    route answered 500 with no body, and the form fell back to "Could not
+    sign you in." Someone with the right password would sit there retyping
+    it while the database was simply unreachable.
+  */
+  let user;
+  try {
+    user = USERNAME_PATTERN.test(name) ? await store.findStaffUser(name) : null;
+  } catch (error) {
+    await report("POST /api/staff/login", error, `looking up ${name}`);
+    return NextResponse.json(
+      { error: "Cannot reach the staff records just now. Try again shortly." },
+      { status: 503 },
+    );
+  }
 
   /*
     The password is verified even when there is no such user, against a hash
@@ -110,7 +128,14 @@ export async function POST(request: Request) {
   }
 
   attempts.delete(ip);
-  await store.touchStaffLogin(user.username);
+
+  // Bookkeeping. They have proved who they are, so a failure to write down
+  // when must not be what stops them getting in.
+  try {
+    await store.touchStaffLogin(user.username);
+  } catch (error) {
+    await report("POST /api/staff/login", error, `stamping ${user.username}`);
+  }
 
   const response = NextResponse.json({ ok: true, username: user.username });
   response.cookies.set(STAFF_COOKIE, token, {

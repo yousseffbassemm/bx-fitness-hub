@@ -78,7 +78,9 @@ export async function requireAdmin(request: Request) {
     return {
       ok: false as const,
       status: 403,
-      error: "Only an admin can change accounts.",
+      // This guard covers prices, photographs and the problem list as well
+      // as accounts, so it does not name one of them.
+      error: "Only an admin can do that.",
     };
   }
 

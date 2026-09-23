@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { report } from "@/lib/report";
 import { requireStaff } from "@/lib/staff/guard";
 import { getStore } from "@/lib/store";
 
@@ -33,9 +34,27 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Missing handled flag" }, { status: 400 });
   }
 
-  const result = await (await getStore()).setLeadHandled(id, handled);
-  if (!result.ok) {
+  /*
+    Enquiry ids are whole numbers in both stores. Without this check an id
+    of any other shape reached Postgres, which refused it, and the store
+    threw - the only route here that let an exception out as a bare 500
+    with nothing written to Problems.
+  */
+  if (!/^\d+$/.test(id)) {
     return NextResponse.json({ error: "That enquiry is gone" }, { status: 404 });
+  }
+
+  try {
+    const result = await (await getStore()).setLeadHandled(id, handled);
+    if (!result.ok) {
+      return NextResponse.json({ error: "That enquiry is gone" }, { status: 404 });
+    }
+  } catch (error) {
+    await report("PATCH /api/staff/leads", error, `lead ${id}`);
+    return NextResponse.json(
+      { error: "Could not update that enquiry just now." },
+      { status: 503 },
+    );
   }
 
   return NextResponse.json({ ok: true });
