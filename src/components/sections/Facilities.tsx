@@ -11,7 +11,7 @@ export default async function Facilities() {
   const facilities = await getFacilities();
 
   return (
-    <section id="facilities" className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
+    <section id="facilities" className="relative py-11 sm:py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <SectionHead
           kicker="Facilities"

@@ -13,7 +13,7 @@ export default async function Coaches() {
   const coaches = await getCoaches();
 
   return (
-    <section id="coaches" className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
+    <section id="coaches" className="relative py-11 sm:py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <SectionHead
           kicker="The team"

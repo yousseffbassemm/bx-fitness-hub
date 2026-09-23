@@ -69,9 +69,44 @@ async function sendEmail(
   });
 
   if (!res.ok) {
-    throw new Error(`Resend refused it: ${res.status} ${await res.text()}`);
+    throw new Error(await explain(res));
   }
   return true;
+}
+
+/**
+ * Why the email did not go, in words somebody can act on.
+ *
+ * These land on the Problems screen, where the reader is whoever runs the
+ * gym - not the person who wrote this. The provider's own answer is a
+ * status code and a blob of JSON, and the two that actually happen here
+ * both have a specific, boring cause worth naming.
+ */
+async function explain(res: Response) {
+  const body = await res.text();
+
+  if (res.status === 403 && /verify a domain/i.test(body)) {
+    return (
+      "Nobody was emailed. The email account is still in test mode, so it " +
+      "can only send to the address it was opened with. Verify a domain at " +
+      "resend.com/domains and set NOTIFY_EMAIL_FROM to an address on it. " +
+      "Nothing is lost: enquiries are on the Enquiries screen and anyone " +
+      "moved off a waitlist is listed on Bookings."
+    );
+  }
+
+  if (res.status === 422 && /`to`|invalid.*to field/i.test(body)) {
+    return (
+      "Nobody was emailed: the address it tried to reach was refused. Check " +
+      "NOTIFY_EMAIL_TO is a real address the gym reads."
+    );
+  }
+
+  if (res.status === 429) {
+    return "Nobody was emailed: too many sent at once. It will work again shortly.";
+  }
+
+  return `The email provider refused it: ${res.status} ${body.slice(0, 300)}`;
 }
 
 /**

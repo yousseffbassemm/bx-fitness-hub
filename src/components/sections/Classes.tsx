@@ -117,7 +117,7 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
   }
 
   return (
-    <section id="classes" className="relative py-11 sm:py-11 sm:py-16 lg:py-24">
+    <section id="classes" className="relative py-11 sm:py-16 lg:py-24">
       <div className="mx-auto max-w-[1600px] px-6 lg:px-12">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <SectionHead

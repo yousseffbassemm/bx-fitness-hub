@@ -1,0 +1,38 @@
+# Every push and every pull request, so a regression is caught by the repo
+# rather than by somebody at the gym.
+#
+# The four checks are the same ones run by hand before each commit. They
+# need nothing configured: the tests use a throwaway SQLite file and refuse
+# to run against Supabase, so there are no secrets here and nothing to leak.
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # The tests run TypeScript directly, which needs a recent Node.
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint . --max-warnings 0
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

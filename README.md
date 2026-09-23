@@ -231,6 +231,33 @@ Two rules:
   `git rebase` on commits that are already pushed.
 - If `git push` is rejected, `git pull`, resolve the conflict, push again.
 
+## Tests
+
+```bash
+npm test
+```
+
+About four seconds, and it needs nothing running - no server, no database,
+no internet. It uses a throwaway SQLite file and refuses to start if it can
+see Supabase, so it can never touch the real bookings.
+
+Every test exists because something actually went wrong. A few of them:
+
+- a class that had already finished could still be booked, right up to
+  midnight
+- renaming a coach lost their photograph, so the save was refused
+- every link in the header and footer did nothing on a member's booking page
+- the enquiry form said "please try again" when the answer was to wait
+- the booking dialog trapping Tab, closing on Escape, and giving focus back
+
+If one fails, the name tells you what a member would have seen. Run it before
+you push; GitHub runs it too, on every push and pull request, along with the
+types, the linter and a production build - the tab is **Actions** on the repo
+page.
+
+To check a test is worth having, break the thing it covers on purpose and
+make sure it goes red. Several of these were rewritten because they did not.
+
 ## Where everything lives
 
 ```
@@ -640,8 +667,10 @@ Everything below is a marked placeholder. Search for the bracketed token.
 | Privacy / Terms | `Footer.tsx` | Marked `[TODO]`. |
 | Lead destination | &mdash; | **Done.** Enquiries are rows in the same store as the bookings, and staff read them at `/staff`. Add email on top if BX wants a nudge as well. |
 | Class capacity | `booking.ts` &rarr; `DEFAULT_CLASS_CAPACITY` | Set to 14 as a stand-in. |
-| Booking storage | `.env` | SQLite by default. Supabase needed only for serverless or multi-instance. |
-| Staff accounts | database | Run `node scripts/staff-user.mjs add <username>`. Until one exists, `/staff` refuses every login. |
+| Booking storage | `.env.local` | **Done.** Running on Supabase; SQLite is the fallback when `SUPABASE_URL` is unset. |
+| Staff accounts | Staff &rarr; Team | **Done.** Add, re-role and remove on screen. `node scripts/staff-user.mjs add <username>` still works for the first one, before anybody can sign in. |
+| `NOTIFY_EMAIL_TO` | `.env.local` | Still `someone@bxfitnesshub.com`, so **no enquiry or waitlist email is reaching anybody.** Nothing is lost - they are all on the Enquiries and Bookings screens - but nobody is nudged. Needs a real address. |
+| Email domain | resend.com | The account can only send to the address it was opened with until a domain is verified and `NOTIFY_EMAIL_FROM` uses it. Until then the failures show on Staff &rarr; Problems, in plain words. |
 | `site.url` | `site.ts` | Set the real domain - it feeds canonical URLs and OG tags. |
 
 ## About the photography
