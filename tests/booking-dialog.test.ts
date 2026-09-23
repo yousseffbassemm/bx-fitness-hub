@@ -39,6 +39,14 @@ function answerWith(status: number, body: unknown) {
     })) as typeof fetch;
 }
 
+/**
+ * Answer "are you a member?" with guest, which is where the name and phone
+ * live. The question itself, and the member branch, have their own tests.
+ */
+async function asGuest(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: /guest/i }));
+}
+
 const open = (over: Partial<BookingTarget> = {}) =>
   render(
     createElement(BookingDialog, {
@@ -64,9 +72,27 @@ afterEach(() => {
 });
 
 describe("opening the dialog", () => {
-  it("puts the cursor in the first field, so a phone keyboard comes up", async () => {
+  it("asks whether you are a member before anything else", async () => {
+    // It changes what is asked next and what happens at the desk, so it is
+    // the first question rather than a checkbox further down.
     open();
-    await waitFor(() => assert.equal(document.activeElement?.id, "bk-name"));
+    await screen.findByRole("button", { name: /member/i });
+    await screen.findByRole("button", { name: /guest/i });
+    assert.equal(screen.queryByLabelText(/name/i), null, "nothing else is asked yet");
+  });
+
+  it("puts the cursor on that question", async () => {
+    open();
+    await waitFor(() => assert.match(document.activeElement?.textContent ?? "", /member/i));
+  });
+
+  it("asks a guest for a name, a phone and how they will pay", async () => {
+    const user = userEvent.setup();
+    open();
+    await asGuest(user);
+    await screen.findByLabelText(/name/i);
+    await screen.findByLabelText(/phone/i);
+    await screen.findByLabelText(/paying by/i);
   });
 
   it("stops the page behind it scrolling", () => {
@@ -98,6 +124,7 @@ describe("keyboard", () => {
   it("keeps Tab inside the dialog", async () => {
     const user = userEvent.setup();
     open();
+    await asGuest(user);
     const panel = screen.getByRole("dialog");
     await waitFor(() => assert.ok(panel.contains(document.activeElement)));
 
@@ -114,6 +141,7 @@ describe("keyboard", () => {
   it("keeps Shift+Tab inside it too", async () => {
     const user = userEvent.setup();
     open();
+    await asGuest(user);
     const panel = screen.getByRole("dialog");
     await waitFor(() => assert.ok(panel.contains(document.activeElement)));
 
@@ -141,6 +169,7 @@ describe("taking a place", () => {
     }) as unknown as typeof fetch;
 
     open();
+    await asGuest(user);
     await user.type(screen.getByLabelText(/name/i), "Karma");
     await user.type(screen.getByLabelText(/phone/i), "01111111111");
     await user.click(screen.getByRole("button", { name: /confirm place/i }));
@@ -152,6 +181,7 @@ describe("taking a place", () => {
       date: TARGET.date,
       name: "Karma",
       phone: "01111111111",
+      payment: "cash",
     });
     assert.equal(booked.length, 1, "the timetable row has to hear about it too");
   });
@@ -159,6 +189,7 @@ describe("taking a place", () => {
   it("shows the link back to the booking, so the place can be given up later", async () => {
     const user = userEvent.setup();
     open();
+    await asGuest(user);
     await user.type(screen.getByLabelText(/name/i), "Karma");
     await user.type(screen.getByLabelText(/phone/i), "01111111111");
     await user.click(screen.getByRole("button", { name: /confirm place/i }));
@@ -172,6 +203,7 @@ describe("taking a place", () => {
   it("copies that link to the clipboard and says it did", async () => {
     const user = userEvent.setup();
     open();
+    await asGuest(user);
     await user.type(screen.getByLabelText(/name/i), "Karma");
     await user.type(screen.getByLabelText(/phone/i), "01111111111");
     await user.click(screen.getByRole("button", { name: /confirm place/i }));
@@ -192,6 +224,7 @@ describe("taking a place", () => {
     }) as typeof fetch;
 
     open();
+    await asGuest(user);
     await user.click(screen.getByRole("button", { name: /confirm place/i }));
     await user.type(screen.getByLabelText(/name/i), "K");
     await user.type(screen.getByLabelText(/phone/i), "abc");
@@ -206,6 +239,7 @@ describe("taking a place", () => {
     answerWith(409, { error: "This class just filled up.", reason: "full" });
 
     open();
+    await asGuest(user);
     await user.type(screen.getByLabelText(/name/i), "Karma");
     await user.type(screen.getByLabelText(/phone/i), "01111111111");
     await user.click(screen.getByRole("button", { name: /confirm place/i }));
@@ -220,6 +254,7 @@ describe("taking a place", () => {
     answerWith(409, { error: "That number is already booked onto this class.", reason: "duplicate" });
 
     open();
+    await asGuest(user);
     await user.type(screen.getByLabelText(/name/i), "Karma");
     await user.type(screen.getByLabelText(/phone/i), "01111111111");
     await user.click(screen.getByRole("button", { name: /confirm place/i }));
@@ -234,6 +269,7 @@ describe("taking a place", () => {
     }) as typeof fetch;
 
     open();
+    await asGuest(user);
     await user.type(screen.getByLabelText(/name/i), "Karma");
     await user.type(screen.getByLabelText(/phone/i), "01111111111");
     await user.click(screen.getByRole("button", { name: /confirm place/i }));
@@ -256,6 +292,7 @@ describe("a full class", () => {
     }) as unknown as typeof fetch;
 
     open({ mode: "waitlist", spotsLeft: 0 });
+    await asGuest(user);
     await user.type(screen.getByLabelText(/name/i), "Karma");
     await user.type(screen.getByLabelText(/phone/i), "01111111111");
     await user.click(screen.getByRole("button", { name: /waitlist|list|join/i }));

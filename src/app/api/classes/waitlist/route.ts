@@ -7,13 +7,12 @@ import {
   slotKey,
 } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
+import { resolveParty } from "@/lib/booking-party";
 import { report } from "@/lib/report";
 import { LIMITS, allow, callerKey, tooManyMessage } from "@/lib/rate-limit";
 import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
-
-const PHONE = /^[+\d][\d\s-]{8,17}$/;
 
 /** Join the waitlist for a class that is already full. */
 export async function POST(request: Request) {
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { sessionId, date, name, phone } = (body ?? {}) as Record<string, unknown>;
+  const { sessionId, date } = (body ?? {}) as Record<string, unknown>;
 
   if (typeof sessionId !== "string" || typeof date !== "string") {
     return NextResponse.json({ error: "Missing class or date" }, { status: 400 });
@@ -49,11 +48,14 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (typeof name !== "string" || name.trim().length < 2) {
-    return NextResponse.json({ error: "Please give a name" }, { status: 400 });
-  }
-  if (typeof phone !== "string" || !PHONE.test(phone.trim())) {
-    return NextResponse.json({ error: "Please give a valid phone number" }, { status: 400 });
+  // Who is queuing, decided the same way a booking decides it - so whoever
+  // joined as a member comes off the queue as one.
+  const party = await resolveParty((body ?? {}) as Record<string, unknown>);
+  if (!party.ok) {
+    return NextResponse.json(
+      { error: party.error, reason: party.reason },
+      { status: party.status },
+    );
   }
 
   try {
@@ -77,8 +79,10 @@ export async function POST(request: Request) {
     const result = await store.joinWaitlist({
       sessionId,
       date,
-      name: name.trim(),
-      phone: phone.trim(),
+      name: party.name,
+      phone: party.phone,
+      memberId: party.memberId,
+      payment: party.payment,
     });
 
     if (!result.ok) {

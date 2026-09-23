@@ -44,12 +44,81 @@ alter table public.bookings enable row level security;
 -- The advisory lock is what stops two people both taking the last place: it
 -- serialises everyone booking the same class on the same date for the length
 -- of the transaction.
+-- ---------------------------------------------------------------------------
+-- Members.
+--
+-- Classes are open to members and to anyone off the street, and the two are
+-- not the same at the desk: a member's place is part of what they already
+-- pay for, a guest pays for the class. So a booking has to say which it is,
+-- and the only way to know is to have the membership list here.
+--
+-- phone is deliberately NOT unique. BX sells a Couples & Friends membership,
+-- and two people on one phone number is exactly what that is. A lookup that
+-- matches more than one membership asks for the number instead of guessing.
+--
+-- member_no is whatever BX already writes on a card or a spreadsheet, so it
+-- is text and optional - a gym that numbers nobody still works, by phone.
+-- ---------------------------------------------------------------------------
+create table if not exists public.members (
+  id         uuid primary key default gen_random_uuid(),
+  member_no  text,
+  name       text        not null,
+  phone      text        not null,
+  created_at timestamptz not null default now(),
+  -- Stamped rather than deleted: a lapsed member keeps their history, and
+  -- their old bookings still say who they were.
+  ended_at   timestamptz
+);
+
+-- One membership per number, ignoring case and spacing, when there is one.
+create unique index if not exists members_no_idx
+  on public.members (lower(btrim(member_no)))
+  where member_no is not null and btrim(member_no) <> '';
+
+create index if not exists members_phone_idx on public.members (phone);
+create index if not exists members_name_idx on public.members (lower(name));
+
+alter table public.members enable row level security;
+
+
+-- ---------------------------------------------------------------------------
+-- What a booking now says about who made it.
+--
+-- member_id survives the member being removed as null, and name and phone
+-- are still written onto the booking itself, so a class list a year from now
+-- still reads as the people who turned up.
+-- ---------------------------------------------------------------------------
+alter table public.bookings
+  add column if not exists member_id uuid references public.members (id) on delete set null;
+
+alter table public.bookings
+  add column if not exists payment text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'bookings_payment_check'
+  ) then
+    alter table public.bookings
+      add constraint bookings_payment_check
+      check (payment is null or payment in ('cash'));
+  end if;
+end;
+$$;
+
+create index if not exists bookings_member_idx on public.bookings (member_id);
+
+
+drop function if exists public.book_session(text, date, text, text, int);
+
 create or replace function public.book_session(
   p_session_id text,
   p_date       date,
   p_name       text,
   p_phone      text,
-  p_capacity   int
+  p_capacity   int,
+  p_member_id  uuid default null,
+  p_payment    text default null
 ) returns json
 language plpgsql
 security definer
@@ -71,22 +140,12 @@ begin
     return json_build_object('ok', false, 'reason', 'full', 'spots_left', 0);
   end if;
 
-  -- The member's own handle on this booking, the thing the "cancel your
-  -- place" link in their confirmation is made of. promote_from_waitlist
-  -- mints one; this did not, so on Supabase every ordinary booking came
-  -- back without one and the link led to /b/undefined - a 404 for everyone
-  -- who booked the normal way. 16 bytes as hex, matching the other stores
-  -- and the [a-f0-9]{16,64} the page checks.
-  -- gen_random_uuid is core Postgres; gen_random_bytes is pgcrypto, which
-  -- Supabase installs into the extensions schema. These functions pin
-  -- search_path to public, so the pgcrypto call was unresolvable and every
-  -- booking came back "function gen_random_bytes(integer) does not exist".
-  -- Stripping the dashes off a uuid gives the same 32 hex characters the
-  -- other stores produce, with nothing to install.
   v_token := replace(gen_random_uuid()::text, '-', '');
 
-  insert into public.bookings (session_id, class_date, name, phone, token)
-  values (p_session_id, p_date, p_name, p_phone, v_token);
+  insert into public.bookings
+    (session_id, class_date, name, phone, token, member_id, payment)
+  values
+    (p_session_id, p_date, p_name, p_phone, v_token, p_member_id, p_payment);
 
   return json_build_object(
     'ok', true,
@@ -236,6 +295,29 @@ create table if not exists waitlist (
   promoted_at timestamptz
 );
 
+-- ---------------------------------------------------------------------------
+-- The waitlist carries who is waiting, the same way a booking does.
+--
+-- Without this, somebody who joined the queue as a member came off it as a
+-- guest: promotion copies the row into bookings, and what it did not copy
+-- was the membership. The desk would then ask a paying member to pay again.
+-- ---------------------------------------------------------------------------
+alter table public.waitlist
+  add column if not exists member_id uuid references public.members (id) on delete set null;
+
+alter table public.waitlist
+  add column if not exists payment text;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'waitlist_payment_check') then
+    alter table public.waitlist
+      add constraint waitlist_payment_check
+      check (payment is null or payment in ('cash'));
+  end if;
+end;
+$$;
+
 -- One live entry per phone per slot, the same rule bookings follow.
 create unique index if not exists waitlist_live_unique
   on waitlist (session_id, class_date, phone)
@@ -245,13 +327,20 @@ create index if not exists waitlist_date_idx on waitlist (class_date);
 
 alter table waitlist enable row level security;
 
+drop function if exists public.join_waitlist(text, date, text, text);
+
 create or replace function join_waitlist(
-  p_session_id text, p_class_date date, p_name text, p_phone text
+  p_session_id text,
+  p_class_date date,
+  p_name       text,
+  p_phone      text,
+  p_member_id  uuid default null,
+  p_payment    text default null
 ) returns json language plpgsql as $$
 declare v_position int;
 begin
-  insert into waitlist (session_id, class_date, name, phone)
-  values (p_session_id, p_class_date, p_name, p_phone);
+  insert into waitlist (session_id, class_date, name, phone, member_id, payment)
+  values (p_session_id, p_class_date, p_name, p_phone, p_member_id, p_payment);
 
   select count(*) into v_position from waitlist
    where session_id = p_session_id and class_date = p_class_date
@@ -269,11 +358,6 @@ $$;
 create or replace function promote_from_waitlist(
   p_session_id text, p_class_date date, p_capacity int
 ) returns json language plpgsql as $$
--- v_id is the new booking's id, and bookings.id is a uuid. It was declared
--- bigint here, left over from before that column changed, so every
--- promotion failed on the RETURNING with "invalid input syntax for type
--- bigint" - the waitlist accepted people and could never move one of them
--- into a place.
 declare v_taken int; v_next waitlist%rowtype; v_token text; v_id uuid;
 begin
   perform pg_advisory_xact_lock(hashtext(p_session_id || p_class_date::text));
@@ -289,16 +373,13 @@ begin
    order by created_at, id limit 1;
   if not found then return null; end if;
 
-  -- gen_random_uuid is core Postgres; gen_random_bytes is pgcrypto, which
-  -- Supabase installs into the extensions schema. These functions pin
-  -- search_path to public, so the pgcrypto call was unresolvable and every
-  -- booking came back "function gen_random_bytes(integer) does not exist".
-  -- Stripping the dashes off a uuid gives the same 32 hex characters the
-  -- other stores produce, with nothing to install.
   v_token := replace(gen_random_uuid()::text, '-', '');
 
-  insert into bookings (session_id, class_date, name, phone, token, promoted_at)
-  values (p_session_id, p_class_date, v_next.name, v_next.phone, v_token, now())
+  insert into bookings
+    (session_id, class_date, name, phone, token, promoted_at, member_id, payment)
+  values
+    (p_session_id, p_class_date, v_next.name, v_next.phone, v_token, now(),
+     v_next.member_id, v_next.payment)
   returning id into v_id;
 
   update waitlist set promoted_at = now() where id = v_next.id;

@@ -22,3 +22,19 @@ export async function requireAdminPage() {
 
   return user;
 }
+
+/**
+ * Pages anyone signed in may see.
+ *
+ * The desk signs members up and corrects their details, so the member list
+ * is not admin-only - a list only an admin can tidy stops being true.
+ */
+export async function requireStaffPage() {
+  const me = await readSessionToken((await cookies()).get(STAFF_COOKIE)?.value);
+  if (!me) redirect("/staff/login");
+
+  const user = await (await getStore()).findStaffUser(me);
+  if (!user) redirect("/api/staff/session-ended");
+
+  return user;
+}

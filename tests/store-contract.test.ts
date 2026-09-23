@@ -223,6 +223,175 @@ function contract(label: string, open: () => Promise<BookingStore>) {
       });
     });
 
+    describe("members", () => {
+      /*
+        The membership list is what tells a booking apart at the desk: a
+        member's place is part of what they already pay for, a guest pays
+        for the class.
+      */
+      let karma = "";
+
+      it("adds one and finds it by its number or by phone", async () => {
+        const added = await store.addMember({
+          memberNo: "BX-0142",
+          name: "Karma Wael",
+          phone: "01000000900",
+        });
+        assert.equal(added.ok, true);
+        karma = added.ok ? added.member.id : "";
+
+        for (const reference of ["BX-0142", "bx-0142", "  BX-0142  ", "01000000900"]) {
+          const found = await store.findMember(reference);
+          assert.equal(found.found, true, `should find by ${JSON.stringify(reference)}`);
+          assert.equal(found.found && found.member.name, "Karma Wael");
+        }
+      });
+
+      it("does not invent a membership that is not there", async () => {
+        for (const reference of ["", "  ", "BX-9999", "01000000999"]) {
+          const found = await store.findMember(reference);
+          assert.equal(found.found, false, `should not find ${JSON.stringify(reference)}`);
+        }
+      });
+
+      it("refuses a second membership on the same number", async () => {
+        const again = await store.addMember({
+          memberNo: "bx-0142",
+          name: "Someone Else",
+          phone: "01000000901",
+        });
+        assert.equal(again.ok, false);
+      });
+
+      it("asks for the number when one phone has two memberships", async () => {
+        // BX sells a Couples & Friends plan, so two people on one number is
+        // a thing they sell. Picking one would book the wrong person in.
+        const second = await store.addMember({
+          memberNo: "BX-0143",
+          name: "Their Partner",
+          phone: "01000000900",
+        });
+        assert.equal(second.ok, true);
+
+        const byPhone = await store.findMember("01000000900");
+        assert.equal(byPhone.found, false);
+        assert.equal(byPhone.found === false && byPhone.reason, "ambiguous");
+
+        // Each number still finds its own.
+        assert.equal((await store.findMember("BX-0143")).found, true);
+      });
+
+      it("stops finding somebody once they lapse, and starts again when reinstated", async () => {
+        assert.equal(await store.setMemberEnded(karma, true), true);
+        assert.equal((await store.findMember("BX-0142")).found, false);
+
+        assert.equal(await store.setMemberEnded(karma, false), true);
+        assert.equal((await store.findMember("BX-0142")).found, true);
+      });
+
+      it("keeps a correction", async () => {
+        const changed = await store.updateMember(karma, {
+          memberNo: "BX-0142",
+          name: "Karma W",
+          phone: "01000000902",
+        });
+        assert.equal(changed.ok, true);
+        const found = await store.findMember("01000000902");
+        assert.equal(found.found && found.member.name, "Karma W");
+      });
+
+      it("will not correct one number into another's", async () => {
+        const clash = await store.updateMember(karma, {
+          memberNo: "BX-0143",
+          name: "Karma W",
+          phone: "01000000902",
+        });
+        assert.equal(clash.ok, false);
+        assert.equal(clash.ok === false && clash.reason, "duplicate-number");
+      });
+
+      it("marks a booking as theirs, and says so on the class list", async () => {
+        const result = await store.book({
+          sessionId: SESSION,
+          date: "2026-11-07",
+          name: "Karma W",
+          phone: "01000000902",
+          capacity: CAPACITY,
+          memberId: karma,
+          payment: null,
+        });
+        assert.equal(result.ok, true);
+
+        const [row] = await store.list("2026-11-07", "2026-11-07");
+        assert.equal(row.memberId, karma);
+        assert.equal(row.memberNo, "BX-0142", "the number comes from the membership");
+        assert.equal(row.payment, null, "a member does not pay for the class");
+      });
+
+      it("marks a guest's booking with how they will pay", async () => {
+        await store.book({
+          sessionId: SESSION,
+          date: "2026-11-14",
+          name: "Walk In",
+          phone: "01000000903",
+          capacity: CAPACITY,
+          memberId: null,
+          payment: "cash",
+        });
+        const [row] = await store.list("2026-11-14", "2026-11-14");
+        assert.equal(row.memberId, null);
+        assert.equal(row.memberNo, null);
+        assert.equal(row.payment, "cash");
+      });
+
+      it("brings the membership off the waitlist with them", async () => {
+        // Without this a member who queued came off the queue as a guest,
+        // and the desk would ask them to pay again.
+        const date = "2026-11-21";
+        await store.book({
+          sessionId: SESSION,
+          date,
+          name: "Filler",
+          phone: "01000000904",
+          capacity: 1,
+        });
+        await store.joinWaitlist({
+          sessionId: SESSION,
+          date,
+          name: "Karma W",
+          phone: "01000000902",
+          memberId: karma,
+          payment: null,
+        });
+
+        const [filler] = await store.list(date, date);
+        await store.cancel(filler.id);
+
+        const promoted = await store.promoteFromWaitlist(SESSION, date, 1);
+        assert.ok(promoted);
+        assert.equal(promoted.memberId, karma, "they queued as a member");
+        assert.equal(promoted.memberNo, "BX-0142");
+      });
+
+      it("removing a membership leaves the bookings naming the person", async () => {
+        const before = await store.list("2026-11-07", "2026-11-07");
+        assert.equal(before[0].name, "Karma W");
+
+        assert.equal(await store.removeMember(karma), true);
+        assert.equal((await store.findMember("BX-0142")).found, false);
+
+        const after = await store.list("2026-11-07", "2026-11-07");
+        assert.equal(after[0].name, "Karma W", "who turned up does not change");
+        assert.equal(after[0].memberId, null, "only the link goes");
+      });
+
+      it("says no rather than throwing for a membership that is not there", async () => {
+        assert.equal(await store.setMemberEnded("nope", true), false);
+        assert.equal(await store.removeMember("nope"), false);
+        assert.equal((await store.updateMember("nope", { name: "X Y", phone: "01000000905" })).ok, false);
+      });
+    });
+
     describe("problems", () => {
       it("counts the same failure once, with a tally", async () => {
         await store.recordError("POST /api/lead", "fetch failed", "stack");

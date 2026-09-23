@@ -7,6 +7,8 @@ import type {
   CancelResult,
   LeadInput,
   LeadRow,
+  Member,
+  MemberInput,
   RestoreResult,
   StaffRole,
   StaffUser,
@@ -28,7 +30,14 @@ const content = new Map<string, unknown>();
 const uploads = new Map<string, { mime: string; bytes: Uint8Array }>();
 const errors = new Map<string, ErrorRow>();
 const waiting: WaitlistRow[] = [];
+const members: Member[] = [];
 let nextWaitId = 1;
+let nextMemberId = 1;
+
+/** Membership numbers are compared ignoring case and surrounding space. */
+const tidyNo = (value: string | null | undefined) => String(value ?? "").trim();
+const sameNo = (a: string | null, b: string | null) =>
+  !!a && !!b && a.toLowerCase() === b.toLowerCase();
 
 const token = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
@@ -103,7 +112,7 @@ export const memoryStore: BookingStore = {
     return rows.find((r) => r.token === t) ?? null;
   },
 
-  async joinWaitlist({ sessionId, date, name, phone }) {
+  async joinWaitlist({ sessionId, date, name, phone, memberId = null, payment = null }) {
     const already = waiting.some(
       (w) =>
         w.sessionId === sessionId &&
@@ -121,6 +130,8 @@ export const memoryStore: BookingStore = {
       phone,
       createdAt: new Date().toISOString(),
       promotedAt: null,
+      memberId,
+      payment,
     });
 
     return {
@@ -153,6 +164,10 @@ export const memoryStore: BookingStore = {
       cancelledAt: null,
       token: token(),
       promotedAt: new Date().toISOString(),
+      // Whoever joined the queue as a member comes off it as one.
+      memberId: next.memberId,
+      memberNo: members.find((m) => m.id === next.memberId)?.memberNo ?? null,
+      payment: next.payment,
     };
     rows.push(row);
     return row;
@@ -254,7 +269,15 @@ export const memoryStore: BookingStore = {
     return { ok: true };
   },
 
-  async book({ sessionId, date, name, phone, capacity }: BookingInput): Promise<BookingResult> {
+  async book({
+    sessionId,
+    date,
+    name,
+    phone,
+    capacity,
+    memberId = null,
+    payment = null,
+  }: BookingInput): Promise<BookingResult> {
     const mine = live(sessionId, date);
 
     if (mine.some((r) => r.phone === phone)) return { ok: false, reason: "duplicate" };
@@ -271,7 +294,82 @@ export const memoryStore: BookingStore = {
       cancelledAt: null,
       token: mineToken,
       promotedAt: null,
+      memberId,
+      memberNo: members.find((m) => m.id === memberId)?.memberNo ?? null,
+      payment,
     });
     return { ok: true, spotsLeft: capacity - mine.length - 1, token: mineToken };
+  },
+
+  async findMember(reference) {
+    const wanted = tidyNo(reference);
+    if (!wanted) return { found: false, reason: "unknown" };
+
+    const active = members.filter((m) => m.endedAt === null);
+    const byNumber = active.find((m) => sameNo(m.memberNo, wanted));
+    if (byNumber) return { found: true, member: { ...byNumber } };
+
+    // Two people on one number is a Couples & Friends membership, not a
+    // mistake, so this asks for the number rather than picking one.
+    const byPhone = active.filter((m) => m.phone === wanted);
+    if (byPhone.length === 1) return { found: true, member: { ...byPhone[0] } };
+    if (byPhone.length > 1) return { found: false, reason: "ambiguous" };
+
+    return { found: false, reason: "unknown" };
+  },
+
+  async listMembers() {
+    return members
+      .map((m) => ({ ...m }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  async addMember({ memberNo, name, phone }: MemberInput) {
+    const no = tidyNo(memberNo) || null;
+    if (no && members.some((m) => sameNo(m.memberNo, no))) {
+      return { ok: false as const, reason: "duplicate-number" as const };
+    }
+
+    const member: Member = {
+      id: `m${nextMemberId++}`,
+      memberNo: no,
+      name: name.trim(),
+      phone: phone.trim(),
+      createdAt: new Date().toISOString(),
+      endedAt: null,
+    };
+    members.push(member);
+    return { ok: true as const, member: { ...member } };
+  },
+
+  async updateMember(id, { memberNo, name, phone }: MemberInput) {
+    const member = members.find((m) => m.id === id);
+    if (!member) return { ok: false as const, reason: "not-found" as const };
+
+    const no = tidyNo(memberNo) || null;
+    if (no && members.some((m) => m.id !== id && sameNo(m.memberNo, no))) {
+      return { ok: false as const, reason: "duplicate-number" as const };
+    }
+
+    member.memberNo = no;
+    member.name = name.trim();
+    member.phone = phone.trim();
+    return { ok: true as const };
+  },
+
+  async setMemberEnded(id, ended) {
+    const member = members.find((m) => m.id === id);
+    if (!member) return false;
+    member.endedAt = ended ? new Date().toISOString() : null;
+    return true;
+  },
+
+  async removeMember(id) {
+    const at = members.findIndex((m) => m.id === id);
+    if (at === -1) return false;
+    members.splice(at, 1);
+    // The bookings keep their name and phone; only the link goes.
+    for (const row of rows) if (row.memberId === id) row.memberId = null;
+    return true;
   },
 };

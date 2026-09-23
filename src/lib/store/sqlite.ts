@@ -11,6 +11,7 @@ import type {
   CancelResult,
   LeadInput,
   LeadRow,
+  Member,
   RestoreResult,
   StaffRole,
   StaffUser,
@@ -171,6 +172,42 @@ function migrate(next: DatabaseSync) {
     next.exec("ALTER TABLE bookings ADD COLUMN promoted_at TEXT");
   }
 
+  /*
+    Members.
+
+    Classes are open to members and to anyone off the street, and the two
+    are not the same at the desk: a member's place is part of what they
+    already pay for, a guest pays for the class.
+
+    phone is deliberately not unique - BX sells a Couples & Friends
+    membership, and two people on one number is what that is.
+  */
+  next.exec(`
+    CREATE TABLE IF NOT EXISTS members (
+      id         TEXT PRIMARY KEY,
+      member_no  TEXT,
+      name       TEXT NOT NULL,
+      phone      TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ended_at   TEXT
+    )
+  `);
+  next.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS members_no_idx
+      ON members (lower(trim(member_no)))
+      WHERE member_no IS NOT NULL AND trim(member_no) <> ''
+  `);
+  next.exec("CREATE INDEX IF NOT EXISTS members_phone_idx ON members (phone)");
+
+  // Who a booking belongs to, and how a guest said they would pay.
+  if (!bookingCols.some((c) => c.name === "member_id")) {
+    next.exec("ALTER TABLE bookings ADD COLUMN member_id TEXT");
+    next.exec("CREATE INDEX IF NOT EXISTS bookings_member_idx ON bookings (member_id)");
+  }
+  if (!bookingCols.some((c) => c.name === "payment")) {
+    next.exec("ALTER TABLE bookings ADD COLUMN payment TEXT");
+  }
+
   // People waiting for a class that was full. One live entry per phone per
   // slot, same rule as bookings, for the same reason.
   next.exec(`
@@ -184,6 +221,15 @@ function migrate(next: DatabaseSync) {
       promoted_at  TEXT
     )
   `);
+  // Carried through promotion, so somebody who joined the queue as a member
+  // does not come off it as a guest and get asked to pay.
+  const waitCols = next.prepare("PRAGMA table_info(waitlist)").all() as { name: string }[];
+  if (!waitCols.some((c) => c.name === "member_id")) {
+    next.exec("ALTER TABLE waitlist ADD COLUMN member_id TEXT");
+  }
+  if (!waitCols.some((c) => c.name === "payment")) {
+    next.exec("ALTER TABLE waitlist ADD COLUMN payment TEXT");
+  }
   next.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS waitlist_live_unique
       ON waitlist (session_id, class_date, phone)
@@ -243,10 +289,44 @@ type BookingDbRow = {
   cancelled_at: string | null;
   token: string | null;
   promoted_at: string | null;
+  member_id: string | null;
+  member_no: string | null;
+  payment: string | null;
 };
 
+/*
+  The membership number comes from a join, not from the booking, so a number
+  corrected on the Members screen reads correctly on an old class list. The
+  name and phone on the booking are left alone - those are who turned up.
+*/
 const BOOKING_COLUMNS =
-  "id, session_id, class_date, name, phone, created_at, cancelled_at, token, promoted_at";
+  "b.id, b.session_id, b.class_date, b.name, b.phone, b.created_at, b.cancelled_at, " +
+  "b.token, b.promoted_at, b.member_id, b.payment, m.member_no";
+
+const BOOKING_FROM = "bookings b LEFT JOIN members m ON m.id = b.member_id";
+
+type MemberDbRow = {
+  id: string;
+  member_no: string | null;
+  name: string;
+  phone: string;
+  created_at: string;
+  ended_at: string | null;
+};
+
+const MEMBER_COLUMNS = "id, member_no, name, phone, created_at, ended_at";
+
+/** A blank membership number is no number, not an empty one. */
+const tidy = (value: string | null | undefined) => String(value ?? "").trim() || null;
+
+const toMember = (r: MemberDbRow): Member => ({
+  id: r.id,
+  memberNo: r.member_no,
+  name: r.name,
+  phone: r.phone,
+  createdAt: r.created_at,
+  endedAt: r.ended_at,
+});
 
 const toBooking = (r: BookingDbRow): BookingRow => ({
   id: String(r.id),
@@ -258,6 +338,9 @@ const toBooking = (r: BookingDbRow): BookingRow => ({
   cancelledAt: r.cancelled_at,
   token: r.token,
   promotedAt: r.promoted_at,
+  memberId: r.member_id,
+  memberNo: r.member_no,
+  payment: (r.payment as BookingRow["payment"]) ?? null,
 });
 
 /** The member's handle on their booking. Long enough not to be guessed. */
@@ -487,28 +570,18 @@ export const sqliteStore: BookingStore = {
     const rows = open()
       .prepare(
         `SELECT ${BOOKING_COLUMNS}
-           FROM bookings
-          WHERE class_date BETWEEN ? AND ?
-          ORDER BY class_date ASC, created_at ASC`,
+           FROM ${BOOKING_FROM}
+          WHERE b.class_date BETWEEN ? AND ?
+          ORDER BY b.class_date ASC, b.created_at ASC`,
       )
-      .all(from, to) as {
-      id: number;
-      session_id: string;
-      class_date: string;
-      name: string;
-      phone: string;
-      created_at: string;
-      cancelled_at: string | null;
-      token: string | null;
-      promoted_at: string | null;
-    }[];
+      .all(from, to) as BookingDbRow[];
 
     return rows.map(toBooking);
   },
 
   async get(id): Promise<BookingRow | null> {
     const r = open()
-      .prepare(`SELECT ${BOOKING_COLUMNS} FROM bookings WHERE id = ?`)
+      .prepare(`SELECT ${BOOKING_COLUMNS} FROM ${BOOKING_FROM} WHERE b.id = ?`)
       .get(id) as BookingDbRow | undefined;
     return r ? toBooking(r) : null;
   },
@@ -516,7 +589,7 @@ export const sqliteStore: BookingStore = {
   async getByToken(token): Promise<BookingRow | null> {
     if (!token) return null;
     const r = open()
-      .prepare(`SELECT ${BOOKING_COLUMNS} FROM bookings WHERE token = ?`)
+      .prepare(`SELECT ${BOOKING_COLUMNS} FROM ${BOOKING_FROM} WHERE b.token = ?`)
       .get(token) as BookingDbRow | undefined;
     return r ? toBooking(r) : null;
   },
@@ -567,12 +640,13 @@ export const sqliteStore: BookingStore = {
   /* ---------------------------------------------------------------- */
   /* Waitlist                                                          */
 
-  async joinWaitlist({ sessionId, date, name, phone }) {
+  async joinWaitlist({ sessionId, date, name, phone, memberId = null, payment = null }) {
     const d = open();
     try {
       d.prepare(
-        "INSERT INTO waitlist (session_id, class_date, name, phone) VALUES (?, ?, ?, ?)",
-      ).run(sessionId, date, name, phone);
+        `INSERT INTO waitlist (session_id, class_date, name, phone, member_id, payment)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run(sessionId, date, name, phone, memberId, payment);
     } catch (error) {
       if (isUniqueViolation(error)) return { ok: false as const, reason: "duplicate" as const };
       throw error;
@@ -591,7 +665,8 @@ export const sqliteStore: BookingStore = {
   async listWaitlist(from, to): Promise<WaitlistRow[]> {
     const rows = open()
       .prepare(
-        `SELECT id, session_id, class_date, name, phone, created_at, promoted_at
+        `SELECT id, session_id, class_date, name, phone, created_at, promoted_at,
+                member_id, payment
            FROM waitlist
           WHERE class_date BETWEEN ? AND ?
           ORDER BY datetime(created_at), id`,
@@ -604,6 +679,8 @@ export const sqliteStore: BookingStore = {
       phone: string;
       created_at: string;
       promoted_at: string | null;
+      member_id: string | null;
+      payment: string | null;
     }[];
 
     return rows.map((r) => ({
@@ -614,6 +691,8 @@ export const sqliteStore: BookingStore = {
       phone: r.phone,
       createdAt: r.created_at,
       promotedAt: r.promoted_at,
+      memberId: r.member_id,
+      payment: (r.payment as WaitlistRow["payment"]) ?? null,
     }));
   },
 
@@ -636,12 +715,14 @@ export const sqliteStore: BookingStore = {
 
       const next = d
         .prepare(
-          `SELECT id, name, phone FROM waitlist
+          `SELECT id, name, phone, member_id, payment FROM waitlist
             WHERE session_id = ? AND class_date = ? AND promoted_at IS NULL
             ORDER BY datetime(created_at), id
             LIMIT 1`,
         )
-        .get(sessionId, date) as { id: number; name: string; phone: string } | undefined;
+        .get(sessionId, date) as
+        | { id: number; name: string; phone: string; member_id: string | null; payment: string | null }
+        | undefined;
 
       if (!next) {
         d.exec("ROLLBACK");
@@ -651,16 +732,17 @@ export const sqliteStore: BookingStore = {
       const token = newToken();
       const info = d
         .prepare(
-          `INSERT INTO bookings (session_id, class_date, name, phone, token, promoted_at)
-           VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+          `INSERT INTO bookings
+             (session_id, class_date, name, phone, token, promoted_at, member_id, payment)
+           VALUES (?, ?, ?, ?, ?, datetime('now'), ?, ?)`,
         )
-        .run(sessionId, date, next.name, next.phone, token);
+        .run(sessionId, date, next.name, next.phone, token, next.member_id, next.payment);
 
       d.prepare("UPDATE waitlist SET promoted_at = datetime('now') WHERE id = ?").run(next.id);
       d.exec("COMMIT");
 
       const row = d
-        .prepare(`SELECT ${BOOKING_COLUMNS} FROM bookings WHERE id = ?`)
+        .prepare(`SELECT ${BOOKING_COLUMNS} FROM ${BOOKING_FROM} WHERE b.id = ?`)
         .get(info.lastInsertRowid) as BookingDbRow;
       return toBooking(row);
     } catch (error) {
@@ -674,11 +756,11 @@ export const sqliteStore: BookingStore = {
   async listPromoted(from, to): Promise<BookingRow[]> {
     const rows = open()
       .prepare(
-        `SELECT ${BOOKING_COLUMNS} FROM bookings
-          WHERE class_date BETWEEN ? AND ?
-            AND promoted_at IS NOT NULL
-            AND cancelled_at IS NULL
-          ORDER BY class_date, datetime(promoted_at)`,
+        `SELECT ${BOOKING_COLUMNS} FROM ${BOOKING_FROM}
+          WHERE b.class_date BETWEEN ? AND ?
+            AND b.promoted_at IS NOT NULL
+            AND b.cancelled_at IS NULL
+          ORDER BY b.class_date, datetime(b.promoted_at)`,
       )
       .all(from, to) as BookingDbRow[];
     return rows.map(toBooking);
@@ -688,7 +770,109 @@ export const sqliteStore: BookingStore = {
     open().prepare("UPDATE bookings SET promoted_at = NULL WHERE id = ?").run(id);
   },
 
-  async book({ sessionId, date, name, phone, capacity }: BookingInput): Promise<BookingResult> {
+  /* ---------------------------------------------------------------- */
+  /* Members                                                           */
+
+  async findMember(reference) {
+    const wanted = String(reference ?? "").trim();
+    if (!wanted) return { found: false as const, reason: "unknown" as const };
+    const d = open();
+
+    const byNumber = d
+      .prepare(
+        `SELECT ${MEMBER_COLUMNS} FROM members
+          WHERE ended_at IS NULL AND lower(trim(member_no)) = lower(trim(?))
+          LIMIT 1`,
+      )
+      .get(wanted) as MemberDbRow | undefined;
+    if (byNumber) return { found: true as const, member: toMember(byNumber) };
+
+    // Two memberships on one phone is a Couples & Friends plan, not a
+    // mistake, so ask for the number rather than picking one of them.
+    const byPhone = d
+      .prepare(
+        `SELECT ${MEMBER_COLUMNS} FROM members WHERE ended_at IS NULL AND phone = ? LIMIT 2`,
+      )
+      .all(wanted) as MemberDbRow[];
+    if (byPhone.length === 1) return { found: true as const, member: toMember(byPhone[0]) };
+    if (byPhone.length > 1) return { found: false as const, reason: "ambiguous" as const };
+
+    return { found: false as const, reason: "unknown" as const };
+  },
+
+  async listMembers(): Promise<Member[]> {
+    const rows = open()
+      .prepare(`SELECT ${MEMBER_COLUMNS} FROM members ORDER BY lower(name)`)
+      .all() as MemberDbRow[];
+    return rows.map(toMember);
+  },
+
+  async addMember({ memberNo, name, phone }) {
+    const id = crypto.randomUUID();
+    try {
+      open()
+        .prepare("INSERT INTO members (id, member_no, name, phone) VALUES (?, ?, ?, ?)")
+        .run(id, tidy(memberNo), name.trim(), phone.trim());
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        return { ok: false as const, reason: "duplicate-number" as const };
+      }
+      throw error;
+    }
+
+    const row = open()
+      .prepare(`SELECT ${MEMBER_COLUMNS} FROM members WHERE id = ?`)
+      .get(id) as MemberDbRow;
+    return { ok: true as const, member: toMember(row) };
+  },
+
+  async updateMember(id, { memberNo, name, phone }) {
+    try {
+      const info = open()
+        .prepare("UPDATE members SET member_no = ?, name = ?, phone = ? WHERE id = ?")
+        .run(tidy(memberNo), name.trim(), phone.trim(), id);
+      if (Number(info.changes) === 0) {
+        return { ok: false as const, reason: "not-found" as const };
+      }
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        return { ok: false as const, reason: "duplicate-number" as const };
+      }
+      throw error;
+    }
+    return { ok: true as const };
+  },
+
+  async setMemberEnded(id, ended) {
+    const info = open()
+      .prepare(
+        ended
+          ? "UPDATE members SET ended_at = datetime('now') WHERE id = ?"
+          : "UPDATE members SET ended_at = NULL WHERE id = ?",
+      )
+      .run(id);
+    return Number(info.changes) > 0;
+  },
+
+  async removeMember(id) {
+    const d = open();
+    // The bookings keep the name and phone that were written onto them; only
+    // the link to the membership goes.
+    d.prepare("UPDATE bookings SET member_id = NULL WHERE member_id = ?").run(id);
+    d.prepare("UPDATE waitlist SET member_id = NULL WHERE member_id = ?").run(id);
+    const info = d.prepare("DELETE FROM members WHERE id = ?").run(id);
+    return Number(info.changes) > 0;
+  },
+
+  async book({
+    sessionId,
+    date,
+    name,
+    phone,
+    capacity,
+    memberId = null,
+    payment = null,
+  }: BookingInput): Promise<BookingResult> {
     const d = open();
 
     // BEGIN IMMEDIATE takes the write lock up front, so two people clicking
@@ -703,8 +887,9 @@ export const sqliteStore: BookingStore = {
 
       const token = newToken();
       d.prepare(
-        "INSERT INTO bookings (session_id, class_date, name, phone, token) VALUES (?, ?, ?, ?, ?)",
-      ).run(sessionId, date, name, phone, token);
+        `INSERT INTO bookings (session_id, class_date, name, phone, token, member_id, payment)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run(sessionId, date, name, phone, token, memberId, payment);
 
       d.exec("COMMIT");
       return { ok: true, spotsLeft: capacity - taken - 1, token };

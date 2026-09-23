@@ -26,6 +26,7 @@ const { POST: book } = await import("../src/app/api/classes/book/route.ts");
 const { POST: joinWaitlist } = await import("../src/app/api/classes/waitlist/route.ts");
 const { POST: cancel } = await import("../src/app/api/classes/cancel/route.ts");
 const { GET: availability } = await import("../src/app/api/classes/availability/route.ts");
+const { POST: lookup } = await import("../src/app/api/members/lookup/route.ts");
 const { getStore } = await import("../src/lib/store/index.ts");
 const { capacityFor } = await import("../src/lib/booking.ts");
 
@@ -48,11 +49,13 @@ const CLASS = "0-200-mobility-flexibility"; // Saturday, 2:00 PM
 const ORIENTAL = "0-700-oriental-flow"; // Saturday, 7:00 PM
 
 let phone = 1000;
+/** A guest: name, phone, and how they will pay. */
 const someone = (over: Record<string, unknown> = {}) => ({
   sessionId: CLASS,
   date: SAT,
-  name: "Test Member",
+  name: "Test Guest",
   phone: `0100000${++phone}`,
+  payment: "cash",
   ...over,
 });
 
@@ -83,6 +86,8 @@ describe("POST /api/classes/book", () => {
       ["a 300 character name", { name: "z".repeat(300) }],
       ["letters for a phone number", { phone: "not a phone" }],
       ["a very short number", { phone: "12" }],
+      ["no payment method", { payment: undefined }],
+      ["a payment method we do not take", { payment: "bitcoin" }],
       ["no session", { sessionId: "" }],
       ["a class that does not exist", { sessionId: "9-999-nope" }],
     ];
@@ -165,7 +170,7 @@ describe("a class that has already begun", () => {
 
   it("will not put anyone on its waitlist either", async () => {
     const { status, body } = await read(
-      await joinWaitlist(post("/api/classes/waitlist", { sessionId: "midnight-class", date: iso, name: "Too Late", phone: "01066660001" })),
+      await joinWaitlist(post("/api/classes/waitlist", { sessionId: "midnight-class", date: iso, name: "Too Late", phone: "01066660001", payment: "cash" })),
     );
     assert.equal(status, 409);
     assert.equal(body.reason, "started");
@@ -179,12 +184,134 @@ describe("a class that has already begun", () => {
   });
 });
 
+describe("booking as a member", () => {
+  /*
+    The membership is checked against the database, not against what the
+    browser says it is. "I am a member" in a request body is a claim, and the
+    desk would be the one to find out it was wrong.
+  */
+  const STRONGER = "0-600-60-min-stronger";
+  let memberId = "";
+
+  before(async () => {
+    const added = await (await getStore()).addMember({
+      memberNo: "BX-7001",
+      name: "Karma Wael",
+      phone: "01055550001",
+    });
+    memberId = added.ok ? added.member.id : "";
+  });
+
+  it("finds a membership by number or phone, and says only the first name", async () => {
+    for (const reference of ["BX-7001", "01055550001"]) {
+      const { status, body } = await read(await lookup(post("/api/members/lookup", { reference })));
+      assert.equal(status, 200);
+      assert.equal(body.found, true);
+      assert.equal(body.firstName, "Karma");
+      // Nothing else: this endpoint is public, and a surname, a phone or a
+      // membership number would all be worth harvesting.
+      assert.deepEqual(Object.keys(body).sort(), ["firstName", "found"]);
+    }
+  });
+
+  it("says it cannot find one rather than hinting", async () => {
+    const { body } = await read(await lookup(post("/api/members/lookup", { reference: "BX-9999" })));
+    assert.equal(body.found, false);
+    assert.equal(body.reason, "unknown");
+  });
+
+  it("refuses a lookup with nothing in it", async () => {
+    assert.equal((await read(await lookup(post("/api/members/lookup", { reference: "" })))).status, 400);
+    assert.equal(
+      (await read(await lookup(post("/api/members/lookup", { reference: "z".repeat(200) })))).status,
+      400,
+    );
+  });
+
+  it("books them under the membership, with nothing to pay", async () => {
+    const { status } = await read(
+      await book(post("/api/classes/book", { sessionId: STRONGER, date: SAT, member: true, memberRef: "BX-7001" })),
+    );
+    assert.equal(status, 200);
+
+    const rows = await (await getStore()).list(SAT, SAT);
+    const mine = rows.find((r) => r.memberId === memberId);
+    assert.ok(mine, "the booking should carry the membership");
+    assert.equal(mine.name, "Karma Wael", "the name comes from the membership, not the browser");
+    assert.equal(mine.payment, null);
+  });
+
+  it("will not take a membership it cannot find", async () => {
+    const { status, body } = await read(
+      await book(post("/api/classes/book", { sessionId: STRONGER, date: SAT, member: true, memberRef: "BX-0000" })),
+    );
+    assert.equal(status, 404);
+    assert.equal(body.reason, "unknown-member");
+  });
+
+  it("will not take the claim without the proof", async () => {
+    // "member: true" and nothing else is not a membership.
+    const { status } = await read(
+      await book(post("/api/classes/book", { sessionId: STRONGER, date: SAT, member: true })),
+    );
+    assert.equal(status, 400);
+  });
+
+  it("ignores a name and phone sent alongside a membership", async () => {
+    const store = await getStore();
+    await store.addMember({ memberNo: "BX-7002", name: "Real Name", phone: "01055550002" });
+
+    await read(
+      await book(
+        post("/api/classes/book", {
+          sessionId: STRONGER,
+          date: SAT,
+          member: true,
+          memberRef: "BX-7002",
+          name: "Someone Else Entirely",
+          phone: "01099999999",
+        }),
+      ),
+    );
+
+    const rows = await store.list(SAT, SAT);
+    assert.ok(rows.some((r) => r.name === "Real Name"));
+    assert.ok(!rows.some((r) => r.name === "Someone Else Entirely"), "the browser does not get to name them");
+  });
+
+  it("asks for the number when one phone has two memberships", async () => {
+    const store = await getStore();
+    await store.addMember({ memberNo: "BX-7003", name: "Partner One", phone: "01055550003" });
+    await store.addMember({ memberNo: "BX-7004", name: "Partner Two", phone: "01055550003" });
+
+    const { status, body } = await read(
+      await book(post("/api/classes/book", { sessionId: STRONGER, date: SAT, member: true, memberRef: "01055550003" })),
+    );
+    assert.equal(status, 409);
+    assert.equal(body.reason, "ambiguous-member");
+    assert.match(String(body.error), /membership number/i);
+  });
+
+  it("will not let a lapsed membership book as a member", async () => {
+    const store = await getStore();
+    const lapsed = await store.addMember({ memberNo: "BX-7005", name: "Gone Away", phone: "01055550005" });
+    assert.ok(lapsed.ok);
+    await store.setMemberEnded(lapsed.member.id, true);
+
+    const { status, body } = await read(
+      await book(post("/api/classes/book", { sessionId: STRONGER, date: SAT, member: true, memberRef: "BX-7005" })),
+    );
+    assert.equal(status, 404);
+    assert.equal(body.reason, "unknown-member");
+  });
+});
+
 describe("POST /api/classes/waitlist", () => {
   it("refuses to queue anyone for a class with room in it", async () => {
     // Nothing would ever move them along: promotion only happens when a
     // place is given up, so they would wait for a class they could walk into.
     const { status, body } = await read(
-      await joinWaitlist(post("/api/classes/waitlist", { sessionId: ORIENTAL, date: SAT, name: "Hopeful", phone: "01088880001" })),
+      await joinWaitlist(post("/api/classes/waitlist", { sessionId: ORIENTAL, date: SAT, name: "Hopeful", phone: "01088880001", payment: "cash" })),
     );
     assert.equal(status, 409);
     assert.equal(body.reason, "not-full");
@@ -199,7 +326,7 @@ describe("POST /api/classes/waitlist", () => {
     }
 
     const join = (phone: string) =>
-      joinWaitlist(post("/api/classes/waitlist", { sessionId: ORIENTAL, date: SAT, name: "Hopeful", phone }));
+      joinWaitlist(post("/api/classes/waitlist", { sessionId: ORIENTAL, date: SAT, name: "Hopeful", phone, payment: "cash" }));
 
     assert.equal((await read(await join("01088880002"))).status, 200);
     const again = await read(await join("01088880002"));

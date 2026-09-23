@@ -7,6 +7,7 @@ import type {
   CancelResult,
   LeadInput,
   LeadRow,
+  Member,
   RestoreResult,
   StaffRole,
   StaffUser,
@@ -77,6 +78,8 @@ type WaitPayload = {
   phone: string;
   created_at: string;
   promoted_at: string | null;
+  member_id: string | null;
+  payment: string | null;
 };
 
 const toWait = (r: WaitPayload): WaitlistRow => ({
@@ -87,7 +90,60 @@ const toWait = (r: WaitPayload): WaitlistRow => ({
   phone: r.phone,
   createdAt: r.created_at,
   promotedAt: r.promoted_at,
+  memberId: r.member_id,
+  payment: (r.payment as WaitlistRow["payment"]) ?? null,
 });
+
+/**
+ * A booking row as PostgREST returns it.
+ *
+ * member_no comes from an embedded select on members rather than from the
+ * booking, so a number corrected on the Members screen reads correctly on
+ * an old class list. The name and phone on the booking are left alone -
+ * those are who turned up.
+ */
+type BookingPayload = Record<string, unknown> & {
+  members?: { member_no: string | null } | null;
+};
+
+const toBooking = (r: BookingPayload): BookingRow => ({
+  id: String(r.id),
+  sessionId: r.session_id as string,
+  date: r.class_date as string,
+  name: r.name as string,
+  phone: r.phone as string,
+  createdAt: r.created_at as string,
+  cancelledAt: (r.cancelled_at as string | null) ?? null,
+  token: (r.token as string | null) ?? null,
+  promotedAt: (r.promoted_at as string | null) ?? null,
+  memberId: (r.member_id as string | null) ?? null,
+  memberNo: r.members?.member_no ?? null,
+  payment: (r.payment as BookingRow["payment"]) ?? null,
+});
+
+/** Every booking read asks for the membership number alongside it. */
+const BOOKING_SELECT = "*,members(member_no)";
+
+type MemberPayload = {
+  id: string;
+  member_no: string | null;
+  name: string;
+  phone: string;
+  created_at: string;
+  ended_at: string | null;
+};
+
+const toMember = (r: MemberPayload): Member => ({
+  id: r.id,
+  memberNo: r.member_no,
+  name: r.name,
+  phone: r.phone,
+  createdAt: r.created_at,
+  endedAt: r.ended_at,
+});
+
+/** A blank membership number is no number, not an empty one. */
+const tidy = (value: string | null | undefined) => String(value ?? "").trim() || null;
 
 export const supabaseStore: BookingStore = {
   name: "supabase",
@@ -99,22 +155,11 @@ export const supabaseStore: BookingStore = {
       { headers: headers(), cache: "no-store" },
     );
     if (!res.ok) throw new Error(`Supabase getByToken failed: ${res.status}`);
-    const [r] = (await res.json()) as Record<string, string | null>[];
-    if (!r) return null;
-    return {
-      id: String(r.id),
-      sessionId: r.session_id as string,
-      date: r.class_date as string,
-      name: r.name as string,
-      phone: r.phone as string,
-      createdAt: r.created_at as string,
-      cancelledAt: r.cancelled_at,
-      token: r.token ?? null,
-      promotedAt: r.promoted_at ?? null,
-    };
+    const [r] = (await res.json()) as BookingPayload[];
+    return r ? toBooking(r) : null;
   },
 
-  async joinWaitlist({ sessionId, date, name, phone }) {
+  async joinWaitlist({ sessionId, date, name, phone, memberId = null, payment = null }) {
     const res = await fetch(`${url}/rest/v1/rpc/join_waitlist`, {
       method: "POST",
       headers: headers(),
@@ -123,6 +168,8 @@ export const supabaseStore: BookingStore = {
         p_class_date: date,
         p_name: name,
         p_phone: phone,
+        p_member_id: memberId,
+        p_payment: payment,
       }),
       cache: "no-store",
     });
@@ -156,39 +203,19 @@ export const supabaseStore: BookingStore = {
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`Supabase promoteFromWaitlist failed: ${res.status}`);
-    const out = (await res.json()) as Record<string, string | null> | null;
+    const out = (await res.json()) as BookingPayload | null;
     if (!out || !out.id) return null;
-    return {
-      id: String(out.id),
-      sessionId: out.session_id as string,
-      date: out.class_date as string,
-      name: out.name as string,
-      phone: out.phone as string,
-      createdAt: out.created_at as string,
-      cancelledAt: null,
-      token: out.token ?? null,
-      promotedAt: out.promoted_at ?? null,
-    };
+    return toBooking(out);
   },
 
   async listPromoted(from, to) {
     const res = await fetch(
-      `${url}/rest/v1/bookings?select=*&class_date=gte.${from}&class_date=lte.${to}` +
+      `${url}/rest/v1/bookings?select=${BOOKING_SELECT}&class_date=gte.${from}&class_date=lte.${to}` +
         `&promoted_at=not.is.null&cancelled_at=is.null&order=class_date`,
       { headers: headers(), cache: "no-store" },
     );
     if (!res.ok) throw new Error(`Supabase listPromoted failed: ${res.status}`);
-    return ((await res.json()) as Record<string, string | null>[]).map((r) => ({
-      id: String(r.id),
-      sessionId: r.session_id as string,
-      date: r.class_date as string,
-      name: r.name as string,
-      phone: r.phone as string,
-      createdAt: r.created_at as string,
-      cancelledAt: r.cancelled_at,
-      token: r.token ?? null,
-      promotedAt: r.promoted_at ?? null,
-    }));
+    return ((await res.json()) as BookingPayload[]).map(toBooking);
   },
 
   async markTold(id) {
@@ -411,7 +438,7 @@ export const supabaseStore: BookingStore = {
 
   async list(from, to): Promise<BookingRow[]> {
     const query =
-      `select=id,session_id,class_date,name,phone,created_at,cancelled_at` +
+      `select=${BOOKING_SELECT}` +
       `&class_date=gte.${from}&class_date=lte.${to}` +
       `&order=class_date.asc,created_at.asc`;
 
@@ -420,36 +447,11 @@ export const supabaseStore: BookingStore = {
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`Supabase list failed: ${res.status}`);
-
-    const data = (await res.json()) as {
-      id: string;
-      session_id: string;
-      class_date: string;
-      name: string;
-      phone: string;
-      created_at: string;
-      cancelled_at: string | null;
-      token?: string | null;
-      promoted_at?: string | null;
-    }[];
-
-    return data.map((r) => ({
-      id: String(r.id),
-      sessionId: r.session_id,
-      date: r.class_date,
-      name: r.name,
-      phone: r.phone,
-      createdAt: r.created_at,
-      cancelledAt: r.cancelled_at,
-      token: r.token ?? null,
-      promotedAt: r.promoted_at ?? null,
-    }));
+    return ((await res.json()) as BookingPayload[]).map(toBooking);
   },
 
   async get(id): Promise<BookingRow | null> {
-    const query =
-      `select=id,session_id,class_date,name,phone,created_at,cancelled_at` +
-      `&id=eq.${encodeURIComponent(id)}&limit=1`;
+    const query = `select=${BOOKING_SELECT}&id=eq.${encodeURIComponent(id)}&limit=1`;
 
     const res = await fetch(`${url}/rest/v1/bookings?${query}`, {
       headers: headers(),
@@ -457,30 +459,8 @@ export const supabaseStore: BookingStore = {
     });
     if (!res.ok) throw new Error(`Supabase get failed: ${res.status}`);
 
-    const [r] = (await res.json()) as {
-      id: string;
-      session_id: string;
-      class_date: string;
-      name: string;
-      phone: string;
-      created_at: string;
-      cancelled_at: string | null;
-      token?: string | null;
-      promoted_at?: string | null;
-    }[];
-
-    if (!r) return null;
-    return {
-      id: String(r.id),
-      sessionId: r.session_id,
-      date: r.class_date,
-      name: r.name,
-      phone: r.phone,
-      createdAt: r.created_at,
-      cancelledAt: r.cancelled_at,
-      token: r.token ?? null,
-      promotedAt: r.promoted_at ?? null,
-    };
+    const [r] = (await res.json()) as BookingPayload[];
+    return r ? toBooking(r) : null;
   },
 
   async cancel(id): Promise<CancelResult> {
@@ -512,7 +492,99 @@ export const supabaseStore: BookingStore = {
     return data.ok ? { ok: true } : { ok: false, reason: data.reason ?? "full" };
   },
 
-  async book({ sessionId, date, name, phone, capacity }: BookingInput): Promise<BookingResult> {
+  /* ---------------------------------------------------------------- */
+  /* Members                                                           */
+
+  async findMember(reference) {
+    const wanted = String(reference ?? "").trim();
+    if (!wanted) return { found: false as const, reason: "unknown" as const };
+
+    const ask = async (filter: string) => {
+      const res = await fetch(
+        `${url}/rest/v1/members?select=*&ended_at=is.null&${filter}&limit=2`,
+        { headers: headers(), cache: "no-store" },
+      );
+      if (!res.ok) throw new Error(`Supabase findMember failed: ${res.status}`);
+      return (await res.json()) as MemberPayload[];
+    };
+
+    const byNumber = await ask(`member_no=ilike.${encodeURIComponent(wanted)}`);
+    if (byNumber.length >= 1) return { found: true as const, member: toMember(byNumber[0]) };
+
+    // Two memberships on one phone is a Couples & Friends plan, not a
+    // mistake, so ask for the number rather than picking one of them.
+    const byPhone = await ask(`phone=eq.${encodeURIComponent(wanted)}`);
+    if (byPhone.length === 1) return { found: true as const, member: toMember(byPhone[0]) };
+    if (byPhone.length > 1) return { found: false as const, reason: "ambiguous" as const };
+
+    return { found: false as const, reason: "unknown" as const };
+  },
+
+  async listMembers(): Promise<Member[]> {
+    const res = await fetch(`${url}/rest/v1/members?select=*&order=name.asc`, {
+      headers: headers(),
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error(`Supabase listMembers failed: ${res.status}`);
+    return ((await res.json()) as MemberPayload[]).map(toMember);
+  },
+
+  async addMember({ memberNo, name, phone }) {
+    const res = await fetch(`${url}/rest/v1/members`, {
+      method: "POST",
+      headers: { ...headers(), Prefer: "return=representation" },
+      body: JSON.stringify({ member_no: tidy(memberNo), name: name.trim(), phone: phone.trim() }),
+    });
+    if (res.status === 409) return { ok: false as const, reason: "duplicate-number" as const };
+    if (!res.ok) throw new Error(`Supabase addMember failed: ${res.status}`);
+    const [row] = (await res.json()) as MemberPayload[];
+    return { ok: true as const, member: toMember(row) };
+  },
+
+  async updateMember(id, { memberNo, name, phone }) {
+    const res = await fetch(`${url}/rest/v1/members?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { ...headers(), Prefer: "return=representation" },
+      body: JSON.stringify({ member_no: tidy(memberNo), name: name.trim(), phone: phone.trim() }),
+    });
+    if (res.status === 409) return { ok: false as const, reason: "duplicate-number" as const };
+    if (!res.ok) throw new Error(`Supabase updateMember failed: ${res.status}`);
+    const rows = (await res.json()) as unknown[];
+    return rows.length
+      ? { ok: true as const }
+      : { ok: false as const, reason: "not-found" as const };
+  },
+
+  async setMemberEnded(id, ended) {
+    const res = await fetch(`${url}/rest/v1/members?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { ...headers(), Prefer: "return=representation" },
+      body: JSON.stringify({ ended_at: ended ? new Date().toISOString() : null }),
+    });
+    if (!res.ok) throw new Error(`Supabase setMemberEnded failed: ${res.status}`);
+    return ((await res.json()) as unknown[]).length > 0;
+  },
+
+  async removeMember(id) {
+    // The bookings keep the name and phone written onto them; the foreign
+    // key is ON DELETE SET NULL, so only the link goes.
+    const res = await fetch(`${url}/rest/v1/members?id=eq.${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { ...headers(), Prefer: "return=representation" },
+    });
+    if (!res.ok) throw new Error(`Supabase removeMember failed: ${res.status}`);
+    return ((await res.json()) as unknown[]).length > 0;
+  },
+
+  async book({
+    sessionId,
+    date,
+    name,
+    phone,
+    capacity,
+    memberId = null,
+    payment = null,
+  }: BookingInput): Promise<BookingResult> {
     const res = await fetch(`${url}/rest/v1/rpc/book_session`, {
       method: "POST",
       headers: headers(),
@@ -522,6 +594,8 @@ export const supabaseStore: BookingStore = {
         p_name: name,
         p_phone: phone,
         p_capacity: capacity,
+        p_member_id: memberId,
+        p_payment: payment,
       }),
     });
 

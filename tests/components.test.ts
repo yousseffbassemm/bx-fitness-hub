@@ -152,19 +152,17 @@ describe("the booking dialog", () => {
     assert.match(html, /2:00 PM/);
   });
 
-  it("asks for a name and a number, and nothing else", async () => {
+  it("opens by asking whether you are a member", async () => {
+    // It decides what is asked next and what happens at the desk, so it is
+    // the first thing rather than a checkbox further down. The fields
+    // themselves are covered where they can be typed into.
     const html = await open();
-    const fields = [...html.matchAll(/<input[^>]*id="([^"]+)"/g)].map((m) => m[1]);
-    assert.deepEqual(fields.sort(), ["bk-name", "bk-phone"]);
-
-    // Both labelled, so the fields are not just placeholders in a box.
-    for (const id of fields) assert.ok(html.includes(`for="${id}"`), `${id} needs a label`);
-
-    // A phone keyboard for a phone number, and the autofill the browser has.
-    assert.match(html, /id="bk-phone"[^>]*type="tel"/);
-    assert.match(html, /autoComplete="tel"|autocomplete="tel"/);
-    // A gym takes a name and a number. Nothing here should want a password.
-    assert.ok(!/type="(email|password)"/.test(html));
+    assert.match(html, /Are you a BX member\?/i);
+    assert.match(html, /Yes, I.{1,8}m a member/);
+    assert.match(html, /No, I.{1,8}m a guest/);
+    assert.equal([...html.matchAll(/<input/g)].length, 0, "nothing is asked yet");
+    // And it says why the answer matters, in the member's terms.
+    assert.match(html, /part of their membership/i);
   });
 
   it("offers a place when there is one and a queue when there is not", async () => {

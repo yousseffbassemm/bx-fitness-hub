@@ -7,6 +7,7 @@ import {
 } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
 import { getStore } from "@/lib/store";
+import type { BookingRow } from "@/lib/store/types";
 import BookingRowActions from "@/components/staff/BookingRowActions";
 import PageHeader from "@/components/staff/PageHeader";
 import PromotedActions from "@/components/staff/PromotedActions";
@@ -21,7 +22,10 @@ type Group = {
   coach: string;
   ladiesOnly: boolean;
   capacity: number;
-  people: { id: string; name: string; phone: string; cancelledAt: string | null }[];
+  people: Pick<
+    BookingRow,
+    "id" | "name" | "phone" | "cancelledAt" | "memberId" | "memberNo" | "payment"
+  >[];
 };
 
 export default async function StaffPage(props: PageProps<"/staff">) {
@@ -91,6 +95,9 @@ export default async function StaffPage(props: PageProps<"/staff">) {
       name: row.name,
       phone: row.phone,
       cancelledAt: row.cancelledAt,
+      memberId: row.memberId,
+      memberNo: row.memberNo,
+      payment: row.payment,
     });
   }
 
@@ -294,6 +301,21 @@ export default async function StaffPage(props: PageProps<"/staff">) {
                               <span className={off ? "text-grey-dim line-through" : "text-white"}>
                                 {p.name}
                               </span>
+                              {/*
+                                Member or guest, because it decides what
+                                happens at the desk: a member's place is part
+                                of what they already pay for, a guest owes for
+                                the class.
+                              */}
+                              {p.memberId ? (
+                                <span className="rounded-sm border border-lime/40 px-1.5 py-0.5 text-[0.62rem] tracking-[0.1em] text-lime uppercase">
+                                  Member{p.memberNo ? ` ${p.memberNo}` : ""}
+                                </span>
+                              ) : (
+                                <span className="rounded-sm border border-amber/40 px-1.5 py-0.5 text-[0.62rem] tracking-[0.1em] text-amber uppercase">
+                                  Guest{p.payment ? ` \u00b7 ${p.payment}` : ""}
+                                </span>
+                              )}
                               {off && (
                                 <span className="text-[0.7rem] tracking-[0.1em] text-pink uppercase">
                                   Cancelled

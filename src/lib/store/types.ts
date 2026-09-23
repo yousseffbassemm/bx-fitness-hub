@@ -4,7 +4,20 @@ export type BookingInput = {
   name: string;
   phone: string;
   capacity: number;
+  /**
+   * The membership this booking belongs to, if any.
+   *
+   * Classes are open to members and to anyone off the street, and the two
+   * are not the same at the desk: a member's place is part of what they
+   * already pay for, a guest pays for the class. Null is a guest.
+   */
+  memberId?: string | null;
+  /** How a guest said they would pay. Members do not pay per class. */
+  payment?: PaymentMethod | null;
 };
+
+/** Cash only for now, and the column says so, so adding another is deliberate. */
+export type PaymentMethod = "cash";
 
 export type BookingResult =
   | { ok: true; spotsLeft: number; token: string }
@@ -30,6 +43,36 @@ export type BookingRow = {
   token: string | null;
   /** Promoted from the waitlist and not yet told. */
   promotedAt: string | null;
+  /**
+   * The membership, if this was a member booking.
+   *
+   * Kept alongside the name and phone rather than instead of them: those are
+   * written onto the booking itself, so a class list a year from now still
+   * reads as the people who turned up even if a membership has since gone.
+   */
+  memberId: string | null;
+  /** The membership number, when the member has one. For the class list. */
+  memberNo: string | null;
+  /** How a guest said they would pay. Null for members. */
+  payment: PaymentMethod | null;
+};
+
+/** Somebody who pays BX monthly or yearly, rather than per class. */
+export type Member = {
+  id: string;
+  /** Whatever BX already writes on a card or a spreadsheet. May be blank. */
+  memberNo: string | null;
+  name: string;
+  phone: string;
+  createdAt: string;
+  /** Stamped when they lapse. The row stays, so their history survives. */
+  endedAt: string | null;
+};
+
+export type MemberInput = {
+  memberNo?: string | null;
+  name: string;
+  phone: string;
 };
 
 export type CancelResult = { ok: true } | { ok: false; reason: "not-found" };
@@ -87,6 +130,9 @@ export type WaitlistRow = {
   createdAt: string;
   /** Set when a place freed and this entry became a booking. */
   promotedAt: string | null;
+  /** Carried through promotion, so a member does not come off as a guest. */
+  memberId: string | null;
+  payment: PaymentMethod | null;
 };
 
 /** Something that went wrong on the server, kept so somebody finds out. */
@@ -195,6 +241,41 @@ export interface BookingStore {
    */
   saveUpload(id: string, mime: string, bytes: Uint8Array): Promise<void>;
   getUpload(id: string): Promise<{ mime: string; bytes: Uint8Array } | null>;
+
+  /* ---------------------------------------------------------------------
+     Members.
+
+     The booking page asks one question before anything else - member or
+     guest - and a member proves it with their number or the phone BX has
+     on file. Everything below exists to answer that, and to let staff keep
+     the list without a developer.
+     ------------------------------------------------------------------ */
+
+  /**
+   * Find a membership by its number or by phone.
+   *
+   * Returns "ambiguous" rather than a guess when more than one membership
+   * uses that phone: BX sells a Couples & Friends plan, so two people on
+   * one number is a thing they sell, not a mistake. The caller asks for the
+   * membership number instead.
+   *
+   * A lapsed membership is not found. Their place is no longer part of what
+   * they pay for, so they book as a guest like anybody else.
+   */
+  findMember(reference: string): Promise<
+    { found: true; member: Member } | { found: false; reason: "unknown" | "ambiguous" }
+  >;
+  listMembers(): Promise<Member[]>;
+  addMember(input: MemberInput): Promise<
+    { ok: true; member: Member } | { ok: false; reason: "duplicate-number" }
+  >;
+  updateMember(
+    id: string,
+    input: MemberInput,
+  ): Promise<{ ok: true } | { ok: false; reason: "not-found" | "duplicate-number" }>;
+  /** Lapse or reinstate. Never deletes - their bookings still name them. */
+  setMemberEnded(id: string, ended: boolean): Promise<boolean>;
+  removeMember(id: string): Promise<boolean>;
 
   readonly name: string;
 }

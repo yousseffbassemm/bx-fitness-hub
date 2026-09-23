@@ -40,6 +40,8 @@ export default async function DashboardLayout({
   const items: NavItem[] = [
     { href: "/staff", label: "Bookings" },
     { href: "/staff/enquiries", label: "Enquiries", badge: waiting },
+    // The desk signs members up, so this is not admin-only.
+    { href: "/staff/members", label: "Members" },
     ...(admin
       ? [
           { href: "/staff/timetable", label: "Timetable" },

@@ -34,6 +34,18 @@ export default function BookingDialog({
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  /*
+    Member or guest, asked before anything else.
+
+    A member's place is part of what they already pay for; a guest pays for
+    the class. The desk needs to know which, and asking here is the only
+    moment either of them is in front of a form.
+  */
+  const [who, setWho] = useState<"asking" | "member" | "guest">("asking");
+  const [memberRef, setMemberRef] = useState("");
+  const [memberName, setMemberName] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [payment, setPayment] = useState<"cash">("cash");
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
   const [manageUrl, setManageUrl] = useState<string | null>(null);
   const [position, setPosition] = useState<number | null>(null);
@@ -48,7 +60,18 @@ export default function BookingDialog({
   const [already, setAlready] = useState(false);
 
   const panel = useRef<HTMLDivElement>(null);
-  const firstField = useRef<HTMLInputElement>(null);
+  /**
+   * Whatever the first thing to answer is on this step.
+   *
+   * It used to always be the name field. Now the dialog opens on a question
+   * with two buttons, so this takes either - the point is that a keyboard
+   * lands on the first thing there is to do, whatever that is today.
+   */
+  const firstField = useRef<HTMLElement | null>(null);
+  /** Assigned to whichever element is first on the current step. */
+  const takeFocus = (el: HTMLElement | null) => {
+    firstField.current = el;
+  };
 
   /*
     onClose is an inline arrow in the parent, so a fresh identity arrives on
@@ -148,13 +171,60 @@ export default function BookingDialog({
     };
   }, []);
 
+  /** Ask the gym whether this is a membership, before taking the place. */
+  async function findMembership() {
+    const reference = memberRef.trim();
+    if (!reference) {
+      return setError("Enter your membership number, or the phone number we have for you.");
+    }
+
+    setChecking(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/members/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.found) {
+        setMemberName(data.firstName ?? "");
+        setError(null);
+      } else {
+        setMemberName(null);
+        setError(data.error ?? "We cannot find that membership.");
+      }
+    } catch {
+      setMemberName(null);
+      setError("Could not check that just now. You can still book as a guest.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  /*
+    Each step focuses its own first thing.
+
+    Answering "member or guest" removes the button that was just clicked, and
+    focus went with it - a keyboard user was dropped at the top of the
+    document and had to tab all the way back in. The dialog's own setup
+    focuses the first step; this carries that through every step after it.
+  */
+  useEffect(() => {
+    firstField.current?.focus();
+  }, [who]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (name.trim().length < 2) return setError("Please enter your name.");
-    if (!/^[+\d][\d\s-]{8,17}$/.test(phone.trim()))
-      return setError("Please enter a phone number we can reach you on.");
+    if (who === "member") {
+      if (!memberName) return setError("Find your membership first.");
+    } else {
+      if (name.trim().length < 2) return setError("Please enter your name.");
+      if (!/^[+\d][\d\s-]{8,17}$/.test(phone.trim()))
+        return setError("Please enter a phone number we can reach you on.");
+    }
 
     setState("sending");
     const waiting = target.mode === "waitlist";
@@ -164,12 +234,17 @@ export default function BookingDialog({
       const res = await fetch(waiting ? "/api/classes/waitlist" : "/api/classes/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: target.id,
-          date: target.date,
-          name: name.trim(),
-          phone: phone.trim(),
-        }),
+        body: JSON.stringify(
+          who === "member"
+            ? { sessionId: target.id, date: target.date, member: true, memberRef: memberRef.trim() }
+            : {
+                sessionId: target.id,
+                date: target.date,
+                name: name.trim(),
+                phone: phone.trim(),
+                payment,
+              },
+        ),
       });
       const data = await res.json();
 
@@ -366,40 +441,144 @@ export default function BookingDialog({
               )
             )}
 
-            <div className="mt-7 space-y-4">
-              <div>
-                <label htmlFor="bk-name" className="kicker mb-2 block">
-                  Name
-                </label>
-                <input
-                  id="bk-name"
-                  ref={firstField}
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={field}
-                  placeholder="Your name"
-                />
-              </div>
-              <div>
-                <label htmlFor="bk-phone" className="kicker mb-2 block">
-                  Phone
-                </label>
-                <input
-                  id="bk-phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className={field}
-                  placeholder="010 0000 0000"
-                />
-                <p className="mt-2 text-xs text-grey-dim">
-                  We use this to confirm and to find your booking on the door.
+            {/*
+              One question first, because the answer changes what is asked
+              next and what happens at the desk.
+            */}
+            {who === "asking" ? (
+              <div className="mt-7 space-y-3">
+                <p className="text-sm text-grey">Are you a BX member?</p>
+                <button
+                  type="button"
+                  ref={takeFocus}
+                  onClick={() => {
+                    setWho("member");
+                    setError(null);
+                  }}
+                  className="font-display w-full rounded-sm border border-lime/50 py-3.5 text-[0.78rem] tracking-[0.12em] text-lime transition-colors hover:bg-lime hover:text-ink"
+                >
+                  Yes, I&rsquo;m a member
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWho("guest");
+                    setError(null);
+                  }}
+                  className="font-display w-full rounded-sm border border-white/15 py-3.5 text-[0.78rem] tracking-[0.12em] text-grey transition-colors hover:border-white hover:text-white"
+                >
+                  No, I&rsquo;m a guest
+                </button>
+                <p className="pt-1 text-xs leading-relaxed text-grey-dim">
+                  Classes are open to both. A member&rsquo;s place is part of
+                  their membership; a guest pays for the class at the desk.
                 </p>
               </div>
-            </div>
+            ) : who === "member" ? (
+              <div className="mt-7 space-y-4">
+                <div>
+                  <label htmlFor="bk-member" className="kicker mb-2 block">
+                    Membership number or phone
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="bk-member"
+                      ref={takeFocus}
+                      value={memberRef}
+                      onChange={(e) => {
+                        setMemberRef(e.target.value);
+                        setMemberName(null);
+                      }}
+                      className={field}
+                      placeholder="BX-0142"
+                    />
+                    <button
+                      type="button"
+                      onClick={findMembership}
+                      disabled={checking}
+                      className="font-display shrink-0 rounded-sm border border-white/15 px-4 text-[0.72rem] tracking-[0.1em] text-grey transition-colors hover:border-lime hover:text-lime disabled:opacity-60"
+                    >
+                      {checking ? "Checking…" : "Find"}
+                    </button>
+                  </div>
+                  {memberName !== null && (
+                    <p className="mt-2 text-xs text-lime">
+                      Welcome back{memberName ? `, ${memberName}` : ""}. Nothing
+                      to pay for this one.
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWho("guest");
+                    setMemberName(null);
+                    setError(null);
+                  }}
+                  className="text-xs text-grey-dim underline-offset-4 hover:text-white hover:underline"
+                >
+                  Not a member after all? Book as a guest
+                </button>
+              </div>
+            ) : (
+              <div className="mt-7 space-y-4">
+                <div>
+                  <label htmlFor="bk-name" className="kicker mb-2 block">
+                    Name
+                  </label>
+                  <input
+                    id="bk-name"
+                    ref={takeFocus}
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className={field}
+                    placeholder="Your name"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="bk-phone" className="kicker mb-2 block">
+                    Phone
+                  </label>
+                  <input
+                    id="bk-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className={field}
+                    placeholder="010 0000 0000"
+                  />
+                  <p className="mt-2 text-xs text-grey-dim">
+                    We use this to confirm and to find your booking on the door.
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="bk-payment" className="kicker mb-2 block">
+                    Paying by
+                  </label>
+                  <select
+                    id="bk-payment"
+                    value={payment}
+                    onChange={(e) => setPayment(e.target.value as "cash")}
+                    className={field}
+                  >
+                    <option value="cash">Cash at the desk</option>
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWho("member");
+                    setError(null);
+                  }}
+                  className="text-xs text-grey-dim underline-offset-4 hover:text-white hover:underline"
+                >
+                  Actually, I&rsquo;m a member
+                </button>
+              </div>
+            )}
 
             {error && (
               <p
@@ -412,7 +591,8 @@ export default function BookingDialog({
 
             <button
               type="submit"
-              disabled={state === "sending"}
+              hidden={who === "asking"}
+              disabled={state === "sending" || (who === "member" && !memberName)}
               className="font-display mt-6 w-full rounded-sm bg-lime py-4 text-[0.8rem] tracking-[0.14em] text-ink transition-colors hover:bg-white disabled:opacity-60"
             >
               {state === "sending"
