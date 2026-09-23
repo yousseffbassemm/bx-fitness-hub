@@ -81,10 +81,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     // Never answer "you're on the list" for something that was not saved.
+    // 503, like every other public route here: the enquiry code is fine,
+    // the records are out of reach, and it is worth retrying. 500 would
+    // tell an uptime check the site itself is broken.
     await report("POST /api/lead", error);
     return NextResponse.json(
       { error: "Could not save that just now. Please call us instead." },
-      { status: 500 },
+      { status: 503 },
     );
   }
 }

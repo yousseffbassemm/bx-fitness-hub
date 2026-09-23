@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CancelBooking from "@/components/CancelBooking";
+import { Button } from "@/components/ui/Button";
 import { findSessionIn, formatDate } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
+import { site } from "@/lib/site";
+import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
 // A booking's state changes; never serve a cached copy of it.
@@ -12,6 +15,35 @@ export const metadata = {
   title: "Your booking",
   robots: { index: false, follow: false },
 };
+
+/** The records are unreachable - which is not the same as a lost place. */
+function BookingUnavailable() {
+  return (
+    <section className="mx-auto flex min-h-[70vh] max-w-lg flex-col justify-center px-6 py-24">
+      <div className="flex items-center gap-3">
+        <span className="h-px w-8 bg-lime" />
+        <span className="kicker">Your booking</span>
+      </div>
+
+      <h1 className="font-display mt-6 text-4xl leading-tight text-white">
+        We can&rsquo;t reach the <span className="text-lime">bookings</span>
+      </h1>
+
+      <p className="mt-5 text-sm leading-relaxed text-grey">
+        Your place has not gone anywhere &mdash; we just cannot read it this
+        minute. Try this link again shortly. If you need it sorted now, call
+        us and we will find it by your phone number.
+      </p>
+
+      <div className="mt-8 flex flex-wrap gap-3">
+        <Button href={site.phone.href}>Call {site.phone.display}</Button>
+        <Button href="/#classes" variant="outline">
+          See the timetable
+        </Button>
+      </div>
+    </section>
+  );
+}
 
 /**
  * One member's booking, reachable by the link they were given.
@@ -28,7 +60,17 @@ export default async function BookingPage({
   const { token } = await params;
   if (!/^[a-f0-9]{16,64}$/.test(token)) notFound();
 
-  const booking = await (await getStore()).getByToken(token);
+  // Reaching the records can fail, and what a member is told when it does
+  // matters more here than anywhere else on the site: "not found" would
+  // read as "your place is gone". It is not gone, the gym just cannot see
+  // it this second, so say that and give them the phone.
+  let booking;
+  try {
+    booking = await (await getStore()).getByToken(token);
+  } catch (error) {
+    await report("GET /b/[token]", error);
+    return <BookingUnavailable />;
+  }
   if (!booking) notFound();
 
   const found = findSessionIn(await getSchedule(), booking.sessionId);
