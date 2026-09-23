@@ -182,9 +182,22 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
                   tabIndex={day === i ? 0 : -1}
                   onClick={() => setDay(i)}
                   onKeyDown={(e) => {
-                    if (e.key === "ArrowRight") setDay((day + 1) % schedule.length);
-                    if (e.key === "ArrowLeft")
-                      setDay((day - 1 + schedule.length) % schedule.length);
+                    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+                    if (!step) return;
+                    e.preventDefault();
+
+                    const next = (day + step + schedule.length) % schedule.length;
+                    setDay(next);
+                    /*
+                      Focus has to follow the selection. Only the selected
+                      tab is in the tab order, so without this a keyboard
+                      user is left standing on a tab that is no longer the
+                      one showing - the next Tab press goes somewhere they
+                      did not ask for, and a screen reader reads out the
+                      wrong day.
+                    */
+                    const tabs = e.currentTarget.parentElement?.children;
+                    (tabs?.[next] as HTMLElement | undefined)?.focus();
                   }}
                   className={`font-display shrink-0 px-6 py-4 text-[0.8rem] tracking-[0.12em] transition-colors ${
                     day === i
