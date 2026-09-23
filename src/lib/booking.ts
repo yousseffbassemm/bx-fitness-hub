@@ -120,13 +120,26 @@ export function hasStarted(time: string, iso: string, now = new Date()) {
   return start.getTime() <= now.getTime();
 }
 
-export function isDateValidForRow(dayIndex: number, iso: string, now = new Date()) {
+/**
+ * A date that exists, not merely one shaped like a date.
+ *
+ * "2026-13-40" matches the pattern and is not a day. Anything that only
+ * checked the shape handed it to the database, which refused it, and the
+ * caller got an unexplained failure instead of "that is not a date".
+ */
+export function isRealDate(iso: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
-
   const [y, m, day] = iso.split("-").map(Number);
   const date = new Date(y, m - 1, day);
   if (Number.isNaN(date.getTime())) return false;
-  if (date.getMonth() !== m - 1 || date.getDate() !== day) return false;
+  return date.getMonth() === m - 1 && date.getDate() === day;
+}
+
+export function isDateValidForRow(dayIndex: number, iso: string, now = new Date()) {
+  if (!isRealDate(iso)) return false;
+
+  const [y, m, day] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, day);
 
   if (date.getDay() !== WEEKDAY_OF_ROW[dayIndex]) return false;
 

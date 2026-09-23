@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { capacityFor } from "@/lib/booking";
+import { capacityFor, isRealDate } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
 import { getStore } from "@/lib/store";
 
 // The store is node:sqlite; this cannot run on the Edge.
 export const runtime = "nodejs";
-
-const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Places taken for every slot between ?from and ?to, plus each class's
@@ -21,7 +19,9 @@ export async function GET(request: Request) {
   const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
 
-  if (!ISO.test(from) || !ISO.test(to) || from > to) {
+  // A real date, not just a date-shaped string: "2026-13-40" used to get
+  // this far and fail in the database as an unexplained 503.
+  if (!isRealDate(from) || !isRealDate(to) || from > to) {
     return NextResponse.json({ error: "Invalid date range" }, { status: 400 });
   }
 
