@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   formatDate,
+  hasStarted,
   nextDateForRow,
   slotKey,
   toISODate,
@@ -31,6 +32,14 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
   // onto the wrong day from another country.
   const [data, setData] = useState<{
     dates: string[];
+    /*
+      When the timetable was read. A class that has already begun is worked
+      out against this rather than a fresh Date() in render, which would
+      differ between the server's HTML and the browser's first paint and
+      tear the page on hydration. It goes stale on a page left open all
+      evening; the server refuses the booking either way, and says why.
+    */
+    readAt: number;
     spots: Availability;
     /*
       Places this browser already holds. Read here rather than in its own
@@ -75,7 +84,7 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
         // and booking will re-check capacity server-side anyway.
       }
 
-      if (!cancelled) setData({ dates, spots, mine: readMine() });
+      if (!cancelled) setData({ dates, readAt: Date.now(), spots, mine: readMine() });
     }
 
     void load();
@@ -88,6 +97,7 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
   }, [schedule]);
 
   const dates = data?.dates ?? [];
+  const readAt = data ? new Date(data.readAt) : null;
   const spots = data?.spots ?? null;
   const mine = data?.mine ?? {};
 
@@ -212,6 +222,10 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
                     const left = date ? (spots?.[slotKey(id, date)] ?? null) : null;
                     const full = left === 0;
                     const booked = date ? (mine[slotKey(id, date)] ?? null) : null;
+                    // Today's earlier classes are over; the row still shows
+                    // today because the day has not rolled round yet.
+                    const started =
+                      date && readAt ? hasStarted(s.time, date, readAt) : false;
 
                     return (
                       <li
@@ -242,7 +256,7 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
                             </span>
                           )}
 
-                          {left !== null && (
+                          {left !== null && !started && (
                             <span
                               className={`text-xs tabular-nums ${
                                 full
@@ -263,7 +277,11 @@ export default function Classes({ schedule }: { schedule: ScheduleDay[] }) {
                             invitation now: the demand is worth capturing, and
                             a place given up later has somewhere to go.
                           */}
-                          {booked ? (
+                          {started ? (
+                            <span className="font-display block w-full rounded-sm border border-white/10 px-5 py-2.5 text-center text-[0.74rem] tracking-[0.12em] text-grey-dim sm:w-auto">
+                              {booked ? "You were in" : "Started"}
+                            </span>
+                          ) : booked ? (
                             /*
                               This browser holds a place here. Offering to
                               book it again led to a red "That number is

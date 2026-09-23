@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { capacityFor, findSessionIn, isDateValidForRow } from "@/lib/booking";
+import { capacityFor, findSessionIn, hasStarted, isDateValidForRow } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
 import { report } from "@/lib/report";
 import { LIMITS, allow, callerKey, tooManyMessage } from "@/lib/rate-limit";
@@ -33,6 +33,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown class" }, { status: 404 });
   }
 
+  if (hasStarted(found.session.time, date)) {
+    return NextResponse.json(
+      { error: "That class has already started.", reason: "started" },
+      { status: 409 },
+    );
+  }
   if (!isDateValidForRow(found.dayIndex, date)) {
     return NextResponse.json(
       { error: "That date is not bookable for this class" },

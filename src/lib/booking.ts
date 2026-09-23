@@ -86,6 +86,40 @@ export function nextDateForRow(dayIndex: number, from = new Date()) {
 }
 
 /** Guards a client-supplied date against the slot it claims to be for. */
+/**
+ * Minutes past midnight for a time written the way the timetable writes it:
+ * "2:00 PM", "8:30 PM". Null when it cannot be read, which is treated as
+ * "unknown", never as "past" - a class must not become unbookable because
+ * somebody typed its time oddly on the Timetable screen.
+ */
+export function minutesOfDay(time: string): number | null {
+  const m = /^\s*(\d{1,2}):(\d{2})\s*([AaPp])\.?[Mm]\.?\s*$/.exec(time);
+  if (!m) return null;
+  const hour12 = Number(m[1]);
+  const minute = Number(m[2]);
+  if (hour12 < 1 || hour12 > 12 || minute > 59) return null;
+  const hour = (hour12 % 12) + (m[3].toLowerCase() === "p" ? 12 : 0);
+  return hour * 60 + minute;
+}
+
+/**
+ * Whether a class on this date has already begun.
+ *
+ * Booking only ever checked the date, so a class stayed bookable until
+ * midnight: at 11:30 PM the timetable still offered the 9 PM class that
+ * finished two hours earlier, took the booking, and said "You're in". For a
+ * gym whose last class ends well before it closes, that is a few hours
+ * every night of advertising classes that are over.
+ */
+export function hasStarted(time: string, iso: string, now = new Date()) {
+  const minutes = minutesOfDay(time);
+  if (minutes === null) return false;
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return false;
+  const start = new Date(y, m - 1, d, Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return start.getTime() <= now.getTime();
+}
+
 export function isDateValidForRow(dayIndex: number, iso: string, now = new Date()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
 
