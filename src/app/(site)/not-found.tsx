@@ -8,6 +8,10 @@ import NotFound from "@/components/NotFound";
  * /b/<token> - and that page also carries the noindex, which is what
  * actually matters for a 404.
  */
+// Same reason as the booking page: nothing here should point a canonical
+// at the home page while carrying a noindex.
+export const metadata = { alternates: { canonical: null } };
+
 export default function SiteNotFound() {
   return <NotFound />;
 }

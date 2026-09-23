@@ -19,6 +19,8 @@ export default function LeadForm() {
   const [values, setValues] = useState({ name: "", phone: "", email: "", goal: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
+  /** What the server said went wrong, when it said anything. */
+  const [failure, setFailure] = useState<string | null>(null);
 
   function validate() {
     const next: Errors = {};
@@ -38,15 +40,28 @@ export default function LeadForm() {
     if (!validate()) return;
 
     setState("sending");
+    setFailure(null);
     try {
       const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
-      if (!res.ok) throw new Error("Request failed");
+      if (!res.ok) {
+        /*
+          The server knows what went wrong and says so; this used to throw
+          the answer away and show "please try again" for everything. On a
+          429 that is the one thing not to do - the message that came back
+          says to wait a few minutes - and on a 503 the enquiry is not
+          saved and calling is the way through.
+        */
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setFailure(typeof data.error === "string" && data.error ? data.error : null);
+        return setState("error");
+      }
       setState("done");
     } catch {
+      setFailure(null);
       setState("error");
     }
   }
@@ -178,8 +193,8 @@ export default function LeadForm() {
 
       {state === "error" && (
         <p role="alert" className="text-xs text-pink">
-          Something went wrong sending that. Please try again, or give the gym a
-          call.
+          {failure ??
+            "Something went wrong sending that. Please try again, or give the gym a call."}
         </p>
       )}
 

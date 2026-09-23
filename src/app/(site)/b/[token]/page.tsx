@@ -14,6 +14,14 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Your booking",
   robots: { index: false, follow: false },
+  /*
+    The (site) layout declares canonical "/" for the marketing page, and
+    metadata is merged shallowly, so this page was inheriting it: a noindex
+    page pointing a canonical at the home page. Google's own guidance is not
+    to pair those - the noindex can be taken to apply to the canonical
+    target, which here is the only page the gym has.
+  */
+  alternates: { canonical: null },
 };
 
 /** The records are unreachable - which is not the same as a lost place. */

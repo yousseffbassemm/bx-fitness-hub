@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findSessionIn, isDateValidForRow } from "@/lib/booking";
+import { capacityFor, findSessionIn, isDateValidForRow, slotKey } from "@/lib/booking";
 import { getSchedule } from "@/lib/content";
 import { report } from "@/lib/report";
 import { LIMITS, allow, callerKey, tooManyMessage } from "@/lib/rate-limit";
@@ -45,7 +45,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await (await getStore()).joinWaitlist({
+    /*
+      A waitlist is for a class with no room left. Without this check the
+      route took anyone: a stale page, or a page held open while people
+      cancelled, could put somebody in a queue for a class with thirteen
+      free places - and nothing would ever move them, because promotion
+      only happens when a booking is given up. They would wait for a class
+      they could have walked into.
+    */
+    const store = await getStore();
+    const taken = (await store.counts(date, date))[slotKey(sessionId, date)] ?? 0;
+    if (taken < capacityFor(found.session.discipline)) {
+      return NextResponse.json(
+        { error: "There is still room in this class - book a place instead.", reason: "not-full" },
+        { status: 409 },
+      );
+    }
+
+    const result = await store.joinWaitlist({
       sessionId,
       date,
       name: name.trim(),
