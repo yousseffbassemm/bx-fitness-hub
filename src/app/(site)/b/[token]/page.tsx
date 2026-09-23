@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import CancelBooking from "@/components/CancelBooking";
 import { findSessionIn, formatDate } from "@/lib/booking";
@@ -63,6 +64,13 @@ export default async function BookingPage({
           <dd className="text-right text-white">{booking.name}</dd>
         </div>
       </dl>
+
+      <Link
+        href="/#classes"
+        className="font-display mt-8 inline-flex items-center gap-2 text-[0.78rem] tracking-[0.12em] text-grey transition-colors hover:text-lime"
+      >
+        <span aria-hidden="true">&larr;</span> Back to the timetable
+      </Link>
 
       {cancelled ? (
         <p className="mt-8 rounded-sm border border-white/10 bg-charcoal px-5 py-4 text-sm leading-relaxed text-grey">

@@ -34,12 +34,12 @@ export default function Footer() {
             <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:mt-5 lg:block lg:space-y-3">
               {nav.map((item) => (
                 <li key={item.href}>
-                  <a
+                  <Link
                     href={item.href}
                     className="text-sm text-grey transition-colors hover:text-lime"
                   >
                     {item.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>

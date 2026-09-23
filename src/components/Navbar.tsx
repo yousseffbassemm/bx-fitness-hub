@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { nav, site } from "@/lib/site";
 import { Logo } from "./ui/Logo";
@@ -42,29 +43,29 @@ export default function Navbar() {
         <ul className="hidden items-center gap-7 xl:flex">
           {nav.map((item) => (
             <li key={item.href}>
-              <a
+              <Link
                 href={item.href}
                 className="text-[0.82rem] text-grey transition-colors hover:text-white"
               >
                 {item.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
 
         <div className="flex items-center gap-3">
-          <a
-            href="#contact"
+          <Link
+            href="/#contact"
             className="hidden text-[0.82rem] text-grey transition-colors hover:text-white lg:block"
           >
             Book a free trial
-          </a>
-          <a
-            href="#membership"
+          </Link>
+          <Link
+            href="/#membership"
             className="font-display hidden rounded-sm bg-lime px-5 py-2.5 text-[0.78rem] tracking-[0.12em] text-ink transition-colors hover:bg-white sm:inline-flex"
           >
             Join Now
-          </a>
+          </Link>
 
           <button
             type="button"
@@ -104,24 +105,24 @@ export default function Navbar() {
         <ul className="px-6 py-2">
           {nav.map((item) => (
             <li key={item.href} className="border-b border-line/60 last:border-0">
-              <a
+              <Link
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className="font-display block py-4 text-xl text-white"
               >
                 {item.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
         <div className="flex gap-3 px-6 pb-6 pt-2">
-          <a
-            href="#membership"
+          <Link
+            href="/#membership"
             onClick={() => setOpen(false)}
             className="font-display flex-1 rounded-sm bg-lime py-3.5 text-center text-[0.8rem] tracking-[0.12em] text-ink"
           >
             Join Now
-          </a>
+          </Link>
           <a
             href={site.phone.href}
             className="font-display flex-1 rounded-sm border border-white/15 py-3.5 text-center text-[0.8rem] tracking-[0.12em] text-white"

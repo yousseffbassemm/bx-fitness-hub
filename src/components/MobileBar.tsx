@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { site } from "@/lib/site";
 
 /**
@@ -14,18 +15,18 @@ export default function MobileBar() {
         >
           Call
         </a>
-        <a
-          href="#classes"
+        <Link
+          href="/#classes"
           className="font-display flex items-center justify-center py-4 text-[0.72rem] tracking-[0.14em] text-white"
         >
           Book
-        </a>
-        <a
-          href="#membership"
+        </Link>
+        <Link
+          href="/#membership"
           className="font-display flex items-center justify-center bg-lime py-4 text-[0.72rem] tracking-[0.14em] text-ink"
         >
           Join
-        </a>
+        </Link>
       </div>
     </div>
   );

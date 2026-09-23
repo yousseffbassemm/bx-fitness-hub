@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 /**
@@ -10,8 +11,16 @@ import { useEffect } from "react";
  * underneath the jump and the reader ends up somewhere else entirely. This
  * re-aligns on a short interval until the target stops moving, and gets out
  * of the way the moment the reader scrolls for themselves.
+ *
+ * Keyed on the path, not just on mount, because coming back from a booking
+ * page to /#classes is a client-side navigation: the layout never unmounts,
+ * so on mount alone this ran once, on a page with no sections, and never
+ * again. Within the home page the hash moves without the path moving, and
+ * the browser's own smooth scroll already handles that.
  */
 export default function HashScroll() {
+  const pathname = usePathname();
+
   useEffect(() => {
     const hash = window.location.hash;
     if (!hash || hash.length < 2) return;
@@ -74,7 +83,7 @@ export default function HashScroll() {
     }
 
     return stop;
-  }, []);
+  }, [pathname]);
 
   return null;
 }

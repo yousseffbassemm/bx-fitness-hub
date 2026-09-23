@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import mark from "@/images/logo-mark.png";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 // Fingerprinted by the import, so replacing the artwork changes the URL.
 const MARK = mark.src;
@@ -36,16 +36,25 @@ export function Mark({ className = "h-11 w-11" }: { className?: string }) {
 }
 
 /**
- * Wordmark plus mark. Clicking it returns to the top of the page rather than
- * re-requesting "/", which on a single-page site would otherwise do nothing
- * visible once you are partway down.
+ * Wordmark plus mark. On the home page, clicking it scrolls to the top
+ * rather than re-requesting "/", which would otherwise do nothing visible
+ * once you are partway down.
+ *
+ * Anywhere else it has to behave like the link it is. It did not: it
+ * swallowed the click on every page, so on a member's booking page - the
+ * one place with no other way out, and the one where "take me back" is the
+ * obvious next thing to want - the logo scrolled a short page that was
+ * already at the top, and nothing happened at all.
  */
 export function Logo({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   function toTop(e: React.MouseEvent<HTMLAnchorElement>) {
     // Let people open the home page in a new tab if they mean to.
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    // Off the home page this is a real journey; let Link make it.
+    if (pathname !== "/") return;
     e.preventDefault();
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -59,7 +68,9 @@ export function Logo({ compact = false }: { compact?: boolean }) {
     <Link
       href="/"
       onClick={toTop}
-      aria-label="BX Fitness Hub - back to top"
+      aria-label={
+        pathname === "/" ? "BX Fitness Hub - back to top" : "BX Fitness Hub - home"
+      }
       className="group flex items-center gap-2.5 text-white"
     >
       <Mark className="h-11 w-11 transition-colors duration-300 group-hover:text-lime sm:h-12 sm:w-12" />

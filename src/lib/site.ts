@@ -107,15 +107,24 @@ export const site = {
  */
 export const isPlaceholder = (value: string) => /^\[.+\]$/.test(value.trim());
 
+/*
+   Every one of these is a section of the home page, so each href says so.
+   They were written "#about" back when the site was one page and that was
+   the same thing. It stopped being the same thing when the booking page
+   arrived: from /b/<token> a bare "#about" means "a section of this page",
+   there is no such section, and the whole nav - header, mobile sheet and
+   footer - silently did nothing. "/#about" still scrolls without reloading
+   when you are already on the home page.
+   ---------------------------------------------------------------------- */
 export const nav = [
-  { href: "#about", label: "About" },
-  { href: "#facilities", label: "Facilities" },
-  { href: "#classes", label: "Classes" },
-  { href: "#training", label: "Personal Training" },
-  { href: "#coaches", label: "Coaches" },
-  { href: "#membership", label: "Membership" },
-  { href: "#gallery", label: "Gallery" },
-  { href: "#contact", label: "Contact" },
+  { href: "/#about", label: "About" },
+  { href: "/#facilities", label: "Facilities" },
+  { href: "/#classes", label: "Classes" },
+  { href: "/#training", label: "Personal Training" },
+  { href: "/#coaches", label: "Coaches" },
+  { href: "/#membership", label: "Membership" },
+  { href: "/#gallery", label: "Gallery" },
+  { href: "/#contact", label: "Contact" },
 ] as const;
 
 /* -------------------------------------------------------------------------
