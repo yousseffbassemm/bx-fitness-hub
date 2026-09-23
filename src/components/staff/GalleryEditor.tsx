@@ -20,7 +20,8 @@ export default function GalleryEditor({
   fallbacks,
 }: {
   items: EditableGalleryItem[];
-  fallbacks: string[];
+  /** The description in the code -> the photo it ships with. */
+  fallbacks: Record<string, string>;
 }) {
   const router = useRouter();
   const { upload, uploading, error: uploadError, setError } = useUpload();
@@ -30,6 +31,8 @@ export default function GalleryEditor({
   const [saved, setSaved] = useState(false);
 
   const strip = (r: Row): EditableGalleryItem => ({
+    // Carried, not shown: which built-in photo this tile started as.
+    base: r.base ?? null,
     alt: r.alt,
     ratio: r.ratio,
     photoId: r.photoId,
@@ -82,7 +85,7 @@ export default function GalleryEditor({
         {draft.map((g, i) => (
           <div key={i} className="rounded-sm border border-white/10 bg-charcoal p-4">
             <PhotoField
-              src={g.preview ?? (g.photoId ? `/api/photo/${g.photoId}` : fallbacks[i])}
+              src={g.preview ?? (g.photoId ? `/api/photo/${g.photoId}` : fallbacks[g.base ?? g.alt])}
               aspect={g.ratio === "tall" ? "aspect-[3/4]" : "aspect-square"}
               busy={uploading === i}
               onFile={async (file) => {
@@ -154,7 +157,7 @@ export default function GalleryEditor({
         type="button"
         onClick={() => {
           setSaved(false);
-          setDraft((d) => [...d, { alt: "", ratio: "square", photoId: null }]);
+          setDraft((d) => [...d, { base: null, alt: "", ratio: "square", photoId: null }]);
         }}
         className="font-display mt-4 w-full rounded-sm border border-dashed border-white/20 py-3 text-[0.72rem] tracking-[0.12em] text-grey hover:border-lime hover:text-lime"
       >

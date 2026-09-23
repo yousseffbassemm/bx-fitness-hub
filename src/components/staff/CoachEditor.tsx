@@ -43,6 +43,7 @@ export default function CoachEditor({
 
   function strip(r: Row): EditableCoach {
     return {
+      base: r.base ?? null,
       name: r.name,
       credential: r.credential,
       disciplines: r.disciplines,
@@ -113,7 +114,9 @@ export default function CoachEditor({
     <div>
       <div className="space-y-4">
         {draft.map((coach, i) => {
-          const src = coach.preview ?? (coach.photoId ? `/api/photo/${coach.photoId}` : fallbacks[coach.name]);
+          const src =
+            coach.preview ??
+            (coach.photoId ? `/api/photo/${coach.photoId}` : fallbacks[coach.base ?? coach.name]);
 
           return (
             <div key={i} className="rounded-sm border border-white/10 bg-charcoal p-5">

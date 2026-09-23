@@ -11,8 +11,16 @@ export default async function CoachesPage() {
   await requireAdminPage();
   const coaches = await getEditableCoaches();
 
-  // The photographs that ship in the code, so a coach who has never had one
-  // uploaded still shows the picture the site is currently using.
+  /*
+    The photographs that ship in the code, so a coach who has never had one
+    uploaded still shows the picture the site is currently using.
+
+    Keyed by the name in the code, and looked up by the row's `base` rather
+    than by whatever the name has been edited to. Keyed by the live name, a
+    coach whose name was being corrected lost their portrait mid-edit and
+    the card read "No photo", which looks like the photograph has just been
+    deleted.
+  */
   const fallbacks = Object.fromEntries(codeCoaches.map((c) => [c.name, c.photo.src]));
 
   return (

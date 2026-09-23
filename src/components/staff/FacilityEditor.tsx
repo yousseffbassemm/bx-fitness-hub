@@ -24,7 +24,8 @@ export default function FacilityEditor({
 }: {
   facilities: EditableFacility[];
   /** Position -> the photo in the code, for ones never re-uploaded. */
-  fallbacks: string[];
+  /** The title in the code -> the photo it ships with. */
+  fallbacks: Record<string, string>;
 }) {
   const router = useRouter();
   const { upload, uploading, error: uploadError, setError } = useUpload();
@@ -34,6 +35,7 @@ export default function FacilityEditor({
   const [saved, setSaved] = useState(false);
 
   const strip = (r: Row): EditableFacility => ({
+    base: r.base ?? null,
     title: r.title,
     copy: r.copy,
     alt: r.alt,
@@ -89,7 +91,7 @@ export default function FacilityEditor({
           <div key={i} className="rounded-sm border border-white/10 bg-charcoal p-5">
             <div className="flex flex-wrap gap-5">
               <PhotoField
-                src={f.preview ?? (f.photoId ? `/api/photo/${f.photoId}` : fallbacks[i])}
+                src={f.preview ?? (f.photoId ? `/api/photo/${f.photoId}` : fallbacks[f.base ?? f.title])}
                 focus={f.focus}
                 aspect="aspect-[4/5]"
                 busy={uploading === i}

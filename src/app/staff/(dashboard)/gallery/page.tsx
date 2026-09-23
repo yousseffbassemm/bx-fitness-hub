@@ -10,7 +10,8 @@ export const metadata = { title: "Gallery" };
 export default async function GalleryPage() {
   await requireAdminPage();
   const items = await getEditableGallery();
-  const fallbacks = codeGallery.map((g) => g.src.src);
+  // By description, not by position - see the note on the facilities screen.
+  const fallbacks = Object.fromEntries(codeGallery.map((g) => [g.alt, g.src.src]));
 
   return (
     <>

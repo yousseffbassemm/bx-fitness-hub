@@ -20,6 +20,19 @@ import {
 export const runtime = "nodejs";
 
 /**
+ * Which built-in item a row came from.
+ *
+ * Every one of these three checks asks the same question - does the code
+ * have a photo for this row, or does it need to bring its own - and all
+ * three used to ask it of the row's visible text. Staff editing that text
+ * were told they had added something new and the save was refused, so a
+ * coach could not be renamed and a photo could not be re-described. The
+ * row now carries where it started; the text is free to change.
+ */
+const identity = (row: { base?: string | null }, text: unknown) =>
+  typeof row?.base === "string" && row.base ? row.base : String(text ?? "").trim();
+
+/**
  * Save an editable piece of the site.
  *
  * The marketing page is prerendered, so a save has to tell Next the page is
@@ -77,7 +90,7 @@ export async function PUT(request: Request) {
     */
     const known = new Set(defaultCoachValues().map((c) => c.name));
     const unphotographed = coaches.find(
-      (c) => !c?.photoId && !known.has(String(c?.name ?? "").trim()),
+      (c) => !c?.photoId && !known.has(identity(c, c?.name)),
     );
     if (unphotographed) {
       return NextResponse.json(
@@ -121,9 +134,11 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Every facility needs a name." }, { status: 400 });
     }
     // Same rule as coaches: only one the code has no photo for needs its own.
+    // Judged on where the row came from, not on what it is called now -
+    // renaming a facility used to be read as adding one.
     const knownFacilities = new Set(defaultFacilityValues().map((f) => f.title));
     const bare = items.find(
-      (f) => !f?.photoId && !knownFacilities.has(String(f?.title ?? "").trim()),
+      (f) => !f?.photoId && !knownFacilities.has(identity(f, f?.title)),
     );
     if (bare) {
       return NextResponse.json(
@@ -142,7 +157,7 @@ export async function PUT(request: Request) {
     }
     const knownPhotos = new Set(defaultGalleryValues().map((g) => g.alt));
     const missing = items.find(
-      (g) => !g?.photoId && !knownPhotos.has(String(g?.alt ?? "").trim()),
+      (g) => !g?.photoId && !knownPhotos.has(identity(g, g?.alt)),
     );
     if (missing) {
       return NextResponse.json(

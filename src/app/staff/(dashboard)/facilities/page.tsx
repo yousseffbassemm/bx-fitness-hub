@@ -10,7 +10,11 @@ export const metadata = { title: "Facilities" };
 export default async function FacilitiesPage() {
   await requireAdminPage();
   const facilities = await getEditableFacilities();
-  const fallbacks = codeFacilities.map((f) => f.image.src);
+  // By title, not by position: these screens have Up and Down buttons, and
+  // an array by index showed each card its neighbour's photograph the moment
+  // anything moved - the same bug the site itself had until getFacilities
+  // started matching on identity.
+  const fallbacks = Object.fromEntries(codeFacilities.map((f) => [f.title, f.image.src]));
 
   return (
     <>

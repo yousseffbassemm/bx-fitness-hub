@@ -109,7 +109,31 @@ export async function savePlans(next: EditablePlan[], editedBy: string) {
    Coaches
    ---------------------------------------------------------------------- */
 
-export type EditableCoach = {
+/*
+   Which built-in item a saved row started as.
+
+   The photograph for a coach, a facility and a gallery tile lives in the
+   code, and a saved row with no uploaded photo of its own borrows it. What
+   tied the two together was the row's own visible text - a coach's name, a
+   facility's title, a photo's description - which is also the text staff
+   are invited to edit. So the identity changed whenever the wording did,
+   and the save was refused with a message about a new item needing a
+   photo. Nobody had added anything; they had corrected a typo.
+
+   This remembers it instead. Rows saved before this existed have no `base`,
+   so it is worked out from their text when the editor loads them, which is
+   safe precisely because the old rule made it impossible to save a row
+   whose text had drifted. From then on the wording is just wording.
+   ---------------------------------------------------------------------- */
+type Based = { base?: string | null };
+
+/** The built-in identity of a row, however it was recorded. */
+const baseOf = (row: Based & Record<string, unknown>, textField: string) =>
+  typeof row.base === "string" && row.base
+    ? row.base
+    : String(row[textField] ?? "").trim();
+
+export type EditableCoach = Based & {
   name: string;
   credential: string;
   disciplines: string[];
@@ -143,6 +167,7 @@ export const uploadUrl = (id: string) => `/api/photo/${id}`;
 /** The coaches as they are in the code, for seeding the editor. */
 export function defaultCoachValues(): EditableCoach[] {
   return defaultCoaches.map((c) => ({
+    base: c.name,
     name: c.name,
     credential: c.credential,
     disciplines: [...c.disciplines],
@@ -179,7 +204,8 @@ export async function getCoaches(): Promise<Coach[]> {
     renamed without every portrait having to be re-uploaded first.
   */
   return saved.map((c) => {
-    const fromCode = defaultCoaches.find((d) => d.name === c.name);
+    const base = baseOf(c, "name");
+    const fromCode = defaultCoaches.find((d) => d.name === base);
     return {
       name: c.name,
       credential: c.credential,
@@ -198,12 +224,24 @@ export async function getEditableCoaches(): Promise<EditableCoach[]> {
   } catch {
     saved = null;
   }
-  return saved?.length ? saved : defaultCoachValues();
+  if (!saved?.length) return defaultCoachValues();
+  // Stamp the identity onto rows saved before it was recorded, so the next
+  // save keeps it and the name becomes free to change. Field order matches
+  // saveCoaches: the screens compare this against their own draft as JSON.
+  return saved.map((c) => ({
+    base: baseOf(c, "name"),
+    name: c.name,
+    credential: c.credential,
+    disciplines: c.disciplines,
+    photoId: c.photoId,
+    focus: c.focus,
+  }));
 }
 
 export async function saveCoaches(next: EditableCoach[], editedBy: string) {
   const clean = next
     .map((c) => ({
+      base: typeof c.base === "string" && c.base ? c.base : null,
       name: String(c.name ?? "").trim().slice(0, 60),
       credential: String(c.credential ?? "").trim().slice(0, 80),
       disciplines: (Array.isArray(c.disciplines) ? c.disciplines : [])
@@ -327,7 +365,7 @@ export function newSessionId() {
    edited before anyone has re-shot anything.
    ---------------------------------------------------------------------- */
 
-export type EditableFacility = {
+export type EditableFacility = Based & {
   title: string;
   copy: string;
   alt: string;
@@ -343,6 +381,7 @@ const FACILITIES_KEY = "facilities";
 
 export function defaultFacilityValues(): EditableFacility[] {
   return defaultFacilities.map((f) => ({
+    base: f.title,
     title: f.title,
     copy: f.copy,
     alt: f.alt,
@@ -379,8 +418,9 @@ export async function getFacilities(): Promise<FacilityItem[]> {
     stayed where they were, leaving each card wearing its neighbour's.
   */
   return saved.map((f, i) => {
+    const base = baseOf(f, "title");
     const fromCode =
-      defaultFacilities.find((d) => d.title === f.title) ?? defaultFacilities[i];
+      defaultFacilities.find((d) => d.title === base) ?? defaultFacilities[i];
     return {
       title: f.title,
       copy: f.copy,
@@ -398,12 +438,21 @@ export async function getEditableFacilities(): Promise<EditableFacility[]> {
   } catch {
     saved = null;
   }
-  return saved?.length ? saved : defaultFacilityValues();
+  if (!saved?.length) return defaultFacilityValues();
+  return saved.map((f) => ({
+    base: baseOf(f, "title"),
+    title: f.title,
+    copy: f.copy,
+    alt: f.alt,
+    photoId: f.photoId,
+    focus: f.focus,
+  }));
 }
 
 export async function saveFacilities(next: EditableFacility[], editedBy: string) {
   const clean = next
     .map((f) => ({
+      base: typeof f.base === "string" && f.base ? f.base : null,
       title: String(f.title ?? "").trim().slice(0, 60),
       copy: String(f.copy ?? "").trim().slice(0, 200),
       alt: String(f.alt ?? "").trim().slice(0, 200),
@@ -417,7 +466,7 @@ export async function saveFacilities(next: EditableFacility[], editedBy: string)
 
 export type GalleryRatio = "tall" | "square";
 
-export type EditableGalleryItem = {
+export type EditableGalleryItem = Based & {
   alt: string;
   ratio: GalleryRatio;
   photoId: string | null;
@@ -433,6 +482,7 @@ const GALLERY_KEY = "gallery";
 
 export function defaultGalleryValues(): EditableGalleryItem[] {
   return defaultGallery.map((g) => ({
+    base: g.alt,
     alt: g.alt,
     ratio: g.ratio === "tall" ? "tall" : "square",
     photoId: null,
@@ -459,7 +509,8 @@ export async function getGallery(): Promise<GalleryItem[]> {
   // getFacilities gives: the mosaic can be reordered, and seven of these
   // eight carry no uploaded photo of their own.
   return saved.map((g, i) => {
-    const fromCode = defaultGallery.find((d) => d.alt === g.alt) ?? defaultGallery[i];
+    const base = baseOf(g, "alt");
+    const fromCode = defaultGallery.find((d) => d.alt === base) ?? defaultGallery[i];
     return {
       alt: g.alt,
       ratio: g.ratio === "tall" ? ("tall" as const) : ("square" as const),
@@ -475,12 +526,19 @@ export async function getEditableGallery(): Promise<EditableGalleryItem[]> {
   } catch {
     saved = null;
   }
-  return saved?.length ? saved : defaultGalleryValues();
+  if (!saved?.length) return defaultGalleryValues();
+  return saved.map((g) => ({
+    base: baseOf(g, "alt"),
+    alt: g.alt,
+    ratio: g.ratio,
+    photoId: g.photoId,
+  }));
 }
 
 export async function saveGallery(next: EditableGalleryItem[], editedBy: string) {
   const clean = next
     .map((g) => ({
+      base: typeof g.base === "string" && g.base ? g.base : null,
       alt: String(g.alt ?? "").trim().slice(0, 200),
       ratio: g.ratio === "tall" ? ("tall" as const) : ("square" as const),
       photoId: typeof g.photoId === "string" && g.photoId ? g.photoId : null,
