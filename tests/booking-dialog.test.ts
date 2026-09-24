@@ -30,13 +30,18 @@ let closed = 0;
 let booked: unknown[] = [];
 const realFetch = globalThis.fetch;
 
+/** What the dialog asked for, so a test can check what it sent. */
+let sent: Array<{ url: string; body: Record<string, unknown> }> = [];
+
 /** Answer the booking endpoint with whatever a test needs it to say. */
 function answerWith(status: number, body: unknown) {
-  globalThis.fetch = (async () =>
-    new Response(JSON.stringify(body), {
+  globalThis.fetch = (async (url: string, init: RequestInit) => {
+    sent.push({ url: String(url), body: JSON.parse(String(init?.body ?? "{}")) });
+    return new Response(JSON.stringify(body), {
       status,
       headers: { "Content-Type": "application/json" },
-    })) as typeof fetch;
+    });
+  }) as unknown as typeof fetch;
 }
 
 /**
@@ -61,6 +66,7 @@ const open = (over: Partial<BookingTarget> = {}) =>
 beforeEach(() => {
   closed = 0;
   booked = [];
+  sent = [];
   answerWith(200, { ok: true, spotsLeft: 9, token: "a".repeat(32) });
   window.history.replaceState(null, "", "/");
 });
@@ -299,5 +305,83 @@ describe("a full class", () => {
 
     await waitFor(() => assert.equal(url, "/api/classes/waitlist"));
     await waitFor(() => assert.match(document.body.textContent ?? "", /2|queue|list/i));
+  });
+});
+
+describe("booking as a member", () => {
+  const asMember = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(await screen.findByRole("button", { name: /i.m a member/i }));
+    return screen.findByLabelText(/membership number or phone/i);
+  };
+
+  /*
+    Find used to be a gate: Confirm stayed disabled until the lookup had
+    run. A member could type their number, press the one green button on
+    the screen, and have nothing happen at all - and because the button was
+    disabled, the message telling them to press Find first never showed.
+    Found by sitting in front of it doing exactly that.
+  */
+  it("books without making them press Find first", async () => {
+    const user = userEvent.setup();
+    open();
+    const field = await asMember(user);
+    await user.type(field, "BX-0142");
+
+    await user.click(screen.getByRole("button", { name: /confirm place/i }));
+
+    await waitFor(() => assert.equal(booked.length, 1));
+    const booking = sent.at(-1)!;
+    assert.match(booking.url, /\/api\/classes\/book$/);
+    assert.equal(booking.body.member, true);
+    assert.equal(booking.body.memberRef, "BX-0142");
+    // Never the lookup: the membership is resolved by the booking itself.
+    assert.equal(sent.length, 1, "pressing Confirm should be one request, not two");
+  });
+
+  it("stays usable after a correction to the number", async () => {
+    const user = userEvent.setup();
+    answerWith(200, { found: true, firstName: "Karma" });
+    open();
+    const field = await asMember(user);
+
+    await user.type(field, "BX-014");
+    await user.click(screen.getByRole("button", { name: /^find$/i }));
+    await screen.findByText(/welcome back, karma/i);
+
+    // Typing again clears the greeting, which used to disable Confirm too.
+    await user.type(field, "2");
+    assert.equal(screen.queryByText(/welcome back/i), null);
+
+    answerWith(200, { ok: true, spotsLeft: 9, token: "b".repeat(32) });
+    await user.click(screen.getByRole("button", { name: /confirm place/i }));
+    await waitFor(() => assert.equal(booked.length, 1));
+  });
+
+  it("says what to type when the field is empty, rather than doing nothing", async () => {
+    const user = userEvent.setup();
+    open();
+    await asMember(user);
+
+    await user.click(screen.getByRole("button", { name: /confirm place/i }));
+    const alert = await screen.findByRole("alert");
+    assert.match(alert.textContent ?? "", /membership number|phone/i);
+    assert.equal(booked.length, 0, "nothing should have been sent");
+  });
+
+  it("passes the gym's answer on when the membership is not found", async () => {
+    const user = userEvent.setup();
+    open();
+    const field = await asMember(user);
+    await user.type(field, "BX-9999");
+
+    answerWith(404, {
+      error: "We cannot find that membership. Check the number, or book as a guest.",
+      reason: "unknown-member",
+    });
+    await user.click(screen.getByRole("button", { name: /confirm place/i }));
+
+    const alert = await screen.findByRole("alert");
+    assert.match(alert.textContent ?? "", /cannot find that membership/i);
+    assert.equal(booked.length, 0);
   });
 });

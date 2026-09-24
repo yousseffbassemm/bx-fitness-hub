@@ -219,7 +219,17 @@ export default function BookingDialog({
     setError(null);
 
     if (who === "member") {
-      if (!memberName) return setError("Find your membership first.");
+      /*
+        Find is reassurance, not a gate. Requiring it meant a member could
+        type their number, press the one green button on the screen, and
+        have nothing happen at all - the button was disabled, so the message
+        telling them to press Find never got a chance to show. Correcting a
+        typo after a successful Find put them back in the same dead end.
+        The membership is checked on the server either way.
+      */
+      if (!memberRef.trim()) {
+        return setError("Enter your membership number, or the phone number we have for you.");
+      }
     } else {
       if (name.trim().length < 2) return setError("Please enter your name.");
       if (!/^[+\d][\d\s-]{8,17}$/.test(phone.trim()))
@@ -592,7 +602,7 @@ export default function BookingDialog({
             <button
               type="submit"
               hidden={who === "asking"}
-              disabled={state === "sending" || (who === "member" && !memberName)}
+              disabled={state === "sending"}
               className="font-display mt-6 w-full rounded-sm bg-lime py-4 text-[0.8rem] tracking-[0.14em] text-ink transition-colors hover:bg-white disabled:opacity-60"
             >
               {state === "sending"
