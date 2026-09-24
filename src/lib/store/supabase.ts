@@ -344,13 +344,42 @@ export const supabaseStore: BookingStore = {
     if (!res.ok) throw new Error(`Supabase saveUpload failed: ${res.status}`);
   },
 
+  /*
+    Photographs are the one thing here big enough for the transfer itself to
+    fail. A coach portrait is a megabyte or more, and base64 makes it a third
+    bigger again, so a cold request pulls a couple of megabytes out of
+    Postgres before it can answer - and a connection dropped part way through
+    that surfaces as "terminated" with no status code to inspect.
+
+    It happened in production within minutes of the first deploy. The CDN
+    caches the answer for a year, so it only ever bites on a miss, but a miss
+    is somebody's first visit and the picture simply does not load.
+
+    So this one asks twice. Only this one: a GET can be repeated safely, and
+    a booking or a cancellation cannot - retrying those would take two places
+    for one person.
+  */
   async getUpload(id) {
-    const res = await fetch(
-      `${url}/rest/v1/uploads?select=mime,bytes_b64&id=eq.${encodeURIComponent(id)}`,
-      { headers: headers(), cache: "no-store" },
-    );
-    if (!res.ok) throw new Error(`Supabase getUpload failed: ${res.status}`);
-    const [row] = (await res.json()) as { mime: string; bytes_b64: string }[];
+    const fetchRow = async () => {
+      const res = await fetch(
+        `${url}/rest/v1/uploads?select=mime,bytes_b64&id=eq.${encodeURIComponent(id)}`,
+        { headers: headers(), cache: "no-store" },
+      );
+      if (!res.ok) throw new Error(`Supabase getUpload failed: ${res.status}`);
+      return (await res.json()) as { mime: string; bytes_b64: string }[];
+    };
+
+    let rows;
+    try {
+      rows = await fetchRow();
+    } catch (error) {
+      // A refusal from Postgres will refuse again; only a broken transfer is
+      // worth repeating, and that arrives as a network error, not a status.
+      if (error instanceof Error && /Supabase getUpload failed/.test(error.message)) throw error;
+      rows = await fetchRow();
+    }
+
+    const [row] = rows;
     return row
       ? { mime: row.mime, bytes: new Uint8Array(Buffer.from(row.bytes_b64, "base64")) }
       : null;
