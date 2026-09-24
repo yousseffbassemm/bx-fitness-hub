@@ -15,8 +15,28 @@ export function usePathname() {
   return pathname;
 }
 
+/**
+ * Counted, because "the screen goes and re-reads the list" is the only way
+ * a staff screen shows the row it just changed. A handler that quietly
+ * stops calling it leaves the desk looking at a stale list.
+ */
+export let refreshes = 0;
+
+export function resetRouter() {
+  refreshes = 0;
+}
+
 export function useRouter() {
-  return { push() {}, replace() {}, refresh() {}, back() {}, forward() {}, prefetch() {} };
+  return {
+    push() {},
+    replace() {},
+    refresh() {
+      refreshes += 1;
+    },
+    back() {},
+    forward() {},
+    prefetch() {},
+  };
 }
 
 export function useSearchParams() {
