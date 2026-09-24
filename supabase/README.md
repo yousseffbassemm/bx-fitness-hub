@@ -51,10 +51,17 @@ in the Supabase SQL editor under the same number and name, so the two line up:
 | `queries/03-bookings.sql` | `03 Bookings - who is coming, and who owes` |
 | `queries/04-enquiries.sql` | `04 Enquiries - asked to be called, not yet called` |
 | `queries/05-errors.sql` | `05 Errors - what has gone wrong on the server` |
+| `queries/06-schema-audit.sql` | `06 Schema audit - every object the repo declares` |
 
 Not one of them writes anything, so they are safe to run against production.
 The staff screens cover the same ground for day to day work; these are for
 when you want to look at the database directly.
+
+**After applying `schema.sql`, run `06`.** It checks every one of the 26
+objects the schema declares - tables, indexes, functions, constraints - by
+name, and `missing` must be 0. The list of names it looks for is tied to the
+schema by a test, so adding a table without adding it to the audit fails the
+build rather than quietly going unchecked.
 
 **The health check is the one to run first when something looks wrong.** It
 reports the eight tables, the five functions, row level security on every
