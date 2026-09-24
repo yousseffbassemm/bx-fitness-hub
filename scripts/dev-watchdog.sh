@@ -22,6 +22,21 @@ set -uo pipefail
 # let a login agent read. The physical path is the only one worth writing down.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 PORT="${PORT:-3000}"
+
+# Local runs use the SQLite file, not BX's live database.
+#
+# Once the site is deployed, the live database holds real bookings from real
+# people. A dev server here reads .env.local, which points at it - so a test
+# booking made while trying something out is a real name on a real class
+# list, and clearing it out afterwards means deleting live rows. Blanking
+# these two makes the store fall back to SQLite; Next will not overwrite a
+# variable that is already set, even to nothing.
+#
+# BX_LIVE=1 opts in, for when looking at real data is the actual point.
+if [ -z "${BX_LIVE:-}" ]; then
+  export SUPABASE_URL=
+  export SUPABASE_SERVICE_ROLE_KEY=
+fi
 STATE="${TMPDIR:-/tmp}"
 PIDFILE="$STATE/bx-watchdog.pid"
 CHILDFILE="$STATE/bx-dev-server.pid"
