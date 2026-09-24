@@ -39,6 +39,19 @@ The parts are the source of truth; the single file exists because pasting one
 file into the SQL editor is the actual workflow, and pasting eleven in the
 right order is a mistake waiting to happen.
 
+## Checking the live database
+
+`checks.sql` reads the live database and reports whether it matches what this
+repository expects — the eight tables, the five functions, row level security
+on everything, and both booking rules. It only reads; nothing in it changes
+anything.
+
+Its first column is `checked_at`, and that is there for a reason: the SQL
+editor keeps the last result on screen after you edit the query, so a row
+describing the database an hour ago is indistinguishable from one describing
+it now. If `checked_at` is not roughly the current time, you are reading a
+stale result — press Run.
+
 ## The parts, in the order they run
 
 The filenames carry the order, and the order matters: `bookings` references
