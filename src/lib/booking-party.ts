@@ -88,5 +88,27 @@ export async function resolveParty(body: Record<string, unknown>): Promise<Party
     return no(400, "Please choose how you would like to pay");
   }
 
+  /*
+    A member booking as a guest.
+
+    Two things go wrong if this is allowed. They are charged for a class
+    their membership already covers - and nobody at the desk can tell,
+    because the booking says Guest. And because a membership and a guest
+    phone are counted separately, the same person could take two places in
+    one class, once each way, out of fourteen.
+
+    So it is refused, and says which button to press. Not silently
+    converted: booking somebody in as a member when they asked to be a
+    guest is a different booking from the one they made.
+  */
+  const onFile = await (await getStore()).findMember(phone);
+  if (onFile.found || (!onFile.found && onFile.reason === "ambiguous")) {
+    return no(
+      409,
+      "That number is on a membership. Choose \"Yes, I'm a member\" so you are not charged for this class.",
+      "is-a-member",
+    );
+  }
+
   return { ok: true, name, phone, memberId: null, payment: payment as PaymentMethod };
 }

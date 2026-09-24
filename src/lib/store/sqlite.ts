@@ -276,10 +276,19 @@ function migrate(next: DatabaseSync) {
       ON bookings (session_id, class_date, member_id)
       WHERE cancelled_at IS NULL AND member_id IS NOT NULL
   `);
+  /*
+    The guest rule applies to bookings actually made as a guest. Removing a
+    membership turns its bookings into guest bookings, and with two
+    memberships on one phone - a Couples & Friends plan - removing the
+    second of the couple made a second guest row on the same phone and
+    class. A booking made as a guest always records how they would pay,
+    because the form requires it; a member's never does. That is the line.
+  */
+  next.exec("DROP INDEX IF EXISTS bookings_live_guest_unique");
   next.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS bookings_live_guest_unique
       ON bookings (session_id, class_date, phone)
-      WHERE cancelled_at IS NULL AND member_id IS NULL
+      WHERE cancelled_at IS NULL AND member_id IS NULL AND payment IS NOT NULL
   `);
 }
 

@@ -28,12 +28,19 @@ const CAPACITY = 3;
 const taken = async (store: BookingStore, date = DATE) =>
   (await store.counts(date, date))[slotKey(SESSION, date)] ?? 0;
 
+/*
+  A guest, in the shape the booking route always builds: name, phone, and
+  how they will pay. The payment is what marks a booking as made by a guest
+  rather than by a member - see the guest uniqueness rule in the stores -
+  so a test that leaves it out is not testing a booking this site can make.
+*/
 const someone = (name: string, phone: string, date = DATE) => ({
   sessionId: SESSION,
   date,
   name,
   phone,
   capacity: CAPACITY,
+  payment: "cash" as const,
 });
 
 function contract(label: string, open: () => Promise<BookingStore>) {
@@ -426,6 +433,32 @@ function contract(label: string, open: () => Promise<BookingStore>) {
         });
         assert.equal(again.ok, false);
         assert.equal(again.ok === false && again.reason, "duplicate");
+      });
+
+      it("lets a removed member's booking sit beside a guest on the same phone", async () => {
+        /*
+          Removing a membership turns its bookings into guest bookings - the
+          person still turned up, and the class list should still name them.
+          With two memberships on one phone, which is what a Couples &
+          Friends plan is, removing the second of the couple used to make a
+          second guest row on the same phone and class, and the uniqueness
+          rule refused it: the removal failed with a duplicate key nobody
+          could act on.
+        */
+        const date = "2027-02-06";
+        const a = await store.addMember({ memberNo: "RM-1", name: "One Of Two", phone: "01000000820" });
+        const b = await store.addMember({ memberNo: "RM-2", name: "Two Of Two", phone: "01000000820" });
+        assert.ok(a.ok && b.ok);
+
+        await store.book({ sessionId: SESSION, date, name: "One Of Two", phone: "01000000820", capacity: CAPACITY, memberId: a.member.id });
+        await store.book({ sessionId: SESSION, date, name: "Two Of Two", phone: "01000000820", capacity: CAPACITY, memberId: b.member.id });
+
+        assert.equal(await store.removeMember(a.member.id), true, "the first comes out");
+        assert.equal(await store.removeMember(b.member.id), true, "and so does the second");
+
+        const rows = await store.list(date, date);
+        assert.equal(rows.length, 2, "both still name who turned up");
+        assert.ok(rows.every((r) => r.memberId === null));
       });
 
       it("still refuses the same guest phone twice on one class", async () => {

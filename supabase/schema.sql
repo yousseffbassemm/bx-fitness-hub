@@ -46,9 +46,11 @@ create unique index if not exists bookings_live_member_unique
   on public.bookings (session_id, class_date, member_id)
   where cancelled_at is null and member_id is not null;
 
+drop index if exists public.bookings_live_guest_unique;
+
 create unique index if not exists bookings_live_guest_unique
   on public.bookings (session_id, class_date, phone)
-  where cancelled_at is null and member_id is null;
+  where cancelled_at is null and member_id is null and payment is not null;
 
 -- The table is only ever reached through the service role from the server,
 -- so no anon policy is granted.

@@ -299,7 +299,7 @@ export const memoryStore: BookingStore = {
     */
     const already = memberId
       ? mine.some((r) => r.memberId === memberId)
-      : mine.some((r) => r.memberId === null && r.phone === phone);
+      : mine.some((r) => r.memberId === null && r.payment !== null && r.phone === phone);
     if (already) return { ok: false, reason: "duplicate" };
     if (mine.length >= capacity) return { ok: false, reason: "full" };
 
