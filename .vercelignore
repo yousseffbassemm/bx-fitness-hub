@@ -1,0 +1,19 @@
+# What not to upload when deploying.
+#
+# Vercel sends the working directory, not the git tree, so anything sitting
+# in here goes with it - including files that were never committed.
+#
+# Deliberately short. Excluding something the build turns out to need fails
+# the deploy for no gain, so this only lists what is certainly not wanted.
+
+# Secrets. The deployed site reads its settings from the project's
+# environment variables, never from a file, so these must not travel.
+.env*
+
+# The local SQLite database. Production uses Supabase.
+.data/
+
+# Pages saved out of a browser ("Save page as" leaves a .html and a _files
+# folder beside it) while reading the Supabase dashboard.
+*.html
+*_files/

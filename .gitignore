@@ -51,3 +51,7 @@ next-env.d.ts
 .backups/
 *.db.replaced-*
 .backup-dir
+
+# Pages saved out of a browser while reading a dashboard.
+*.html
+*_files/
