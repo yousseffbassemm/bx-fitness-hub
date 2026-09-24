@@ -26,6 +26,7 @@ const { POST: addUser, PATCH: setRole, DELETE: removeUser } = await import("../s
 const { PATCH: patchBookings } = await import("../src/app/api/staff/bookings/route.ts");
 const { revalidated } = await import("./support/stubs/next-cache.ts");
 const { createSessionToken, STAFF_COOKIE } = await import("../src/lib/staff/session.ts");
+const { GET: photo } = await import("../src/app/api/photo/[id]/route.ts");
 const { getStore } = await import("../src/lib/store/index.ts");
 const { defaultCoachValues, defaultFacilityValues, defaultGalleryValues } = await import("../src/lib/content.ts");
 
@@ -358,6 +359,55 @@ describe("the team list", () => {
       ["remove", () => removeUser(send("DELETE", "/api/staff/users", { username: "boss" }, options))],
     ] as const) {
       assert.equal((await read(await call())).status, 403, `${label} should be admin only`);
+    }
+  });
+});
+
+describe("serving an uploaded photograph", () => {
+  const ID = "a".repeat(32);
+  const ask = (id: string) =>
+    photo(new Request(`${SITE}/api/photo/${id}`), { params: Promise.resolve({ id }) });
+
+  before(async () => {
+    await (await getStore()).saveUpload(ID, "image/jpeg", new Uint8Array([1, 2, 3, 4]));
+  });
+
+  it("serves the bytes, and says they can be cached forever", async () => {
+    const res = await ask(ID);
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("Content-Type"), "image/jpeg");
+    // The id is a hash of the contents, so the URL can only ever mean this
+    // image - which is what makes caching it forever safe.
+    assert.match(res.headers.get("Cache-Control") ?? "", /immutable/);
+    assert.equal((await res.arrayBuffer()).byteLength, 4);
+  });
+
+  it("refuses an id that is not one, without asking the database", async () => {
+    for (const id of ["", "../../etc/passwd", "nope", "A".repeat(32), "a".repeat(200)]) {
+      assert.equal((await ask(id)).status, 404, `should refuse ${JSON.stringify(id)}`);
+    }
+  });
+
+  it("is a plain 404 for an id nobody uploaded", async () => {
+    assert.equal((await ask("b".repeat(32))).status, 404);
+  });
+
+  /*
+    This one is served into an <img> tag. Throwing here had Next answer
+    with 500 and a full HTML error page under an image's URL.
+  */
+  it("answers 503 when the store cannot be reached, not a page of HTML", async () => {
+    const store = await getStore();
+    const real = store.getUpload;
+    store.getUpload = async () => {
+      throw new Error("connect ECONNREFUSED");
+    };
+    try {
+      const res = await ask(ID);
+      assert.equal(res.status, 503);
+      assert.ok(!/<html/i.test(await res.text()), "an image URL must not answer with a web page");
+    } finally {
+      store.getUpload = real;
     }
   });
 });

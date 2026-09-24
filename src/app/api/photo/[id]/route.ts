@@ -1,3 +1,4 @@
+import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
@@ -20,7 +21,21 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  const file = await (await getStore()).getUpload(id);
+  /*
+    A store that cannot be reached threw out of here, which Next answers
+    with 500 and an HTML error page - served under an image's URL, into an
+    <img> tag. 503 keeps it an image request that failed, and leaves the
+    page around it intact.
+  */
+  let file;
+  try {
+    file = await (await getStore()).getUpload(id);
+  } catch (error) {
+    // The id goes in the detail, not the label: one row per broken
+    // photo would bury the Errors screen during an outage.
+    await report("GET /api/photo", error, id);
+    return new Response("Unavailable", { status: 503 });
+  }
   if (!file) return new Response("Not found", { status: 404 });
 
   return new Response(Buffer.from(file.bytes), {

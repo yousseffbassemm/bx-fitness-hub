@@ -50,7 +50,10 @@ export async function POST(request: Request) {
   }
   // Who is queuing, decided the same way a booking decides it - so whoever
   // joined as a member comes off the queue as one.
-  const party = await resolveParty((body ?? {}) as Record<string, unknown>);
+  const party = await resolveParty(
+    (body ?? {}) as Record<string, unknown>,
+    "POST /api/classes/waitlist",
+  );
   if (!party.ok) {
     return NextResponse.json(
       { error: party.error, reason: party.reason },

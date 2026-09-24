@@ -47,7 +47,10 @@ export async function POST(request: Request) {
 
   // Member or guest, decided against the database rather than against what
   // the browser says it is.
-  const party = await resolveParty((body ?? {}) as Record<string, unknown>);
+  const party = await resolveParty(
+    (body ?? {}) as Record<string, unknown>,
+    "POST /api/classes/book",
+  );
   if (!party.ok) {
     return NextResponse.json(
       { error: party.error, reason: party.reason },

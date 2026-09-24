@@ -44,11 +44,16 @@ const no = (status: number, error: string, reason?: string): Party => ({
  * somebody was part way through. The work itself is in decide(); this says
  * what happens when the database is the thing that broke.
  */
-export async function resolveParty(body: Record<string, unknown>): Promise<Party> {
+export async function resolveParty(
+  body: Record<string, unknown>,
+  asked: string,
+): Promise<Party> {
   try {
     return await decide(body);
   } catch (error) {
-    await report("resolveParty", error);
+    // Named for whoever reads the Errors screen: "resolveParty" tells
+    // them nothing about what somebody was trying to do.
+    await report(`${asked} (working out who is booking)`, error);
     return no(
       503,
       "Cannot reach the gym's records just now. Try again shortly, or give us a call.",
