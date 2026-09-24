@@ -1,4 +1,17 @@
 import type { NextConfig } from "next";
+import { unconfiguredHostError } from "./src/lib/store/host-check";
+
+/*
+  Refuse to build a hosted deploy that has no database.
+
+  The running server checks this too, but by then it is serving: getSchedule
+  falls back to code defaults when the store is unreachable, so the site
+  comes up looking fine and only booking is broken. Failing here instead
+  means a deploy with the variables missing never reaches anybody.
+*/
+const misconfigured = unconfiguredHostError();
+if (misconfigured) throw new Error(`[bx] ${misconfigured}`);
+
 
 const nextConfig: NextConfig = {
   /**
