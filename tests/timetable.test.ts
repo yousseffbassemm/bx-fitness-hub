@@ -217,4 +217,27 @@ describe("the timetable", () => {
     await screen.findByText("Later Tonight");
     assert.ok(!/\d+ left/i.test(document.body.textContent ?? ""));
   });
+
+  /*
+    Book is disabled until the dates are in, and the dates arrive in the
+    same update as the availability. If a failed availability call had left
+    that update unsent, every Book button on the site would sit there grey
+    and unexplained whenever the count could not be fetched - which is
+    exactly when somebody most wants to ring up and book.
+  */
+  it("still lets somebody book when availability cannot be fetched", async () => {
+    globalThis.fetch = (async () => {
+      throw new TypeError("offline");
+    }) as typeof fetch;
+
+    const user = userEvent.setup();
+    render(createElement(Classes, { schedule }));
+    await showToday(user);
+
+    const book = await screen.findByRole("button", { name: /^book$/i });
+    await waitFor(() => assert.equal((book as HTMLButtonElement).disabled, false));
+
+    await user.click(book);
+    await screen.findByRole("dialog");
+  });
 });
