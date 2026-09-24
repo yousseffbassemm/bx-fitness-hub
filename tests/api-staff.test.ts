@@ -32,6 +32,9 @@ const {
   PATCH: patchMember,
   DELETE: removeMember,
 } = await import("../src/app/api/staff/members/route.ts");
+const { POST: upload } = await import("../src/app/api/staff/upload/route.ts");
+const { PATCH: patchLead } = await import("../src/app/api/staff/leads/route.ts");
+const { DELETE: clearErrors } = await import("../src/app/api/staff/errors/route.ts");
 const { GET: photo } = await import("../src/app/api/photo/[id]/route.ts");
 const { getStore } = await import("../src/lib/store/index.ts");
 const { defaultCoachValues, defaultFacilityValues, defaultGalleryValues } = await import("../src/lib/content.ts");
@@ -536,5 +539,155 @@ describe("the membership list endpoint", () => {
     const { status, body } = await read(await call("PATCH", { id: "anything" }, asAdmin()));
     assert.equal(status, 400);
     assert.match(String(body.error), /name/i);
+  });
+});
+
+describe("marking an enquiry handled", () => {
+  const call = (body: unknown, options = {}) =>
+    patchLead(send("PATCH", "/api/staff/leads", body, options));
+
+  it("ticks one off, and puts it back", async () => {
+    const store = await getStore();
+    const { id } = await store.saveLead({
+      name: "Called Back",
+      phone: "010 0000 1111",
+      email: "called@example.com",
+      goal: "Improve Fitness",
+    });
+
+    assert.equal((await read(await call({ id, handled: true }, asAdmin()))).status, 200);
+    assert.notEqual((await store.listLeads()).find((l) => l.id === id)?.handledAt, null);
+
+    assert.equal((await read(await call({ id, handled: false }, asAdmin()))).status, 200);
+    assert.equal((await store.listLeads()).find((l) => l.id === id)?.handledAt, null);
+  });
+
+  it("is not something a stranger can do", async () => {
+    assert.equal((await read(await call({ id: "1", handled: true }))).status, 401);
+    const crossSite = await call({ id: "1", handled: true }, { cookie: adminCookie, origin: "https://evil.test" });
+    assert.equal((await read(crossSite)).status, 403);
+  });
+
+  it("wants to know which enquiry, and which way", async () => {
+    for (const body of [{}, { id: "1" }, { handled: true }, { id: "", handled: true }, { id: "1", handled: "yes" }]) {
+      const { status } = await read(await call(body, asAdmin()));
+      assert.equal(status, 400, `should refuse ${JSON.stringify(body)}`);
+    }
+  });
+});
+
+describe("clearing the problems list", () => {
+  it("is admin only, and actually empties it", async () => {
+    const store = await getStore();
+    await store.recordError("somewhere", "something broke", "detail");
+    assert.ok((await store.listErrors()).length > 0, "there should be something to clear");
+
+    // The desk can read Problems; wiping the record of what went wrong is
+    // not theirs to do.
+    const asFloor = { cookie: floorCookie, origin: SITE };
+    assert.equal(
+      (await read(await clearErrors(send("DELETE", "/api/staff/errors", undefined, asFloor)))).status,
+      403,
+    );
+    assert.ok((await store.listErrors()).length > 0, "and nothing should have gone");
+
+    assert.equal(
+      (await read(await clearErrors(send("DELETE", "/api/staff/errors", undefined, asAdmin())))).status,
+      200,
+    );
+    assert.equal((await store.listErrors()).length, 0);
+  });
+
+  it("is not something a stranger can do", async () => {
+    assert.equal(
+      (await read(await clearErrors(send("DELETE", "/api/staff/errors", undefined)))).status,
+      401,
+    );
+  });
+});
+
+describe("uploading a photograph", () => {
+  /*
+    It does not trust the filename or the browser's content type - it reads
+    the first bytes and decides for itself. A .jpg that is really something
+    else would otherwise be stored and then served back under our own domain
+    with whatever type was claimed.
+  */
+  const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 1, 2, 3]);
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 1, 2, 3]);
+  const WEBP = new Uint8Array([
+    0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 0, 1,
+  ]);
+
+  function sending(bytes: Uint8Array, name = "photo.jpg", options: Record<string, unknown> = {}) {
+    const form = new FormData();
+    form.set("file", new File([bytes as BlobPart], name));
+    const headers = new Headers({
+      "x-forwarded-for": "198.51.100.9",
+      host: "bx.test",
+    });
+    if (options.cookie) headers.set("cookie", String(options.cookie));
+    if (options.origin) headers.set("origin", String(options.origin));
+    return new Request(`${SITE}/api/staff/upload`, { method: "POST", headers, body: form });
+  }
+
+  it("takes the image formats a gym actually has", async () => {
+    for (const [bytes, expected] of [
+      [JPEG, "image/jpeg"],
+      [PNG, "image/png"],
+      [WEBP, "image/webp"],
+    ] as const) {
+      const { status, body } = await read(await upload(sending(bytes, "x.jpg", asAdmin())));
+      assert.equal(status, 200, `${expected} should be accepted`);
+      const stored = await (await getStore()).getUpload(String(body.id));
+      assert.equal(stored?.mime, expected, "the type comes from the bytes, not the name");
+    }
+  });
+
+  it("refuses something that is not an image, whatever it is called", async () => {
+    const notImages: Array<[string, Uint8Array]> = [
+      ["an HTML page", new TextEncoder().encode("<html><script>alert(1)</script>")],
+      ["an SVG", new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>')],
+      ["a PDF", new TextEncoder().encode("%PDF-1.4 ...")],
+      ["empty", new Uint8Array()],
+      ["nearly a jpeg", new Uint8Array([0xff, 0xd8, 0x00])],
+    ];
+    for (const [what, bytes] of notImages) {
+      const { status, body } = await read(await upload(sending(bytes, "photo.jpg", asAdmin())));
+      // 415, not 400: the request was fine, the thing inside it was not.
+      assert.equal(status, 415, `${what} named photo.jpg must be refused`);
+      assert.match(String(body.error), /JPEG|PNG|WebP/i);
+    }
+  });
+
+  it("gives the same image the same id, so changing a photo changes the URL", async () => {
+    const a = await read(await upload(sending(JPEG, "one.jpg", asAdmin())));
+    const b = await read(await upload(sending(JPEG, "another-name.jpg", asAdmin())));
+    assert.equal(a.body.id, b.body.id, "the id is a hash of the contents");
+
+    const different = await read(await upload(sending(PNG, "one.jpg", asAdmin())));
+    assert.notEqual(a.body.id, different.body.id);
+  });
+
+  it("is admin only, and refuses a stranger outright", async () => {
+    assert.equal((await read(await upload(sending(JPEG)))).status, 401);
+    assert.equal(
+      (await read(await upload(sending(JPEG, "x.jpg", { cookie: floorCookie, origin: SITE })))).status,
+      403,
+    );
+    assert.equal(
+      (await read(await upload(sending(JPEG, "x.jpg", { cookie: adminCookie, origin: "https://evil.test" })))).status,
+      403,
+    );
+  });
+
+  it("says so when there is no file rather than saving nothing", async () => {
+    const headers = new Headers({ host: "bx.test", ...Object.fromEntries(
+      Object.entries(asAdmin()).map(([k, v]) => [k === "cookie" ? "cookie" : k, String(v)]),
+    ) });
+    const form = new FormData();
+    form.set("notafile", "hello");
+    const res = await upload(new Request(`${SITE}/api/staff/upload`, { method: "POST", headers, body: form }));
+    assert.equal((await read(res)).status, 400);
   });
 });
