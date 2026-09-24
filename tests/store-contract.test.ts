@@ -247,6 +247,24 @@ function contract(label: string, open: () => Promise<BookingStore>) {
         }
       });
 
+      it("treats the reference as a value, never as a pattern", async () => {
+        /*
+          The hole this was written for. Matching the number
+          case-insensitively means ilike over PostgREST, and ilike is a
+          pattern: "*" was translated to "%" before it reached Postgres, so
+          a single asterisk typed into the booking form matched the first
+          membership in the table and took a free place under that person's
+          name. "A*", "B*" walked the list.
+
+          Every store is asked, because only one of them had it - which is
+          the whole reason this suite runs against them all.
+        */
+        for (const pattern of ["*", "%", "_", "BX*", "B%", "BX-014%", "BX-014_", "%%", "\\"]) {
+          const found = await store.findMember(pattern);
+          assert.equal(found.found, false, `${JSON.stringify(pattern)} must not match anybody`);
+        }
+      });
+
       it("does not invent a membership that is not there", async () => {
         for (const reference of ["", "  ", "BX-9999", "01000000999"]) {
           const found = await store.findMember(reference);

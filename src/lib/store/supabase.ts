@@ -524,11 +524,28 @@ export const supabaseStore: BookingStore = {
       return (await res.json()) as MemberPayload[];
     };
 
-    const byNumber = await ask(`member_no=ilike.${encodeURIComponent(wanted)}`);
+    /*
+      The number is matched case-insensitively, which over PostgREST means
+      ilike - and ilike is a pattern, not a value. "*" is translated to "%"
+      before it reaches Postgres, so somebody typing a single asterisk into
+      the booking form matched the first membership in the table and took a
+      free place under that person's name. "A*", "B*" walked the list.
+
+      So the query only narrows. What decides is the comparison below, on
+      the value that came back, which no pattern can satisfy unless it is
+      the number itself.
+    */
+    const sameNumber = (value: string | null) =>
+      (value ?? "").trim().toLowerCase() === wanted.toLowerCase();
+
+    const byNumber = (await ask(`member_no=ilike.${encodeURIComponent(wanted)}`)).filter((m) =>
+      sameNumber(m.member_no),
+    );
     if (byNumber.length >= 1) return { found: true as const, member: toMember(byNumber[0]) };
 
-    // Two memberships on one phone is a Couples & Friends plan, not a
-    // mistake, so ask for the number rather than picking one of them.
+    // eq, not ilike: a value comparison, with no pattern to abuse. Two
+    // memberships on one phone is a Couples & Friends plan, not a mistake,
+    // so ask for the number rather than picking one of them.
     const byPhone = await ask(`phone=eq.${encodeURIComponent(wanted)}`);
     if (byPhone.length === 1) return { found: true as const, member: toMember(byPhone[0]) };
     if (byPhone.length > 1) return { found: false as const, reason: "ambiguous" as const };
