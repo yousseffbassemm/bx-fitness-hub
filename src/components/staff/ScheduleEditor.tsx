@@ -34,6 +34,8 @@ export default function ScheduleEditor({
   const [draft, setDraft] = useState(schedule);
   const [open, setOpen] = useState(0);
   const [busy, setBusy] = useState(false);
+  /** The class whose removal is waiting on a second press. */
+  const [confirming, setConfirming] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -178,13 +180,47 @@ export default function ScheduleEditor({
                       />
                       Ladies
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => removeSession(open, i)}
-                      className="rounded-sm border border-white/15 px-2 py-1.5 text-xs text-grey hover:border-pink hover:text-pink"
-                    >
-                      Remove
-                    </button>
+                    {/*
+                      A class nobody has booked goes on one click - it is
+                      just a row. One with people on it asks first, because
+                      removing it strands them: their bookings keep an id
+                      the timetable no longer has, and putting the class
+                      back does not undo it. A new row is a new class, so it
+                      gets a new id, and the old bookings stay orphaned.
+                      Every other Remove in here asks; this was the one that
+                      did not, and it had the most to lose.
+                    */}
+                    {booked > 0 && confirming === sess.id ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            removeSession(open, i);
+                            setConfirming(null);
+                          }}
+                          className="rounded-sm bg-pink px-2 py-1.5 text-xs text-white"
+                        >
+                          Remove anyway
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirming(null)}
+                          className="px-1 text-xs text-grey hover:text-white"
+                        >
+                          Keep
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          booked > 0 ? setConfirming(sess.id) : removeSession(open, i)
+                        }
+                        className="rounded-sm border border-white/15 px-2 py-1.5 text-xs text-grey hover:border-pink hover:text-pink"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
 
                   {/* One line, not a paragraph: on a busy day this repeats
@@ -193,7 +229,9 @@ export default function ScheduleEditor({
                   {booked > 0 && (
                     <p className="flex items-center gap-1.5 text-[0.68rem] text-amber sm:col-span-4">
                       <span aria-hidden="true">&#9679;</span>
-                      {booked} booked
+                      {confirming === sess.id
+                        ? `${booked} booked - they would be left on a class that is not there, and putting it back will not undo it.`
+                        : `${booked} booked`}
                     </p>
                   )}
                 </div>
