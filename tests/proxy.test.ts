@@ -24,7 +24,11 @@ const SITE = "https://bx.test";
 
 let valid = "";
 before(async () => {
-  valid = await createSessionToken("boss");
+  // Null would mean the secret is not set, and every test below would then
+  // pass for the wrong reason - an unsigned session is refused either way.
+  const token = await createSessionToken("boss");
+  assert.ok(token, "could not mint a session token to test with");
+  valid = token;
 });
 
 /** A request for a staff URL, with or without a session cookie. */
