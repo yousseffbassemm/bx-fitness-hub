@@ -26,6 +26,12 @@ const { POST: addUser, PATCH: setRole, DELETE: removeUser } = await import("../s
 const { PATCH: patchBookings } = await import("../src/app/api/staff/bookings/route.ts");
 const { revalidated } = await import("./support/stubs/next-cache.ts");
 const { createSessionToken, STAFF_COOKIE } = await import("../src/lib/staff/session.ts");
+const {
+  GET: listMembers,
+  POST: addMember,
+  PATCH: patchMember,
+  DELETE: removeMember,
+} = await import("../src/app/api/staff/members/route.ts");
 const { GET: photo } = await import("../src/app/api/photo/[id]/route.ts");
 const { getStore } = await import("../src/lib/store/index.ts");
 const { defaultCoachValues, defaultFacilityValues, defaultGalleryValues } = await import("../src/lib/content.ts");
@@ -409,5 +415,126 @@ describe("serving an uploaded photograph", () => {
     } finally {
       store.getUpload = real;
     }
+  });
+});
+
+describe("the membership list endpoint", () => {
+  /*
+    This holds every member's name and phone number, and adds and removes
+    them. It was the newest endpoint here and the only one with no tests -
+    including none that its guard works at all.
+  */
+  const call = (method: string, body: unknown, options = {}) =>
+    ({ GET: listMembers, POST: addMember, PATCH: patchMember, DELETE: removeMember })[
+      method as "GET" | "POST" | "PATCH" | "DELETE"
+    ]!(send(method, "/api/staff/members", body, options));
+
+  const someone = (over: Record<string, unknown> = {}) => ({
+    memberNo: `BX-T${Math.floor(Math.random() * 1e6)}`,
+    name: "Test Member",
+    phone: "010 1234 5678",
+    ...over,
+  });
+
+  it("tells nobody anything without a session", async () => {
+    for (const [method, body] of [
+      ["GET", undefined],
+      ["POST", someone()],
+      ["PATCH", { id: "x", ended: true }],
+      ["DELETE", { id: "x" }],
+    ] as const) {
+      const { status, body: out } = await read(await call(method, body));
+      assert.equal(status, 401, `${method} must not work signed out`);
+      assert.equal(out.members, undefined, "and must not leak the list in the error");
+    }
+  });
+
+  it("turns away a request claiming a different origin", async () => {
+    const { status } = await read(
+      await call("POST", someone(), { cookie: adminCookie, origin: "https://evil.test" }),
+    );
+    assert.equal(status, 403);
+  });
+
+  it("lets whoever is on the desk do it, not only an admin", async () => {
+    // Deliberate: the desk signs members up. A list only an admin can tidy
+    // stops being true.
+    const { status } = await read(
+      await call("POST", someone({ name: "Desk Added" }), { cookie: floorCookie, origin: SITE }),
+    );
+    assert.equal(status, 200, "staff must be able to add a member");
+  });
+
+  it("refuses a member it could never ring back", async () => {
+    for (const bad of [
+      { name: "A", phone: "010 1234 5678" },
+      { name: "", phone: "010 1234 5678" },
+      { name: "x".repeat(81), phone: "010 1234 5678" },
+      { name: "Fine Name", phone: "nope" },
+      { name: "Fine Name", phone: "12" },
+      { name: "Fine Name", phone: "" },
+      { name: "Fine Name", phone: "010 1234 5678", memberNo: "n".repeat(41) },
+    ]) {
+      const { status } = await read(await call("POST", bad, asAdmin()));
+      assert.equal(status, 400, `should refuse ${JSON.stringify(bad).slice(0, 48)}`);
+    }
+  });
+
+  it("will not let one membership number belong to two people", async () => {
+    const shared = someone({ memberNo: "BX-CLASH" });
+    assert.equal((await read(await call("POST", shared, asAdmin()))).status, 200);
+    const { status } = await read(
+      await call("POST", { ...shared, name: "Somebody Else" }, asAdmin()),
+    );
+    assert.equal(status, 409, "two people on one number breaks booking as a member");
+  });
+
+  it("lapses, reinstates, corrects and removes", async () => {
+    const made = await read(await call("POST", someone({ name: "Full Circle" }), asAdmin()));
+    const id = (made.body.member as { id: string }).id;
+
+    assert.equal((await read(await call("PATCH", { id, ended: true }, asAdmin()))).status, 200);
+    const lapsed = (await read(await call("GET", undefined, asAdmin()))).body.members as Array<{
+      id: string;
+      endedAt: string | null;
+    }>;
+    assert.notEqual(lapsed.find((m) => m.id === id)?.endedAt, null, "should read as lapsed");
+
+    assert.equal((await read(await call("PATCH", { id, ended: false }, asAdmin()))).status, 200);
+
+    const fixed = await read(
+      await call("PATCH", { id, ...someone({ name: "Corrected Name" }) }, asAdmin()),
+    );
+    assert.equal(fixed.status, 200);
+
+    assert.equal((await read(await call("DELETE", { id }, asAdmin()))).status, 200);
+    const left = (await read(await call("GET", undefined, asAdmin()))).body.members as Array<{
+      id: string;
+    }>;
+    assert.equal(left.find((m) => m.id === id), undefined, "should be gone");
+  });
+
+  it("says so rather than throwing for a member who is not there", async () => {
+    // Lapsing one, and correcting one, both have to find it first.
+    for (const body of [
+      { id: "no-such-member", ended: true },
+      { id: "no-such-member", ...someone() },
+    ]) {
+      const patched = await read(await call("PATCH", body, asAdmin()));
+      assert.equal(patched.status, 404, `${JSON.stringify(body).slice(0, 40)} should be 404`);
+    }
+    assert.equal(
+      (await read(await call("DELETE", { id: "no-such-member" }, asAdmin()))).status,
+      404,
+    );
+    assert.equal((await read(await call("DELETE", {}, asAdmin()))).status, 404);
+  });
+
+  it("checks the details before it goes looking for the member", async () => {
+    // A correction with nothing to correct is a bad request, not a missing
+    // member - so it says which field is wrong rather than "no such member".
+    const { status, body } = await read(await call("PATCH", { id: "anything" }, asAdmin()));
+    assert.equal(status, 400);
+    assert.match(String(body.error), /name/i);
   });
 });
