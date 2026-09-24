@@ -167,6 +167,53 @@ describe("the membership list", () => {
     assert.equal(calls[0].body.name, "Karma W. Ali");
   });
 
+  /*
+    Found by clicking Edit and then Cancel on the staff screen.
+
+    The row being corrected shared its fields with "Add a member" above it,
+    so Edit filled that form with the member, and Cancel left it there with
+    a live Add button. On somebody with no membership number that made a
+    second identical membership - and two memberships on one phone is a
+    Couples plan, so the real member could no longer book as a member at
+    all: the booking told her to use her membership number, which is
+    precisely what she did not have.
+  */
+  it("does not arm the add form with the member being corrected", async () => {
+    const user = userEvent.setup();
+    show([member({ id: "m-x", memberNo: null, name: "Nourhan Kamal", phone: "010 3333 4444" })]);
+
+    const addName = () => screen.getAllByLabelText(/^name$/i)[0] as HTMLInputElement;
+    const addPhone = () => screen.getAllByLabelText(/^phone$/i)[0] as HTMLInputElement;
+
+    await user.click(screen.getByRole("button", { name: /^edit$/i }));
+    assert.equal(addName().value, "", "the add form is not where the correction goes");
+    assert.equal(addPhone().value, "");
+
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+    assert.equal(addName().value, "", "and cancelling must not leave them loaded into it");
+    assert.equal(addPhone().value, "");
+
+    // The proof: pressing Add now would have to be somebody the staff typed.
+    await user.click(screen.getByRole("button", { name: /^add$/i }));
+    assert.equal(calls.length, 1);
+    assert.deepEqual(calls[0].body, { memberNo: "", name: "", phone: "" });
+  });
+
+  it("keeps what was half-typed into the add form while a row is corrected", async () => {
+    const user = userEvent.setup();
+    show([member({ id: "m-y", name: "Karma Wael" })]);
+
+    await user.type(screen.getAllByLabelText(/^name$/i)[0], "Half Typed");
+    await user.click(screen.getByRole("button", { name: /^edit$/i }));
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    assert.equal(
+      (screen.getAllByLabelText(/^name$/i)[0] as HTMLInputElement).value,
+      "Half Typed",
+      "correcting somebody else must not throw away what was being typed",
+    );
+  });
+
   it("finds one member among many, and says so when nobody matches", async () => {
     const user = userEvent.setup();
     const many = [

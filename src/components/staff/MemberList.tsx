@@ -22,6 +22,18 @@ export default function MemberList({ members }: { members: Member[] }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [draft, setDraft] = useState({ memberNo: "", name: "", phone: "" });
+  /*
+    The row being corrected keeps its own copy.
+
+    It used to share `draft` with the form above, so opening Edit filled
+    "Add a member" with that member and Cancel left it sitting there, armed,
+    with a live Add button. Pressing it on somebody who has no membership
+    number made a second, identical membership - and two memberships on one
+    phone is a Couples plan, so that person could no longer book as a member
+    at all. They were told to use their membership number, which is the one
+    thing they did not have.
+  */
+  const [edit, setEdit] = useState({ memberNo: "", name: "", phone: "" });
   const [pasted, setPasted] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [search, setSearch] = useState("");
@@ -59,7 +71,7 @@ export default function MemberList({ members }: { members: Member[] }) {
   }
 
   async function save(id: string) {
-    if (await send("PATCH", { id, ...draft })) {
+    if (await send("PATCH", { id, ...edit })) {
       setEditing(null);
       setNote("Saved.");
     }
@@ -231,20 +243,20 @@ export default function MemberList({ members }: { members: Member[] }) {
                   <div className="grid gap-3 sm:grid-cols-[10rem_1fr_12rem_auto_auto]">
                     <input
                       aria-label="Membership number"
-                      value={draft.memberNo}
-                      onChange={(e) => setDraft({ ...draft, memberNo: e.target.value })}
+                      value={edit.memberNo}
+                      onChange={(e) => setEdit({ ...edit, memberNo: e.target.value })}
                       className={field}
                     />
                     <input
                       aria-label="Name"
-                      value={draft.name}
-                      onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                      value={edit.name}
+                      onChange={(e) => setEdit({ ...edit, name: e.target.value })}
                       className={field}
                     />
                     <input
                       aria-label="Phone"
-                      value={draft.phone}
-                      onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+                      value={edit.phone}
+                      onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
                       className={field}
                     />
                     <button
@@ -288,7 +300,7 @@ export default function MemberList({ members }: { members: Member[] }) {
                         onClick={() => {
                           setEditing(m.id);
                           setConfirming(null);
-                          setDraft({
+                          setEdit({
                             memberNo: m.memberNo ?? "",
                             name: m.name,
                             phone: m.phone,
