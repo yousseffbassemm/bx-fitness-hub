@@ -39,18 +39,34 @@ The parts are the source of truth; the single file exists because pasting one
 file into the SQL editor is the actual workflow, and pasting eleven in the
 right order is a mistake waiting to happen.
 
-## Checking the live database
+## Queries you will want again
 
-`checks.sql` reads the live database and reports whether it matches what this
-repository expects — the eight tables, the five functions, row level security
-on everything, and both booking rules. It only reads; nothing in it changes
-anything.
+`queries/` holds the read-only queries worth keeping. Each one is also saved
+in the Supabase SQL editor under the same number and name, so the two line up:
 
-Its first column is `checked_at`, and that is there for a reason: the SQL
-editor keeps the last result on screen after you edit the query, so a row
-describing the database an hour ago is indistinguishable from one describing
-it now. If `checked_at` is not roughly the current time, you are reading a
-stale result — press Run.
+| File | Saved in Supabase as |
+| --- | --- |
+| `queries/01-health-check.sql` | `01 Health check - live vs repo` |
+| `queries/02-members.sql` | `02 Members - the list booking checks against` |
+| `queries/03-bookings.sql` | `03 Bookings - who is coming, and who owes` |
+| `queries/04-enquiries.sql` | `04 Enquiries - asked to be called, not yet called` |
+| `queries/05-errors.sql` | `05 Errors - what has gone wrong on the server` |
+
+Not one of them writes anything, so they are safe to run against production.
+The staff screens cover the same ground for day to day work; these are for
+when you want to look at the database directly.
+
+**The health check is the one to run first when something looks wrong.** It
+reports the eight tables, the five functions, row level security on every
+table, and both booking unique indexes. Its first column is `checked_at`, and
+that is deliberate: the SQL editor keeps the last result on screen while you
+edit the query above it, so a row describing the database an hour ago looks
+exactly like a row describing it now. If `checked_at` is not roughly the
+current time, press Run - you are reading a stale result.
+
+Editing a query in the Supabase editor does not change the file here, and
+editing the file does not change Supabase. When you change one, paste it into
+the other.
 
 ## The parts, in the order they run
 
