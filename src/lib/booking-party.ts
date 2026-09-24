@@ -1,5 +1,6 @@
 import type { PaymentMethod } from "@/lib/store/types";
 
+import { report } from "@/lib/report";
 import { getStore } from "@/lib/store";
 
 /**
@@ -35,7 +36,27 @@ const no = (status: number, error: string, reason?: string): Party => ({
   reason,
 });
 
+/**
+ * A store that cannot be reached is an answer here, not an exception.
+ *
+ * Both routes ask this before their own try block, so a throw escaped into
+ * Next and became a bare 500 with an empty body - a blank failure on a form
+ * somebody was part way through. The work itself is in decide(); this says
+ * what happens when the database is the thing that broke.
+ */
 export async function resolveParty(body: Record<string, unknown>): Promise<Party> {
+  try {
+    return await decide(body);
+  } catch (error) {
+    await report("resolveParty", error);
+    return no(
+      503,
+      "Cannot reach the gym's records just now. Try again shortly, or give us a call.",
+    );
+  }
+}
+
+async function decide(body: Record<string, unknown>): Promise<Party> {
   const reference = typeof body.memberRef === "string" ? body.memberRef.trim() : "";
 
   if (body.member === true || reference) {

@@ -377,3 +377,53 @@ describe("GET /api/classes/availability", () => {
     }
   });
 });
+
+describe("when the database cannot be reached", () => {
+  /*
+    Every way into a class now asks the database who this person is before
+    it does anything else, and that question was being asked outside the
+    handler's try block. A store that was down threw straight past it, so
+    Next answered a bare 500 with an empty body: somebody part way through
+    booking got a dead form and no reason for it.
+  */
+  it("says so on every way in, rather than failing blank", async () => {
+    const store = await getStore();
+    const real = store.findMember;
+    store.findMember = async () => {
+      throw new Error("connect ECONNREFUSED 127.0.0.1:5432");
+    };
+
+    try {
+      const attempts: Array<[string, Response]> = [
+        [
+          "booking as a member",
+          await book(
+            post("/api/classes/book", {
+              sessionId: CLASS,
+              date: SAT,
+              member: true,
+              memberRef: "BX-0142",
+            }),
+          ),
+        ],
+        ["booking as a guest", await book(post("/api/classes/book", someone()))],
+        [
+          "joining the queue",
+          await joinWaitlist(post("/api/classes/waitlist", someone())),
+        ],
+      ];
+
+      for (const [how, response] of attempts) {
+        const { status, body } = await read(response);
+        assert.equal(status, 503, `${how} should answer "unavailable", not crash`);
+        assert.match(
+          String(body.error ?? ""),
+          /call us|give us a call/i,
+          `${how} needs to tell them what to do instead`,
+        );
+      }
+    } finally {
+      store.findMember = real;
+    }
+  });
+});
